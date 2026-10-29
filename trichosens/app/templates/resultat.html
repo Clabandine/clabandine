@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Mon résultat – TrichoSens{% endblock %}
+{% block content %}
+<h1>Votre diagnostic</h1>
+<p class="lead">{{ d.resume }}</p>
+
+{% for a in d.alertes %}
+<p class="alert" role="alert">{{ a }}</p>
+{% endfor %}
+
+<section class="card">
+  <h2>Les besoins de vos cheveux</h2>
+  <ul class="needs">
+    {% for need, score in d.besoins.items() | sort(attribute='1', reverse=True) %}
+    {% if score > 0 %}
+    <li{% if need in d.priorites %} class="priority"{% endif %}>
+      <span class="need-label">{{ NEEDS[need] }}{% if need in d.priorites %} <em>priorité</em>{% endif %}</span>
+      <span class="bar" role="img" aria-label="{{ score }} sur 100"><span style="width: {{ score }}%"></span></span>
+      <span class="score">{{ score }}</span>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  <p><strong>Lavage conseillé :</strong> {{ d.frequence_lavage }}.</p>
+</section>
+
+<section>
+  <h2>Votre routine sur mesure</h2>
+  {% for moment, label in MOMENTS.items() %}
+  {% set steps = d.routine | selectattr('moment', 'equalto', moment) | list %}
+  {% if steps %}
+  <h3>{{ label }}</h3>
+  <ol class="routine">
+    {% for s in steps %}
+    <li class="step">
+      <div>
+        <strong>{{ s.titre }}</strong>
+        <p>{{ s.conseil }}</p>
+      </div>
+      {% if s.produit %}
+      <div class="product">
+        <span class="tag">{{ CATEGORIES[s.produit.categorie] }}</span>
+        <strong>{{ s.produit.nom }}</strong>
+        <small>{{ s.produit.description }}</small>
+        {% if s.produit.ingredients_cles %}<small class="ingredients">{{ s.produit.ingredients_cles | join(', ') }}</small>{% endif %}
+        {% if s.produit.prix %}<span class="price">{{ '%.2f' | format(s.produit.prix) | replace('.', ',') }} €</span>{% endif %}
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+  {% endfor %}
+</section>
+
+{% if d.conseils %}
+<section class="card">
+  <h2>Nos conseils</h2>
+  <ul class="tips">
+    {% for c in d.conseils %}<li>{{ c }}</li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<p><a class="button secondary" href="/diagnostic">Refaire le diagnostic</a></p>
+{% endblock %}
