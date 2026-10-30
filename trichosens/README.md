@@ -90,7 +90,7 @@ Les réponses illustrées utilisent des dessins vectoriels générés par
 (1000 × 1000 pixels conseillés) dans `app/static/img/photos/`, avec le même nom que
 l'illustration : `type-1a.webp` à `type-4c.webp`, `epaisseur-fin.jpg`,
 `densite-forte.jpg`, `porosite-faible.jpg`… La photo remplace automatiquement
-l'illustration. Le type 4B n'a pas encore de photo.
+l'illustration.
 Utilisez uniquement des photos dont vous avez les droits (vos propres photos avec
 l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels).
 
