@@ -13,6 +13,8 @@ FORM = {
     "porosite": "forte",
     "cuir_chevelu": "sec",
     "preoccupations": ["secheresse", "casse"],
+    "gene_secheresse": "beaucoup",
+    "gene_casse": "enormement",
     "chaleur": "parfois",
     "objectif": "longueur",
 }
@@ -36,6 +38,8 @@ def test_submit_form_shows_result():
     assert r.status_code == 200
     assert "Votre routine sur mesure" in r.text
     assert "Protection thermique" in r.text
+    assert "Ce qui vous gêne, et comment y remédier" in r.text
+    assert r.text.index("Casse") < r.text.index("Sécheresse")  # la plus gênante d'abord
 
 
 def test_incomplete_form_shows_errors_and_keeps_answers():
@@ -48,11 +52,15 @@ def test_incomplete_form_shows_errors_and_keeps_answers():
 def test_api_questions():
     r = client.get("/api/questions")
     assert r.status_code == 200
-    assert [q["id"] for q in r.json()][0] == "texture"
+    assert r.json()["questions"][0]["id"] == "preoccupations"
+
+
+API_PAYLOAD = {k: v for k, v in FORM.items() if not k.startswith("gene_")}
+API_PAYLOAD["intensites"] = {"secheresse": "beaucoup", "casse": "enormement"}
 
 
 def test_api_diagnostic():
-    r = client.post("/api/diagnostic", json=FORM)
+    r = client.post("/api/diagnostic", json=API_PAYLOAD)
     assert r.status_code == 200
     body = r.json()
     assert body["routine"]

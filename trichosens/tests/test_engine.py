@@ -4,6 +4,8 @@ import pytest
 
 from app.catalog import CATEGORIES, load_catalog
 from app.engine import run_diagnostic
+from app.pain_points import PAIN_POINTS
+from app.photo import AnalysePhoto
 from app.questionnaire import QUESTIONS_BY_ID, InvalidAnswers, validate
 
 BASE = {
@@ -13,14 +15,18 @@ BASE = {
     "porosite": "moyenne",
     "cuir_chevelu": "normal",
     "preoccupations": ["secheresse"],
+    "intensites": {"secheresse": "beaucoup"},
     "traitements": [],
     "chaleur": "jamais",
     "objectif": "hydratation",
 }
 
 
-def diag(**overrides):
-    return run_diagnostic(validate({**BASE, **overrides}))
+def diag(photo=None, **overrides):
+    data = {**BASE, **overrides}
+    if "preoccupations" in overrides and "intensites" not in overrides:
+        data["intensites"] = {p: "beaucoup" for p in overrides["preoccupations"]}
+    return run_diagnostic(validate(data), photo=photo)
 
 
 def titles(d):
@@ -48,7 +54,8 @@ def test_unknown_answer_is_rejected():
 
 def test_too_many_concerns_is_rejected():
     with pytest.raises(InvalidAnswers) as e:
-        validate({**BASE, "preoccupations": ["secheresse", "casse", "chute", "volume"]})
+        validate({**BASE, "preoccupations": ["secheresse", "casse", "chute", "volume"],
+                  "intensites": dict.fromkeys(["secheresse", "casse", "chute", "volume"], "un_peu")})
     assert "preoccupations" in e.value.errors
 
 
@@ -99,3 +106,72 @@ def test_every_profile_gets_a_product_for_each_step():
         d = diag(**dict(zip(ids, combo)))
         missing = [s.titre for s in d.routine if s.categorie and s.produit is None]
         assert not missing, f"{combo} : aucun produit pour {missing}"
+
+
+def test_missing_intensity_is_rejected():
+    with pytest.raises(InvalidAnswers) as e:
+        validate({**BASE, "preoccupations": ["casse"], "intensites": {}})
+    assert "gene_casse" in e.value.errors
+
+
+def test_stronger_pain_means_stronger_need():
+    weak = diag(preoccupations=["casse"], intensites={"casse": "un_peu"})
+    strong = diag(preoccupations=["casse"], intensites={"casse": "enormement"})
+    assert strong.besoins["proteines"] > weak.besoins["proteines"]
+
+
+def test_pain_reports_are_personalised_and_sorted():
+    d = diag(preoccupations=["frisottis", "casse"],
+             intensites={"frisottis": "un_peu", "casse": "enormement"},
+             traitements=["decoloration"])
+    assert [p.id for p in d.douleurs] == ["casse", "frisottis"]
+    casse = d.douleurs[0]
+    assert any("décoloration" in c for c in casse.causes)
+    assert casse.actions and casse.a_eviter and casse.delai
+
+
+def test_every_pain_point_has_engine_points():
+    from app.engine import PREOCCUPATION_POINTS
+    assert set(PAIN_POINTS) == set(PREOCCUPATION_POINTS)
+
+
+def photo(**overrides):
+    data = {
+        "exploitable": True, "conseil_photo": None, "texture": "boucle",
+        "confiance_texture": "elevee", "epaisseur": "moyen", "densite": "moyenne",
+        "signes": [], "observations": ["Les longueurs paraissent sèches."], "alerte_medicale": None,
+    }
+    return AnalysePhoto.model_validate({**data, **overrides})
+
+
+def test_photo_confirms_pain_point():
+    d = diag(photo=photo(signes=[{"signe": "secheresse", "intensite": "marque",
+                                  "explication": "Pointes ternes et rêches."}]))
+    assert d.douleurs[0].vu_sur_photo
+    assert d.douleurs[0].note_photo == "Pointes ternes et rêches."
+
+
+def test_photo_adds_unchosen_signs_and_raises_needs():
+    sign = {"signe": "casse", "intensite": "modere", "explication": "Cheveux cassés visibles."}
+    d = diag(photo=photo(signes=[sign]))
+    assert [s["id"] for s in d.signes_photo_en_plus] == ["casse"]
+    assert d.besoins["proteines"] > diag().besoins["proteines"]
+
+
+def test_photo_texture_disagreement_is_explained():
+    d = diag(photo=photo(texture="crepu"))
+    assert any("crépus" in n for n in d.notes_photo)
+    assert not diag(photo=photo(texture="crepu", confiance_texture="faible")).notes_photo
+
+
+def test_unusable_photo_changes_nothing():
+    p = photo(exploitable=False, conseil_photo="Prenez la photo à la lumière du jour.",
+              signes=[{"signe": "casse", "intensite": "marque", "explication": "x"}])
+    d = diag(photo=p)
+    assert d.besoins == diag().besoins
+    assert "lumière du jour" in d.notes_photo[0]
+
+
+def test_photo_medical_alert_is_shown():
+    d = diag(photo=photo(alerte_medicale="Une zone sans cheveux mérite un avis médical."))
+    assert "Une zone sans cheveux mérite un avis médical." in d.alertes

@@ -13,6 +13,8 @@ affinées avec des experts (trichologues, coiffeurs) puis avec les données.
 from dataclasses import dataclass, field
 
 from .catalog import Product, load_catalog
+from .pain_points import INTENSITE_FACTEUR, PAIN_POINTS, PainReport, explain
+from .photo import AnalysePhoto
 from .questionnaire import QUESTIONS_BY_ID, Answers
 
 # --- Besoins -----------------------------------------------------------------
@@ -70,7 +72,12 @@ PREOCCUPATION_POINTS = {
     "definition": {"definition": 5, "hydratation": 1},
     "pousse": {"cuir_chevelu": 2, "reparation": 1},
     "terne": {"nutrition": 3},
+    "demelage": {"hydratation": 2, "nutrition": 2},
+    "alourdis": {"volume": 2},
 }
+
+# Poids des signes vus sur la photo : ils complètent les réponses sans les remplacer.
+PHOTO_FACTEUR = {"leger": 0.3, "modere": 0.5, "marque": 0.8}
 
 TRAITEMENT_POINTS = {
     "coloration": {"reparation": 1, "proteines": 1, "nutrition": 1},
@@ -95,13 +102,13 @@ OBJECTIF_POINTS = {
 }
 
 
-def compute_needs(a: Answers) -> dict[str, int]:
+def compute_needs(a: Answers, photo: AnalysePhoto | None = None) -> dict[str, int]:
     """Renvoie un score de 0 à 100 pour chaque besoin."""
-    raw = dict.fromkeys(NEEDS, 0)
+    raw: dict[str, float] = dict.fromkeys(NEEDS, 0.0)
 
-    def add(points: dict[str, int]) -> None:
+    def add(points: dict[str, int], factor: float = 1.0) -> None:
         for need, value in points.items():
-            raw[need] += value
+            raw[need] += value * factor
 
     add(TEXTURE_POINTS[a.texture])
     add(EPAISSEUR_POINTS[a.epaisseur])
@@ -110,7 +117,10 @@ def compute_needs(a: Answers) -> dict[str, int]:
     add(CHALEUR_POINTS[a.chaleur])
     add(OBJECTIF_POINTS[a.objectif])
     for p in a.preoccupations:
-        add(PREOCCUPATION_POINTS[p])
+        add(PREOCCUPATION_POINTS[p], INTENSITE_FACTEUR[a.intensites.get(p, "beaucoup")])
+    if photo and photo.exploitable:
+        for s in photo.signes:
+            add(PREOCCUPATION_POINTS[s.signe], PHOTO_FACTEUR[s.intensite])
     for t in a.traitements:
         add(TRAITEMENT_POINTS[t])
 
@@ -135,17 +145,27 @@ class Step:
 @dataclass
 class Diagnostic:
     resume: str
+    texture: str
     besoins: dict[str, int]
     priorites: list[str]
     frequence_lavage: str
     poids_produits: str
     routine: list[Step]
+    douleurs: list[PainReport] = field(default_factory=list)
     conseils: list[str] = field(default_factory=list)
     alertes: list[str] = field(default_factory=list)
+    photo: AnalysePhoto | None = None
+    notes_photo: list[str] = field(default_factory=list)
+    signes_photo_en_plus: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
             "resume": self.resume,
+            "texture": self.texture,
+            "douleurs": [d.to_dict() for d in self.douleurs],
+            "photo": self.photo.model_dump() if self.photo else None,
+            "notes_photo": self.notes_photo,
+            "signes_photo_en_plus": self.signes_photo_en_plus,
             "besoins": self.besoins,
             "priorites": self.priorites,
             "frequence_lavage": self.frequence_lavage,
@@ -215,6 +235,8 @@ def _poids_produits(a: Answers) -> str:
     score = {"lisse": -2, "ondule": -1, "boucle": 0, "frise": 1, "crepu": 2}[a.texture]
     score += {"fin": -2, "moyen": 0, "epais": 1}[a.epaisseur]
     score += {"faible": -1, "moyenne": 0, "forte": 1, "inconnue": 0}[a.porosite]
+    if "alourdis" in a.preoccupations:
+        score -= 1
     if score <= -2:
         return "leger"
     if score >= 2:
@@ -255,7 +277,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "apres_shampoing",
         ))
 
-    if boucles:
+    if boucles or "demelage" in a.preoccupations:
         steps.append(Step(
             "lavage", "Démêlage",
             "Démêlez sous l'après-shampoing ou le masque, avec les doigts ou un peigne à dents larges, "
@@ -331,7 +353,8 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "1 fois par semaine, appliquez un soin adapté et massez 3 à 5 minutes pour stimuler la circulation.",
             "soin_cuir",
         ))
-    if a.porosite == "faible" or a.cuir_chevelu == "gras" or texture_bouclee:
+    if (a.porosite == "faible" or a.cuir_chevelu == "gras" or texture_bouclee
+            or "alourdis" in a.preoccupations):
         steps.append(Step(
             "hebdomadaire", "Shampoing clarifiant",
             "1 fois par mois, pour enlever les résidus de produits qui alourdissent les cheveux.",
@@ -453,9 +476,50 @@ def recommend(category: str, a: Answers, besoins: dict[str, int], poids: str,
 # --- Point d'entrée ----------------------------------------------------------
 
 
-def run_diagnostic(a: Answers, catalog: list[Product] | None = None) -> Diagnostic:
+TEXTURE_LABELS = {"lisse": "lisses", "ondule": "ondulés", "boucle": "bouclés",
+                  "frise": "frisés", "crepu": "crépus"}
+INTENSITE_PHOTO = {"leger": "léger", "modere": "modéré", "marque": "marqué"}
+
+
+def _apply_photo(a: Answers, photo: AnalysePhoto, douleurs: list[PainReport],
+                 alertes: list[str]) -> tuple[list[str], list[dict]]:
+    """Croise l'analyse photo avec les réponses. Les réponses restent la référence."""
+    notes: list[str] = []
+    if not photo.exploitable:
+        if photo.conseil_photo:
+            notes.append(f"La photo n'a pas pu être exploitée : {photo.conseil_photo}")
+        return notes, []
+
+    if photo.texture and photo.texture != a.texture and photo.confiance_texture != "faible":
+        notes.append(
+            f"Sur la photo, vos cheveux paraissent plutôt {TEXTURE_LABELS[photo.texture]}, "
+            f"alors que vous les avez décrits {TEXTURE_LABELS[a.texture]}. Les cheveux coiffés ou "
+            "mouillés trompent souvent : observez-les après un lavage, sans produit. Si vous hésitez, "
+            "refaites le diagnostic avec l'autre texture pour comparer."
+        )
+
+    seen = {s.signe: s for s in photo.signes}
+    for d in douleurs:
+        if d.id in seen:
+            d.vu_sur_photo = True
+            d.note_photo = seen[d.id].explication
+
+    chosen = {d.id for d in douleurs}
+    en_plus = [
+        {"id": s.signe, "label": PAIN_POINTS[s.signe].label,
+         "intensite": INTENSITE_PHOTO[s.intensite], "explication": s.explication}
+        for s in photo.signes
+        if s.signe not in chosen and s.intensite != "leger"
+    ]
+    if photo.alerte_medicale:
+        alertes.append(photo.alerte_medicale)
+    return notes, en_plus
+
+
+def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
+                   photo: AnalysePhoto | None = None) -> Diagnostic:
     catalog = catalog if catalog is not None else load_catalog()
-    besoins = compute_needs(a)
+    besoins = compute_needs(a, photo)
     poids = _poids_produits(a)
     routine = _build_routine(a, besoins, poids)
     for step in routine:
@@ -463,14 +527,22 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None) -> Diagnost
             step.produit = recommend(step.categorie, a, besoins, poids, catalog)
 
     priorites = [n for n, s in sorted(besoins.items(), key=lambda kv: -kv[1]) if s > 0][:3]
+    douleurs = explain(a)
+    alertes = _alertes(a)
+    notes_photo, en_plus = _apply_photo(a, photo, douleurs, alertes) if photo else ([], [])
 
     return Diagnostic(
         resume=_resume(a),
+        texture=a.texture,
         besoins=besoins,
         priorites=priorites,
         frequence_lavage=_frequence_lavage(a),
         poids_produits=poids,
         routine=routine,
+        douleurs=douleurs,
         conseils=_conseils(a, besoins, poids),
-        alertes=_alertes(a),
+        alertes=alertes,
+        photo=photo,
+        notes_photo=notes_photo,
+        signes_photo_en_plus=en_plus,
     )

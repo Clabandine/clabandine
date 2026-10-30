@@ -1,12 +1,63 @@
 {% extends "base.html" %}
 {% block title %}Mon résultat – TrichoSens{% endblock %}
 {% block content %}
-<h1>Votre diagnostic</h1>
-<p class="lead">{{ d.resume }}</p>
+<section class="result-hero">
+  <img src="{{ visuel('texture-' ~ d.texture) }}" alt="" width="120" height="120">
+  <div>
+    <p class="eyebrow">Votre diagnostic</p>
+    <h1>Votre profil capillaire</h1>
+    <p class="lead">{{ d.resume }}</p>
+  </div>
+</section>
 
 {% for a in d.alertes %}
 <p class="alert" role="alert">{{ a }}</p>
 {% endfor %}
+
+{% if d.douleurs %}
+<section>
+  <h2>Ce qui vous gêne, et comment y remédier</h2>
+  <div class="pain-reports">
+    {% for p in d.douleurs %}
+    <article class="pain-report level-{{ p.intensite }}">
+      <header>
+        <h3>{{ p.label }}</h3>
+        <span class="level">Gêne : {{ p.intensite_label | lower }}</span>
+      </header>
+      {% if p.vu_sur_photo %}
+      <p class="photo-confirm">📷 Confirmé sur votre photo : {{ p.note_photo }}</p>
+      {% endif %}
+      <h4>Pourquoi chez vous</h4>
+      <ul>{% for c in p.causes %}<li>{{ c }}</li>{% endfor %}</ul>
+      <h4>Ce que nous allons faire</h4>
+      <ul class="check">{% for c in p.actions %}<li>{{ c }}</li>{% endfor %}</ul>
+      <h4>À éviter</h4>
+      <ul class="cross">{% for c in p.a_eviter %}<li>{{ c }}</li>{% endfor %}</ul>
+      <p class="delay">⏱ {{ p.delai }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if d.photo %}
+<section class="card">
+  <h2>📷 L'analyse de votre photo</h2>
+  {% if d.photo.exploitable %}
+  <ul>{% for o in d.photo.observations %}<li>{{ o }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% for n in d.notes_photo %}<p class="note">{{ n }}</p>{% endfor %}
+  {% if d.signes_photo_en_plus %}
+  <h3>L'IA a aussi remarqué</h3>
+  <ul>
+    {% for s in d.signes_photo_en_plus %}
+    <li><strong>{{ s.label }}</strong> ({{ s.intensite }}) : {{ s.explication }}</li>
+    {% endfor %}
+  </ul>
+  <p class="help">Nous en avons tenu compte dans votre routine.</p>
+  {% endif %}
+</section>
+{% endif %}
 
 <section class="card">
   <h2>Les besoins de vos cheveux</h2>

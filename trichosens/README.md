@@ -10,19 +10,21 @@ texture : lisse, ondulée, bouclée, frisée ou crépue.
 personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, un
 écosystème de marques et de professionnels.
 
-## Ce que fait cette première version (v0.1)
+## Ce que fait la version actuelle (v0.2)
 
-1. **Diagnostic capillaire** : 9 questions (texture, épaisseur, densité, porosité,
-   cuir chevelu, préoccupations, traitements chimiques, chaleur, objectif).
-2. **Profil des besoins** : un score sur 100 pour l'hydratation, la nutrition, les
-   protéines, la réparation, le cuir chevelu, la protection thermique, la définition et
-   le volume. Les 3 besoins les plus forts sont les priorités.
-3. **Routine sur mesure** : les étapes du jour de lavage, du quotidien, de la semaine ou
-   du mois et de la nuit, avec la fréquence de lavage conseillée.
-4. **Produits recommandés** : pour chaque étape, le produit du catalogue qui correspond
-   le mieux au profil (texture, poids du soin, type de cuir chevelu, besoins).
-5. **Conseils et alertes** : conseils pratiques, et une invitation à consulter un médecin
-   en cas de chute ou de problème de cuir chevelu persistant.
+1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
+   (sécheresse, casse, frisottis, chute, démêlage…) et leur intensité.
+2. **Analyse photo par IA (facultative)** : la personne prend ses cheveux en photo ;
+   l'IA (Claude, d'Anthropic) observe la texture, l'épaisseur, la densité et les signes
+   visibles (sécheresse, frisottis, pointes abîmées…). Elle pré-remplit les réponses,
+   confirme ou complète les points de douleur. La photo n'est jamais enregistrée.
+3. **Questionnaire illustré** en 5 étapes : texture, épaisseur, densité et porosité sont
+   illustrées, puis cuir chevelu, habitudes et objectif.
+4. **Résultat centré sur les problèmes** : pour chaque point de douleur, pourquoi il
+   apparaît chez cette personne, ce qu'on va faire, ce qu'il faut éviter et le délai
+   pour voir des résultats.
+5. **Besoins, routine et produits** : scores sur 100, routine du jour de lavage au soin
+   de nuit, et produit recommandé pour chaque étape.
 
 Le catalogue (`app/data/produits.json`) contient des **produits génériques d'exemple**,
 à remplacer par les produits des marques partenaires.
@@ -63,18 +65,45 @@ Chaque nouvel envoi sur cette branche met le site à jour automatiquement.
 Avec l'offre gratuite, le site se met en veille après 15 minutes sans visite :
 la première page met alors une trentaine de secondes à s'afficher.
 
+### Activer l'analyse photo
+
+1. Créez une clé sur https://console.anthropic.com (rubrique **API Keys**) et ajoutez
+   un moyen de paiement. Une analyse coûte quelques centimes.
+2. Dans Render, ouvrez le service **trichosens**, puis **Environment**, et donnez sa
+   valeur à `ANTHROPIC_API_KEY`.
+3. `PHOTO_MAX_PAR_HEURE` (par personne) et `PHOTO_MAX_PAR_JOUR` (pour tout le site)
+   limitent le nombre d'analyses, et donc la dépense.
+
+En local : `export ANTHROPIC_API_KEY=...` avant `uvicorn`.
+
+## Images
+
+Les réponses illustrées utilisent des dessins vectoriels générés par
+`scripts/generate_illustrations.py` (dans `app/static/img/illustrations/`).
+
+**Pour les remplacer par des photos HD**, déposez un fichier JPG, PNG ou WebP carré
+(1000 × 1000 pixels conseillés) dans `app/static/img/photos/`, avec le même nom que
+l'illustration : `texture-lisse.jpg`, `texture-ondule.jpg`, `texture-boucle.jpg`,
+`texture-frise.jpg`, `texture-crepu.jpg`, `epaisseur-fin.jpg`, `densite-forte.jpg`,
+`porosite-faible.jpg`… La photo remplace automatiquement l'illustration.
+Utilisez uniquement des photos dont vous avez les droits (vos propres photos avec
+l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels).
+
 ## Organisation du code
 
 ```
 trichosens/
 ├── app/
 │   ├── main.py            # Application web (pages + API JSON)
-│   ├── questionnaire.py   # Questions du diagnostic et validation des réponses
+│   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
+│   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
+│   ├── photo.py           # Analyse photo par l'IA (Claude)
 │   ├── engine.py          # Moteur : besoins, routine, produits, conseils
 │   ├── catalog.py         # Chargement du catalogue de produits
 │   ├── data/produits.json # Catalogue d'exemple
 │   ├── templates/         # Pages HTML (accueil, questionnaire, résultat)
-│   └── static/style.css   # Mise en page
+│   └── static/            # Mise en page, script du questionnaire, images
+├── scripts/               # Génération des illustrations
 └── tests/                 # Tests automatiques (pytest)
 ```
 
@@ -88,7 +117,8 @@ en haut de `app/engine.py` (`TEXTURE_POINTS`, `PREOCCUPATION_POINTS`, etc.).
 
 | Méthode | Adresse            | Rôle                                        |
 |---------|--------------------|---------------------------------------------|
-| GET     | `/api/questions`   | Liste des questions et des réponses possibles |
+| GET     | `/api/questions`   | Étapes, questions et réponses possibles |
+| POST    | `/api/analyse-photo` | Envoie une photo (`photo`, `consentement=oui`), renvoie l'analyse |
 | POST    | `/api/diagnostic`  | Envoie les réponses (JSON), renvoie le diagnostic |
 
 Exemple :
@@ -97,6 +127,7 @@ Exemple :
 curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/json" -d '{
   "texture": "boucle", "epaisseur": "fin", "densite": "moyenne", "porosite": "forte",
   "cuir_chevelu": "normal", "preoccupations": ["secheresse", "frisottis"],
+  "intensites": {"secheresse": "enormement", "frisottis": "un_peu"},
   "traitements": [], "chaleur": "parfois", "objectif": "definition"
 }'
 ```
@@ -105,7 +136,8 @@ curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/
 
 - **v0.1 – Mise en ligne** : publier le diagnostic et recueillir les avis des premiers
   testeurs.
-- **v0.2 – Diagnostic affiné** : ajuster les questions et les règles à partir de ces avis.
+- **v0.2 – Diagnostic affiné** : points de douleur, analyse photo par IA, questionnaire
+  illustré. À ajuster ensuite avec les avis des testeurs.
 - **v0.3 – Catalogue réel** : base de données de produits (ingrédients, prix, liens),
   filtres (vegan, sans parfum, budget).
 - **v0.4 – Comptes utilisateurs** : sauvegarder son diagnostic et suivre l'évolution

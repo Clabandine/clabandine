@@ -6,17 +6,21 @@ l'API et la validation s'appuient tous sur cette liste.
 
 from dataclasses import dataclass, field
 
+from .pain_points import INTENSITES, PAIN_POINTS
+
 
 @dataclass(frozen=True)
 class Option:
     value: str
     label: str
     hint: str = ""
+    visuel: str = ""  # nom d'image (sans extension), voir main.visuel()
 
 
 @dataclass(frozen=True)
 class Question:
     id: str
+    step: str
     label: str
     options: tuple[Option, ...]
     multiple: bool = False
@@ -27,53 +31,93 @@ class Question:
     def values(self) -> set[str]:
         return {o.value for o in self.options}
 
+    @property
+    def has_visuals(self) -> bool:
+        return any(o.visuel for o in self.options)
+
+
+@dataclass(frozen=True)
+class Step:
+    id: str
+    titre: str
+    intro: str
+
+
+STEPS: tuple[Step, ...] = (
+    Step("douleurs", "Ce qui vous gêne",
+         "Commençons par l'essentiel : qu'est-ce qui vous dérange dans vos cheveux aujourd'hui ?"),
+    Step("photo", "Votre photo",
+         "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic."),
+    Step("cheveux", "Vos cheveux", "Apprenons à connaître la nature de vos cheveux."),
+    Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien."),
+    Step("objectif", "Votre objectif", "Dernière question !"),
+)
 
 QUESTIONS: tuple[Question, ...] = (
     Question(
+        id="preoccupations",
+        step="douleurs",
+        label="Qu'est-ce qui vous gêne le plus dans vos cheveux ?",
+        help="Choisissez jusqu'à 3 réponses, puis dites-nous à quel point cela vous gêne.",
+        multiple=True,
+        max_choices=3,
+        options=tuple(Option(p.id, p.label, p.description) for p in PAIN_POINTS.values()),
+    ),
+    Question(
         id="texture",
+        step="cheveux",
         label="Quelle est la texture naturelle de vos cheveux ?",
         help="Observez vos cheveux au naturel, après un lavage, sans coiffage.",
         options=(
-            Option("lisse", "Lisses", "Tombent droit, sans forme."),
-            Option("ondule", "Ondulés", "Forment des vagues en S."),
-            Option("boucle", "Bouclés", "Forment des boucles bien définies."),
-            Option("frise", "Frisés", "Petites boucles serrées, en ressort."),
-            Option("crepu", "Crépus", "Motif en zigzag très serré, fort rétrécissement."),
+            Option("lisse", "Lisses", "Tombent droit, sans forme.", "texture-lisse"),
+            Option("ondule", "Ondulés", "Forment des vagues en S.", "texture-ondule"),
+            Option("boucle", "Bouclés", "Forment des boucles bien définies.", "texture-boucle"),
+            Option("frise", "Frisés", "Petites boucles serrées, en ressort.", "texture-frise"),
+            Option("crepu", "Crépus", "Motif en zigzag très serré, fort rétrécissement.", "texture-crepu"),
         ),
     ),
     Question(
         id="epaisseur",
+        step="cheveux",
         label="Quelle est l'épaisseur d'un cheveu ?",
         help="Faites rouler un cheveu entre vos doigts : le sentez-vous à peine, ou nettement ?",
         options=(
-            Option("fin", "Fin", "On le sent à peine."),
-            Option("moyen", "Moyen"),
-            Option("epais", "Épais", "On le sent nettement, comme un fil."),
+            Option("fin", "Fin", "On le sent à peine.", "epaisseur-fin"),
+            Option("moyen", "Moyen", "On le sent sous les doigts.", "epaisseur-moyen"),
+            Option("epais", "Épais", "On le sent nettement, comme un fil.", "epaisseur-epais"),
         ),
     ),
     Question(
         id="densite",
+        step="cheveux",
         label="Quelle est la densité de votre chevelure ?",
         help="Voit-on facilement votre cuir chevelu quand les cheveux sont secs ?",
         options=(
-            Option("faible", "Faible", "Le cuir chevelu se voit facilement."),
-            Option("moyenne", "Moyenne"),
-            Option("forte", "Forte", "Le cuir chevelu se voit à peine."),
+            Option("faible", "Faible", "Le cuir chevelu se voit facilement.", "densite-faible"),
+            Option("moyenne", "Moyenne", "Le cuir chevelu se voit un peu.", "densite-moyenne"),
+            Option("forte", "Forte", "Le cuir chevelu se voit à peine.", "densite-forte"),
         ),
     ),
     Question(
         id="porosite",
+        step="cheveux",
         label="Comment vos cheveux réagissent-ils à l'eau ?",
         help="La porosité indique la facilité avec laquelle le cheveu absorbe et garde l'hydratation.",
         options=(
-            Option("faible", "Ils mettent du temps à se mouiller et à sécher", "Porosité faible : les soins restent en surface."),
-            Option("moyenne", "Ils se mouillent et sèchent normalement", "Porosité moyenne."),
-            Option("forte", "Ils absorbent l'eau vite mais sèchent très vite", "Porosité forte : l'hydratation s'échappe vite."),
-            Option("inconnue", "Je ne sais pas"),
+            Option("faible", "Ils mettent du temps à se mouiller et à sécher",
+                   "Porosité faible : les écailles sont fermées, les soins restent en surface.",
+                   "porosite-faible"),
+            Option("moyenne", "Ils se mouillent et sèchent normalement",
+                   "Porosité moyenne : l'équilibre idéal.", "porosite-moyenne"),
+            Option("forte", "Ils absorbent l'eau vite mais sèchent très vite",
+                   "Porosité forte : les écailles sont ouvertes, l'hydratation s'échappe.",
+                   "porosite-forte"),
+            Option("inconnue", "Je ne sais pas", "Nous vous expliquerons comment la tester."),
         ),
     ),
     Question(
         id="cuir_chevelu",
+        step="habitudes",
         label="Comment décririez-vous votre cuir chevelu ?",
         options=(
             Option("normal", "Normal"),
@@ -84,27 +128,10 @@ QUESTIONS: tuple[Question, ...] = (
         ),
     ),
     Question(
-        id="preoccupations",
-        label="Quelles sont vos principales préoccupations ?",
-        help="Choisissez jusqu'à 3 réponses.",
-        multiple=True,
-        max_choices=3,
-        options=(
-            Option("secheresse", "Sécheresse"),
-            Option("casse", "Casse"),
-            Option("frisottis", "Frisottis"),
-            Option("chute", "Chute de cheveux"),
-            Option("pointes", "Pointes abîmées ou fourchues"),
-            Option("volume", "Manque de volume"),
-            Option("definition", "Boucles peu définies"),
-            Option("pousse", "Pousse lente"),
-            Option("terne", "Cheveux ternes"),
-        ),
-    ),
-    Question(
         id="traitements",
+        step="habitudes",
         label="Vos cheveux ont-ils subi des traitements chimiques ?",
-        help="Plusieurs réponses possibles.",
+        help="Plusieurs réponses possibles. Ne cochez rien si ce n'est pas le cas.",
         multiple=True,
         required=False,
         options=(
@@ -116,6 +143,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="chaleur",
+        step="habitudes",
         label="À quelle fréquence utilisez-vous des outils chauffants ?",
         help="Lisseur, fer à boucler, sèche-cheveux à température élevée.",
         options=(
@@ -126,6 +154,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="objectif",
+        step="objectif",
         label="Quel est votre objectif principal ?",
         options=(
             Option("hydratation", "Des cheveux mieux hydratés"),
@@ -154,6 +183,8 @@ class Answers:
     objectif: str
     preoccupations: list[str] = field(default_factory=list)
     traitements: list[str] = field(default_factory=list)
+    # Intensité de la gêne pour chaque préoccupation : un_peu, beaucoup ou enormement.
+    intensites: dict[str, str] = field(default_factory=dict)
 
 
 class InvalidAnswers(ValueError):
@@ -162,13 +193,14 @@ class InvalidAnswers(ValueError):
         self.errors = errors
 
 
-def validate(raw: dict[str, str | list[str] | None]) -> Answers:
+def validate(raw: dict) -> Answers:
     """Vérifie les réponses brutes et renvoie des `Answers` propres.
 
+    `raw["intensites"]` est un dictionnaire {préoccupation: intensité}.
     Lève `InvalidAnswers` avec un message par question en erreur.
     """
     errors: dict[str, str] = {}
-    clean: dict[str, str | list[str]] = {}
+    clean: dict = {}
 
     for q in QUESTIONS:
         value = raw.get(q.id)
@@ -198,6 +230,20 @@ def validate(raw: dict[str, str | list[str] | None]) -> Answers:
             else:
                 clean[q.id] = value
 
+    raw_intensites = raw.get("intensites") or {}
+    if not isinstance(raw_intensites, dict):
+        raw_intensites = {}
+    intensites = {}
+    for pid in clean.get("preoccupations", []):
+        value = raw_intensites.get(pid)
+        if not value:
+            errors[f"gene_{pid}"] = "Dites-nous à quel point cela vous gêne."
+        elif value not in INTENSITES:
+            errors[f"gene_{pid}"] = f"Réponse inconnue : {value}"
+        else:
+            intensites[pid] = value
+    clean["intensites"] = intensites
+
     if errors:
         raise InvalidAnswers(errors)
-    return Answers(**clean)  # type: ignore[arg-type]
+    return Answers(**clean)

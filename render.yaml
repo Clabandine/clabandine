@@ -13,3 +13,12 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
+      # Clé de l'API Anthropic pour l'analyse photo : à saisir dans le tableau de bord Render.
+      # Sans elle, le site fonctionne mais l'étape photo est masquée.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Nombre maximal d'analyses photo (chaque analyse coûte quelques centimes).
+      - key: PHOTO_MAX_PAR_HEURE
+        value: "5"
+      - key: PHOTO_MAX_PAR_JOUR
+        value: "200"
