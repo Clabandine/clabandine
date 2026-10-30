@@ -41,6 +41,7 @@ def test_submit_form_shows_result():
     assert "Protection thermique" in r.text
     assert "Ce qui vous gêne, et comment y remédier" in r.text
     assert "Votre type : 3C" in r.text
+    assert "docs.google.com/forms" in r.text and "Donner mon avis" in r.text
     pains = r.text[r.text.index("Ce qui vous gêne, et comment y remédier"):]
     assert pains.index("Casse") < pains.index("Sécheresse")  # la plus gênante d'abord
 

@@ -227,3 +227,4 @@ h2 { font-size: 1.35rem; }
 .badge.surveiller { background: var(--accent-soft); color: var(--accent); }
 .key-tip { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 0; }
 .badge.photo { background: #3d7a5c; color: #fff; }
+.feedback { background: var(--accent-soft); border-color: var(--accent); text-align: center; }

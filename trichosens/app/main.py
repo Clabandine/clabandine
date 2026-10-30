@@ -4,6 +4,7 @@ Lancer en local :  uvicorn app.main:app --reload   (depuis le dossier trichosens
 """
 
 import logging
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -23,6 +24,11 @@ from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
 logging.basicConfig(level=logging.INFO)
 
 BASE_DIR = Path(__file__).parent
+# Questionnaire d'avis des testeurs (modifiable avec la variable d'environnement AVIS_URL).
+AVIS_URL = os.environ.get(
+    "AVIS_URL",
+    "https://docs.google.com/forms/d/e/1FAIpQLSe5vH5uiouUbUPDXzPx-1ez6kIwnHbCByc8VU3u0stc92FnTw/viewform",
+)
 STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(
@@ -44,7 +50,7 @@ def visuel(name: str) -> str:
 
 templates.env.globals.update(
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
-    FAMILLES=FAMILLES,
+    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL,
 )
 
 
