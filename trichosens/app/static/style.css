@@ -228,3 +228,48 @@ h2 { font-size: 1.35rem; }
 .key-tip { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 0; }
 .badge.photo { background: #3d7a5c; color: #fff; }
 .feedback { background: var(--accent-soft); border-color: var(--accent); text-align: center; }
+
+/* --- v0.4 : catalogue, programme, saisons, suivi --- */
+.site-header nav { display: flex; gap: 14px; }
+.product .brand { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.labels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.labels span { font-size: 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
+.product-link { font-size: 0.9rem; font-weight: 600; margin-top: 4px; }
+.phases { display: grid; gap: 12px; }
+@media (min-width: 640px) { .phases { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); } }
+.phase { background: var(--bg); border-radius: 10px; padding: 12px 14px; }
+.phase h3 { margin: 2px 0 6px; color: var(--text); }
+.phase ul { margin: 0; padding-left: 18px; }
+.saison { border-left: 6px solid #c9a184; }
+.saison-hiver { border-left-color: #6a8fb3; }
+.saison-ete { border-left-color: #e0a630; }
+.saison-printemps { border-left-color: #6ea56b; }
+.evolution { border-left: 6px solid #3d7a5c; }
+.changes { list-style: none; padding: 0; display: grid; gap: 8px; }
+.changes li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.changes small { color: var(--muted); width: 100%; }
+.trend { font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; background: var(--accent-soft); color: var(--accent); }
+.trend-mieux .trend, .trend-resolu .trend { background: #e3f1e8; color: #2f6a4c; }
+.trend-moins_bien .trend, .trend-nouveau .trend { background: #fbe7e2; color: #a3361f; }
+.table-wrap { overflow-x: auto; }
+.timeline { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.timeline th, .timeline td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.timeline tbody th { text-align: left; font-weight: 600; }
+.dots { color: var(--accent); letter-spacing: 1px; }
+.dots.l3 { color: #a3361f; }
+.dots.none { color: var(--border); }
+.needs-evo { list-style: none; padding: 0; display: grid; gap: 6px; }
+.needs-evo li { display: grid; grid-template-columns: 1fr auto 3em; gap: 10px; }
+.delta { text-align: right; font-weight: 700; }
+.delta.down { color: #2f6a4c; }
+.delta.up { color: #a3361f; }
+.delta.same { color: var(--muted); }
+.journal-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+.journal-form label { display: flex; flex-direction: column; font-size: 0.85rem; font-weight: 600; gap: 4px; }
+.journal-form .wide { grid-column: 1 / -1; }
+.journal-form input { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); min-width: 0; }
+.journal-form button { grid-column: 1 / -1; }
+.journal { list-style: none; padding: 0; display: grid; gap: 6px; margin-top: 12px; }
+.journal li { display: grid; grid-template-columns: auto auto 1fr auto; gap: 10px; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.link { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 1rem; }
+.button.danger { background: transparent; color: #a3361f; border: 2px solid #a3361f; }

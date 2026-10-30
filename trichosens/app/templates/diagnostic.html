@@ -156,6 +156,8 @@
   </section>
   {% endif %}
   {% endfor %}
+  <input type="hidden" name="precedent" id="precedent" value="">
+  <p class="help suivi-info" hidden>📈 Nous comparerons ce diagnostic avec celui du <span></span>.</p>
   <button class="button submit" type="submit">Voir mon diagnostic</button>
 </form>
 <script src="{{ url_for('static', path='diagnostic.js') }}" defer></script>

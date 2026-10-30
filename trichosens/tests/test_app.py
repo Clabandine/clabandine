@@ -78,3 +78,19 @@ def test_api_diagnostic_rejects_invalid():
 
 def test_health_check():
     assert client.get("/sante").json() == {"statut": "ok"}
+
+
+def test_form_compares_with_previous_diagnostic():
+    first = client.post("/api/diagnostic", json=API_PAYLOAD).json()
+    previous = {**first["suivi"], "date": "2026-01-01"}
+    import json
+    r = client.post("/diagnostic", data={**FORM, "precedent": json.dumps(previous)})
+    assert r.status_code == 200
+    assert "Votre évolution" in r.text
+    assert 'id="suivi-data"' in r.text
+
+
+def test_suivi_page():
+    r = client.get("/suivi")
+    assert r.status_code == 200
+    assert "Journal de pousse" in r.text

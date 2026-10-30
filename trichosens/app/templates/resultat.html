@@ -14,6 +14,25 @@
 <p class="alert" role="alert">{{ a }}</p>
 {% endfor %}
 
+{% if d.evolution %}
+<section class="card evolution">
+  <h2>📈 Votre évolution</h2>
+  <p class="help">Depuis votre diagnostic du {{ d.evolution.depuis.strftime('%d/%m/%Y') }}.</p>
+  {% if d.evolution.changements %}
+  <ul class="changes">
+    {% for c in d.evolution.changements %}
+    <li class="trend-{{ c.tendance }}">
+      <strong>{{ c.label }}</strong>
+      <span class="trend">{{ TENDANCE_LABEL[c.tendance] }}</span>
+      <small>{{ c.avant }} → {{ c.apres }}</small>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% for m in d.evolution.messages %}<p>{{ m }}</p>{% endfor %}
+</section>
+{% endif %}
+
 <section class="card type-card">
   <h2>Votre type : {{ d.type_cheveux.code }} · {{ d.type_cheveux.nom }}</h2>
   <p>{{ d.type_cheveux.description }}</p>
@@ -93,6 +112,29 @@
   <p><strong>Lavage conseillé :</strong> {{ d.frequence_lavage }}.</p>
 </section>
 
+<section class="card programme">
+  <h2>Votre programme · {{ PHASES[d.phase] }}</h2>
+  <div class="phases">
+    {% for ph in d.programme %}
+    <div class="phase">
+      <p class="eyebrow">{{ ph.periode }}</p>
+      <h3>{{ ph.titre }}</h3>
+      <ul>{% for a in ph.actions %}<li>{{ a }}</li>{% endfor %}</ul>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="key-tip">📅 Prochain point : refaites votre diagnostic vers le
+    <strong>{{ d.prochain_point.strftime('%d/%m/%Y') }}</strong> pour suivre l'évolution de vos cheveux
+    et adapter votre routine.</p>
+</section>
+
+{% if d.conseils_saison %}
+<section class="card saison saison-{{ d.saison.id }}">
+  <h2>{{ {'hiver': '❄️', 'printemps': '🌱', 'ete': '☀️', 'automne': '🍂'}[d.saison.id] }} Vos cheveux {{ d.saison.article }}</h2>
+  <ul class="tips">{% for c in d.conseils_saison %}<li>{{ c }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
 <section>
   <h2>Votre routine sur mesure</h2>
   {% for moment, label in MOMENTS.items() %}
@@ -109,10 +151,13 @@
       {% if s.produit %}
       <div class="product">
         <span class="tag">{{ CATEGORIES[s.produit.categorie] }}</span>
+        <span class="brand">{{ s.produit.marque }}</span>
         <strong>{{ s.produit.nom }}</strong>
         <small>{{ s.produit.description }}</small>
         {% if s.produit.ingredients_cles %}<small class="ingredients">{{ s.produit.ingredients_cles | join(', ') }}</small>{% endif %}
-        {% if s.produit.prix %}<span class="price">{{ '%.2f' | format(s.produit.prix) | replace('.', ',') }} €</span>{% endif %}
+        {% if s.produit.labels %}<span class="labels">{% for l in s.produit.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
+        {% if s.produit.prix %}<span class="price">≈ {{ '%.2f' | format(s.produit.prix) | replace('.', ',') }} €{% if s.produit.contenance %} <small>· {{ s.produit.contenance }}</small>{% endif %}</span>{% endif %}
+        {% if s.produit.lien %}<a class="product-link" href="{{ s.produit.lien }}" target="_blank" rel="noopener">Voir le produit</a>{% endif %}
       </div>
       {% endif %}
     </li>
@@ -140,5 +185,15 @@
 </section>
 {% endif %}
 
+<p class="help">Prix indicatifs, susceptibles de varier selon les revendeurs. TrichoSens n'est lié à
+  aucune de ces marques.</p>
+
+<section class="card suivi-save">
+  <h2>Votre suivi</h2>
+  <p id="suivi-status">Ce diagnostic est enregistré sur votre appareil pour suivre l'évolution de vos cheveux.</p>
+  <p><a class="button" href="/suivi">Voir mon suivi</a></p>
+</section>
+
 <p><a class="button secondary" href="/diagnostic">Refaire le diagnostic</a></p>
+<script type="application/json" id="suivi-data">{{ d.suivi | tojson }}</script>
 {% endblock %}

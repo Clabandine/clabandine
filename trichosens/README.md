@@ -10,29 +10,45 @@ texture : lisse, ondulée, bouclée, frisée ou crépue.
 personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, un
 écosystème de marques et de professionnels.
 
-## Ce que fait la version actuelle (v0.3)
+## Ce que fait la version actuelle (v0.4)
 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
    (sécheresse, casse, frisottis, chute, démêlage…) et leur intensité.
-2. **Analyse photo par IA (facultative)** : la personne prend ses cheveux en photo ;
-   l'IA (Claude, d'Anthropic) observe la texture, l'épaisseur, la densité et les signes
-   visibles (sécheresse, frisottis, pointes abîmées…). Elle pré-remplit les réponses,
-   confirme ou complète les points de douleur. La photo n'est jamais enregistrée.
-3. **Les 12 types de cheveux (1A à 4C)** : la personne choisit sa famille (1 raides,
-   2 ondulés, 3 bouclés, 4 crépus et frisés), puis son type, en photo. Chaque type a
-   ses problèmes fréquents (`app/hair_types.py`), qui renforcent les besoins, adaptent
-   le poids des soins et s'affichent dans le résultat (« Vous l'avez signalé », « Vu sur
-   votre photo » ou « À surveiller »).
-4. **Questionnaire illustré** en 5 étapes : épaisseur, densité et porosité sont
-   illustrées, puis cuir chevelu, habitudes et objectif.
-5. **Résultat centré sur les problèmes** : pour chaque point de douleur, pourquoi il
-   apparaît chez cette personne, ce qu'on va faire, ce qu'il faut éviter et le délai
-   pour voir des résultats.
-6. **Besoins, routine et produits** : scores sur 100, routine du jour de lavage au soin
-   de nuit, et produit recommandé pour chaque étape.
+2. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
+   de cheveux et les signes visibles, et pré-remplit les réponses. La photo n'est jamais
+   enregistrée.
+3. **Les 12 types de cheveux (1A à 4C)**, chacun avec ses problèmes fréquents
+   (`app/hair_types.py`).
+4. **Résultat centré sur les problèmes** : causes propres au profil, actions, à éviter, délai.
+5. **Programme de soins** : phase intensive (4 semaines), puis entretien, avec la date du
+   prochain point.
+6. **Saisons** : besoins, conseils et choix des produits adaptés à la saison en cours.
+7. **Évolution des cheveux** : chaque diagnostic est gardé sur l'appareil de la personne.
+   Le suivant est comparé au précédent (mieux, stable, en hausse, réglé, nouveau) et le
+   programme s'adapte : entretien si ça progresse, ajustement ciblé sinon. La page
+   **Mon suivi** montre l'historique, l'évolution des besoins et un journal de pousse
+   (mèche témoin).
+8. **Catalogue de produits réels** : 51 produits de marques disponibles en France.
 
-Le catalogue (`app/data/produits.json`) contient des **produits génériques d'exemple**,
-à remplacer par les produits des marques partenaires.
+### Le catalogue
+
+Le catalogue est le tableau `app/data/produits.csv` (séparateur « ; »), qui s'ouvre dans
+Google Sheets ou Excel. **Les prix sont indicatifs et toutes les fiches sont à vérifier**
+(colonne `a_verifier`) : formules et prix changent souvent.
+
+| Colonne | Contenu |
+|---|---|
+| `categorie` | shampoing, apres_shampoing, masque, leave_in, coiffant, huile, protecteur_thermique, soin_cuir, shampoing_clarifiant, accessoire |
+| `besoins` | hydratation, nutrition, proteines, reparation, cuir_chevelu, protection, definition, volume (+ `anti_chute`, réservé aux personnes qui ont de la chute) |
+| `poids` | leger, moyen ou riche |
+| `types` | types de cheveux, avec des plages : `3A-4C`, `1A\|2B`. Vide = tous |
+| `cuir_chevelu` | normal, sec, gras, sensible, pellicules. Vide = tous |
+| `saisons` | hiver, printemps, été, automne : le produit est favorisé à cette saison |
+| `sans_parfum`, `sans_sulfates`, `sans_silicones`, `vegan` | oui, non, ou vide si inconnu |
+| `prix_indicatif`, `contenance`, `lien` | informations d'achat (le lien peut être un lien affilié) |
+
+Dans les colonnes à plusieurs valeurs, séparez les valeurs par `|`. Après modification,
+lancez `pytest` : les tests signalent toute ligne mal remplie.
 
 ## Lancer le projet
 
@@ -101,19 +117,21 @@ trichosens/
 ├── app/
 │   ├── main.py            # Application web (pages + API JSON)
 │   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
+│   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
 │   ├── photo.py           # Analyse photo par l'IA (Claude)
-│   ├── engine.py          # Moteur : besoins, routine, produits, conseils
-│   ├── catalog.py         # Chargement du catalogue de produits
-│   ├── data/produits.json # Catalogue d'exemple
-│   ├── templates/         # Pages HTML (accueil, questionnaire, résultat)
-│   └── static/            # Mise en page, script du questionnaire, images
+│   ├── seasons.py         # Adaptation à la saison
+│   ├── evolution.py       # Comparaison avec le diagnostic précédent
+│   ├── engine.py          # Moteur : besoins, programme, routine, produits, conseils
+│   ├── catalog.py         # Lecture et vérification du catalogue
+│   ├── data/produits.csv  # Catalogue de produits (tableau)
+│   ├── templates/         # Pages HTML (accueil, questionnaire, résultat, suivi)
+│   └── static/            # Mise en page, scripts (questionnaire, suivi), images
 ├── scripts/               # Génération des illustrations
 └── tests/                 # Tests automatiques (pytest)
 ```
 
-**Ajouter un produit :** ajoutez une entrée dans `app/data/produits.json`. Les champs
-`textures` et `cuir_chevelu` vides veulent dire « convient à tous ».
+**Ajouter un produit :** ajoutez une ligne dans `app/data/produits.csv` (voir plus haut).
 
 **Ajuster le diagnostic :** les points attribués à chaque réponse sont dans les tableaux
 en haut de `app/engine.py` (`TEXTURE_POINTS`, `PREOCCUPATION_POINTS`, etc.).
@@ -143,10 +161,11 @@ curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/
   testeurs.
 - **v0.2 – Diagnostic affiné** : points de douleur, analyse photo par IA, questionnaire
   illustré. À ajuster ensuite avec les avis des testeurs.
-- **v0.3 – Catalogue réel** : base de données de produits (ingrédients, prix, liens),
-  filtres (vegan, sans parfum, budget).
-- **v0.4 – Comptes utilisateurs** : sauvegarder son diagnostic et suivre l'évolution
-  de ses cheveux (journal, photos, rappels de routine).
+- **v0.3 – Les 12 types de cheveux** (1A à 4C) et leurs problèmes fréquents.
+- **v0.4 – Catalogue réel, programme, saisons et suivi** : produits réels, phases de soins,
+  conseils de saison, historique et comparaison des diagnostics sur l'appareil.
+- **Ensuite** : préférences (budget, vegan, sans parfum), rappels de routine, photos dans le
+  suivi, puis comptes utilisateurs pour retrouver son suivi sur tous ses appareils.
 - **v0.5 – E-commerce** : panier, paiement, partenariats avec les marques.
 - **v0.6 – Professionnels** : annuaire de coiffeurs et trichologues, prise de rendez-vous.
 - **Plus tard** : analyse photo des cheveux, application mobile, plusieurs langues.

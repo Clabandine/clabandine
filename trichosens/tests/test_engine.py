@@ -80,10 +80,10 @@ def test_hair_loss_triggers_medical_alert():
     assert not diag().alertes
 
 
-def test_sensitive_scalp_gets_fragrance_free_shampoo():
+def test_sensitive_scalp_gets_shampoo_made_for_it():
     d = diag(cuir_chevelu="sensible")
     shampoo = next(s.produit for s in d.routine if s.categorie == "shampoing")
-    assert shampoo.sans_parfum
+    assert "sensible" in shampoo.cuir_chevelu
 
 
 def test_fine_straight_hair_gets_light_products():

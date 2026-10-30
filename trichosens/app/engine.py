@@ -10,9 +10,13 @@ Les règles sont volontairement simples et lisibles : elles pourront être
 affinées avec des experts (trichologues, coiffeurs) puis avec les données.
 """
 
+import datetime as dt
+import uuid
 from dataclasses import dataclass, field
 
+from . import seasons
 from .catalog import Product, load_catalog
+from .evolution import Evolution, ResumeSuivi, compare
 from .hair_types import FAMILLES, HAIR_TYPES, TYPE_POIDS, TYPE_POINTS, HairType
 from .pain_points import INTENSITE_FACTEUR, PAIN_POINTS, PainReport, explain
 from .photo import AnalysePhoto
@@ -103,7 +107,8 @@ OBJECTIF_POINTS = {
 }
 
 
-def compute_needs(a: Answers, photo: AnalysePhoto | None = None) -> dict[str, int]:
+def compute_needs(a: Answers, photo: AnalysePhoto | None = None,
+                  saison: seasons.Saison | None = None) -> dict[str, int]:
     """Renvoie un score de 0 à 100 pour chaque besoin."""
     raw: dict[str, float] = dict.fromkeys(NEEDS, 0.0)
 
@@ -113,6 +118,8 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None) -> dict[str, in
 
     add(TEXTURE_POINTS[a.texture])
     add(TYPE_POINTS[a.type_cheveux])
+    if saison:
+        add(saison.points)
     add(EPAISSEUR_POINTS[a.epaisseur])
     add(POROSITE_POINTS[a.porosite])
     add(CUIR_POINTS[a.cuir_chevelu])
@@ -155,6 +162,13 @@ class Diagnostic:
     frequence_lavage: str
     poids_produits: str
     routine: list[Step]
+    saison: seasons.Saison | None = None
+    conseils_saison: list[str] = field(default_factory=list)
+    phase: str = "intensive"
+    programme: list[dict] = field(default_factory=list)
+    prochain_point: dt.date | None = None
+    evolution: Evolution | None = None
+    suivi: dict = field(default_factory=dict)
     douleurs: list[PainReport] = field(default_factory=list)
     conseils: list[str] = field(default_factory=list)
     alertes: list[str] = field(default_factory=list)
@@ -169,6 +183,19 @@ class Diagnostic:
             "type_cheveux": self.type_cheveux.code,
             "problemes_type": self.problemes_type,
             "douleurs": [d.to_dict() for d in self.douleurs],
+            "saison": self.saison.id if self.saison else None,
+            "conseils_saison": self.conseils_saison,
+            "phase": self.phase,
+            "programme": self.programme,
+            "prochain_point": self.prochain_point.isoformat() if self.prochain_point else None,
+            "evolution": {
+                "depuis": self.evolution.depuis.isoformat(),
+                "jours": self.evolution.jours,
+                "changements": [c.__dict__ for c in self.evolution.changements],
+                "besoins_deltas": self.evolution.besoins_deltas,
+                "messages": self.evolution.messages,
+            } if self.evolution else None,
+            "suivi": self.suivi,
             "photo": self.photo.model_dump() if self.photo else None,
             "notes_photo": self.notes_photo,
             "signes_photo_en_plus": self.signes_photo_en_plus,
@@ -446,32 +473,42 @@ def _alertes(a: Answers) -> list[str]:
 # --- Produits ----------------------------------------------------------------
 
 
-def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str) -> float | None:
+def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
+                  saison: str | None = None) -> float | None:
     """Score d'adéquation d'un produit au profil, ou None s'il ne convient pas."""
-    if p.textures and a.texture not in p.textures:
+    if p.types and a.type_cheveux not in p.types:
         return None
     if p.cuir_chevelu and a.cuir_chevelu not in p.cuir_chevelu:
         return None
-    if a.cuir_chevelu == "sensible" and not p.sans_parfum and p.categorie in {
-        "shampoing", "soin_cuir", "shampoing_clarifiant"
-    }:
+    # Cuir chevelu sensible : seulement des produits prévus pour lui.
+    if (a.cuir_chevelu == "sensible" and p.categorie in {"shampoing", "soin_cuir"}
+            and "sensible" not in p.cuir_chevelu):
         return None
 
-    score = sum(besoins.get(b, 0) for b in p.besoins) / max(1, len(p.besoins))
+    vrais_besoins = [b for b in p.besoins if b in NEEDS]
+    score = sum(besoins.get(b, 0) for b in vrais_besoins) / max(1, len(vrais_besoins))
+    if "anti_chute" in p.besoins:
+        if "chute" not in a.preoccupations:
+            return None  # pas de soin anti-chute sans chute
+        score += 25
     if p.poids == poids:
         score += 20
     elif {p.poids, poids} == {"leger", "riche"}:
         score -= 30
+    if saison and saison in p.saisons:
+        score += 8
+    if p.types and len(p.types) <= 6:
+        score += 4  # produit pensé pour peu de types : plus ciblé
     return score
 
 
 def recommend(category: str, a: Answers, besoins: dict[str, int], poids: str,
-              catalog: list[Product]) -> Product | None:
+              catalog: list[Product], saison: str | None = None) -> Product | None:
     best: tuple[float, Product] | None = None
     for p in catalog:
         if p.categorie != category:
             continue
-        s = score_product(p, a, besoins, poids)
+        s = score_product(p, a, besoins, poids, saison)
         if s is None:
             continue
         if best is None or s > best[0]:
@@ -529,17 +566,73 @@ def _apply_photo(a: Answers, photo: AnalysePhoto, douleurs: list[PainReport],
     return notes, en_plus
 
 
+PHASES = {
+    "intensive": "Phase intensive",
+    "entretien": "Phase d'entretien",
+    "ajustement": "Phase d'ajustement",
+}
+
+
+def _programme(phase: str, a: Answers, besoins: dict[str, int], priorites: list[str],
+               today: dt.date) -> tuple[list[dict], dt.date]:
+    """Programme en étapes : ce qui change d'une période à l'autre."""
+    prio = [NEEDS[p].lower() for p in priorites[:2]]
+    focus = " et ".join(prio) if prio else "l'équilibre de vos cheveux"
+    point = today + dt.timedelta(weeks=4)
+    entretien = {
+        "titre": "Entretien",
+        "periode": "Ensuite",
+        "actions": [
+            "Masque 1 lavage sur 2, après-shampoing les autres fois.",
+            "Gardez les gestes protecteurs : nuit en satin, démêlage doux, séchage sans frotter.",
+            "Refaites votre diagnostic tous les 2 à 3 mois, ou à chaque changement de saison.",
+        ],
+    }
+    if phase == "entretien":
+        return [entretien], today + dt.timedelta(weeks=8)
+    intensif = {
+        "titre": "Phase intensive" if phase == "intensive" else "Ajustement",
+        "periode": "Semaines 1 à 4",
+        "actions": [
+            f"Priorité : {focus}.",
+            "Masque à chaque lavage, en suivant la routine ci-dessous.",
+            "Notez ce que vous observez après chaque lavage (souplesse, frisottis, casse).",
+        ],
+    }
+    if besoins.get("reparation", 0) >= 50 or "pointes" in a.preoccupations:
+        intensif["actions"].append("Faites couper les pointes abîmées au début du programme.")
+    if phase == "ajustement":
+        intensif["actions"].insert(1, "Appliquez les ajustements indiqués dans « Votre évolution ».")
+    return [intensif, {**entretien, "periode": "À partir de la semaine 5"}], point
+
+
+def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
+    return ResumeSuivi(
+        id=uuid.uuid4().hex, date=today, type_cheveux=a.type_cheveux,
+        intensites=dict(a.intensites), besoins=d.besoins, phase=d.phase,
+        prochain_point=d.prochain_point,
+    ).model_dump(mode="json")
+
+
 def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
-                   photo: AnalysePhoto | None = None) -> Diagnostic:
+                   photo: AnalysePhoto | None = None, today: dt.date | None = None,
+                   precedent: ResumeSuivi | None = None) -> Diagnostic:
     catalog = catalog if catalog is not None else load_catalog()
-    besoins = compute_needs(a, photo)
+    today = today or dt.date.today()
+    saison = seasons.saison_du(today)
+    besoins = compute_needs(a, photo, saison)
     poids = _poids_produits(a)
+    evolution = compare(precedent, a, besoins, today) if precedent else None
+    phase = evolution.phase if evolution else "intensive"
     routine = _build_routine(a, besoins, poids)
     for step in routine:
         if step.categorie:
-            step.produit = recommend(step.categorie, a, besoins, poids, catalog)
+            step.produit = recommend(step.categorie, a, besoins, poids, catalog, saison.id)
+        if step.categorie == "masque" and phase == "entretien":
+            step.conseil = "Un lavage sur deux, en alternance avec un après-shampoing. " + step.conseil
 
     priorites = [n for n, s in sorted(besoins.items(), key=lambda kv: -kv[1]) if s > 0][:3]
+    programme, prochain_point = _programme(phase, a, besoins, priorites, today)
     douleurs = explain(a)
     typ = HAIR_TYPES[a.type_cheveux]
     vus = {s.signe for s in photo.signes} if photo and photo.exploitable else set()
@@ -551,7 +644,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
     alertes = _alertes(a)
     notes_photo, en_plus = _apply_photo(a, photo, douleurs, alertes) if photo else ([], [])
 
-    return Diagnostic(
+    d = Diagnostic(
         resume=_resume(a),
         texture=a.texture,
         type_cheveux=typ,
@@ -567,4 +660,12 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         photo=photo,
         notes_photo=notes_photo,
         signes_photo_en_plus=en_plus,
+        saison=saison,
+        conseils_saison=seasons.conseils(saison, a),
+        phase=phase,
+        programme=programme,
+        prochain_point=prochain_point,
+        evolution=evolution,
     )
+    d.suivi = resume_suivi(d, a, today)
+    return d

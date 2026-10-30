@@ -16,9 +16,10 @@ from starlette.concurrency import run_in_threadpool
 
 from . import photo as photo_ai
 from .catalog import CATEGORIES
-from .engine import MOMENTS, NEEDS, run_diagnostic
+from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
+from .evolution import TENDANCE_LABEL, ResumeSuivi
 from .hair_types import FAMILLES
-from .pain_points import INTENSITES
+from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
 
 logging.basicConfig(level=logging.INFO)
@@ -51,6 +52,7 @@ def visuel(name: str) -> str:
 templates.env.globals.update(
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
     FAMILLES=FAMILLES, AVIS_URL=AVIS_URL,
+    PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()}, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
 )
 
 
@@ -93,6 +95,21 @@ def _parse_photo(raw: str | None) -> photo_ai.AnalysePhoto | None:
         return None
 
 
+def _parse_precedent(raw: str | None) -> ResumeSuivi | None:
+    """Relit le résumé du diagnostic précédent envoyé par le navigateur."""
+    if not raw:
+        return None
+    try:
+        return ResumeSuivi.model_validate_json(raw)
+    except ValidationError:
+        return None
+
+
+@app.get("/suivi", response_class=HTMLResponse)
+def suivi(request: Request):
+    return templates.TemplateResponse(request, "suivi.html")
+
+
 @app.post("/diagnostic", response_class=HTMLResponse)
 async def diagnostic_submit(request: Request):
     form = await request.form()
@@ -101,13 +118,15 @@ async def diagnostic_submit(request: Request):
         pid: form.get(f"gene_{pid}") for pid in form.getlist("preoccupations")
     }
     photo_json = form.get("analyse_photo") or ""
+    precedent_json = form.get("precedent") or ""
     try:
         answers = validate(raw)
     except InvalidAnswers as e:
         ctx = _form_context(raw, e.errors)
         ctx["photo_json"] = photo_json
         return templates.TemplateResponse(request, "diagnostic.html", ctx, status_code=422)
-    diagnostic = run_diagnostic(answers, photo=_parse_photo(photo_json))
+    diagnostic = run_diagnostic(answers, photo=_parse_photo(photo_json),
+                                precedent=_parse_precedent(precedent_json))
     return templates.TemplateResponse(request, "resultat.html", {"d": diagnostic})
 
 
@@ -183,4 +202,10 @@ def api_diagnostic(payload: dict):
             photo = photo_ai.AnalysePhoto.model_validate(payload["photo"])
         except ValidationError as e:
             raise HTTPException(status_code=422, detail={"photo": str(e)})
-    return run_diagnostic(answers, photo=photo).to_dict()
+    precedent = None
+    if payload.get("precedent"):
+        try:
+            precedent = ResumeSuivi.model_validate(payload["precedent"])
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail={"precedent": str(e)})
+    return run_diagnostic(answers, photo=photo, precedent=precedent).to_dict()
