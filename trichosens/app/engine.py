@@ -13,9 +13,10 @@ affinées avec des experts (trichologues, coiffeurs) puis avec les données.
 from dataclasses import dataclass, field
 
 from .catalog import Product, load_catalog
+from .hair_types import FAMILLES, HAIR_TYPES, TYPE_POIDS, TYPE_POINTS, HairType
 from .pain_points import INTENSITE_FACTEUR, PAIN_POINTS, PainReport, explain
 from .photo import AnalysePhoto
-from .questionnaire import QUESTIONS_BY_ID, Answers
+from .questionnaire import Answers
 
 # --- Besoins -----------------------------------------------------------------
 
@@ -111,6 +112,7 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None) -> dict[str, in
             raw[need] += value * factor
 
     add(TEXTURE_POINTS[a.texture])
+    add(TYPE_POINTS[a.type_cheveux])
     add(EPAISSEUR_POINTS[a.epaisseur])
     add(POROSITE_POINTS[a.porosite])
     add(CUIR_POINTS[a.cuir_chevelu])
@@ -146,6 +148,8 @@ class Step:
 class Diagnostic:
     resume: str
     texture: str
+    type_cheveux: HairType
+    problemes_type: list[dict]
     besoins: dict[str, int]
     priorites: list[str]
     frequence_lavage: str
@@ -162,6 +166,8 @@ class Diagnostic:
         return {
             "resume": self.resume,
             "texture": self.texture,
+            "type_cheveux": self.type_cheveux.code,
+            "problemes_type": self.problemes_type,
             "douleurs": [d.to_dict() for d in self.douleurs],
             "photo": self.photo.model_dump() if self.photo else None,
             "notes_photo": self.notes_photo,
@@ -193,20 +199,19 @@ MOMENTS = {
 }
 
 
-def _label(question_id: str, value: str) -> str:
-    for option in QUESTIONS_BY_ID[question_id].options:
-        if option.value == value:
-            return option.label
-    return value
+CUIR_LABELS = {"normal": "normal", "sec": "sec", "gras": "gras", "sensible": "sensible",
+               "pellicules": "avec pellicules"}
 
 
 def _resume(a: Answers) -> str:
-    texture = _label("texture", a.texture).lower()
-    epaisseur = {"fin": "fins", "moyen": "d'épaisseur moyenne", "epais": "épais"}[a.epaisseur]
-    parts = [f"Cheveux {texture}, {epaisseur}", f"densité {a.densite}"]
+    t = HAIR_TYPES[a.type_cheveux]
+    epaisseur = {"fin": "cheveu fin", "moyen": "cheveu d'épaisseur moyenne",
+                 "epais": "cheveu épais"}[a.epaisseur]
+    parts = [f"{FAMILLES[t.famille].label}, type {t.code} ({t.nom.lower()})",
+             epaisseur, f"densité {a.densite}"]
     if a.porosite != "inconnue":
         parts.append(f"porosité {a.porosite}")
-    parts.append(f"cuir chevelu {_label('cuir_chevelu', a.cuir_chevelu).lower()}")
+    parts.append(f"cuir chevelu {CUIR_LABELS[a.cuir_chevelu]}")
     return ", ".join(parts) + "."
 
 
@@ -237,6 +242,7 @@ def _poids_produits(a: Answers) -> str:
     score += {"faible": -1, "moyenne": 0, "forte": 1, "inconnue": 0}[a.porosite]
     if "alourdis" in a.preoccupations:
         score -= 1
+    score += TYPE_POIDS.get(a.type_cheveux, 0)
     if score <= -2:
         return "leger"
     if score >= 2:
@@ -476,8 +482,6 @@ def recommend(category: str, a: Answers, besoins: dict[str, int], poids: str,
 # --- Point d'entrée ----------------------------------------------------------
 
 
-TEXTURE_LABELS = {"lisse": "lisses", "ondule": "ondulés", "boucle": "bouclés",
-                  "frise": "frisés", "crepu": "crépus"}
 INTENSITE_PHOTO = {"leger": "léger", "modere": "modéré", "marque": "marqué"}
 
 
@@ -490,13 +494,22 @@ def _apply_photo(a: Answers, photo: AnalysePhoto, douleurs: list[PainReport],
             notes.append(f"La photo n'a pas pu être exploitée : {photo.conseil_photo}")
         return notes, []
 
-    if photo.texture and photo.texture != a.texture and photo.confiance_texture != "faible":
-        notes.append(
-            f"Sur la photo, vos cheveux paraissent plutôt {TEXTURE_LABELS[photo.texture]}, "
-            f"alors que vous les avez décrits {TEXTURE_LABELS[a.texture]}. Les cheveux coiffés ou "
-            "mouillés trompent souvent : observez-les après un lavage, sans produit. Si vous hésitez, "
-            "refaites le diagnostic avec l'autre texture pour comparer."
-        )
+    vu = HAIR_TYPES.get(photo.type_cheveux or "")
+    if vu and vu.code != a.type_cheveux and photo.confiance_type != "faible":
+        if vu.famille != a.famille:
+            notes.append(
+                f"Sur la photo, vos cheveux ressemblent plutôt au type {vu.code} "
+                f"({FAMILLES[vu.famille].label.lower()}), alors que vous avez choisi le type "
+                f"{a.type_cheveux}. Les cheveux coiffés ou mouillés trompent souvent : observez-les "
+                "après un lavage, sans produit. Si vous hésitez, refaites le diagnostic avec "
+                "l'autre type pour comparer."
+            )
+        else:
+            notes.append(
+                f"Sur la photo, vos cheveux ressemblent plutôt au type {vu.code} "
+                f"({vu.nom.lower()}) qu'au type {a.type_cheveux}. Les deux sont proches : "
+                "vos soins restent adaptés."
+            )
 
     seen = {s.signe: s for s in photo.signes}
     for d in douleurs:
@@ -528,12 +541,21 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
 
     priorites = [n for n, s in sorted(besoins.items(), key=lambda kv: -kv[1]) if s > 0][:3]
     douleurs = explain(a)
+    typ = HAIR_TYPES[a.type_cheveux]
+    vus = {s.signe for s in photo.signes} if photo and photo.exploitable else set()
+    problemes_type = [
+        {"id": pid, "label": PAIN_POINTS[pid].label, "pourquoi": why,
+         "signale": pid in a.preoccupations, "vu_photo": pid in vus}
+        for pid, why in typ.problemes
+    ]
     alertes = _alertes(a)
     notes_photo, en_plus = _apply_photo(a, photo, douleurs, alertes) if photo else ([], [])
 
     return Diagnostic(
         resume=_resume(a),
         texture=a.texture,
+        type_cheveux=typ,
+        problemes_type=problemes_type,
         besoins=besoins,
         priorites=priorites,
         frequence_lavage=_frequence_lavage(a),

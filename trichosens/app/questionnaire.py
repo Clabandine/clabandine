@@ -6,6 +6,7 @@ l'API et la validation s'appuient tous sur cette liste.
 
 from dataclasses import dataclass, field
 
+from .hair_types import HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 
 
@@ -15,6 +16,7 @@ class Option:
     label: str
     hint: str = ""
     visuel: str = ""  # nom d'image (sans extension), voir main.visuel()
+    groupe: str = ""  # famille de cheveux (1 à 4) pour la question du type
 
 
 @dataclass(frozen=True)
@@ -64,16 +66,14 @@ QUESTIONS: tuple[Question, ...] = (
         options=tuple(Option(p.id, p.label, p.description) for p in PAIN_POINTS.values()),
     ),
     Question(
-        id="texture",
+        id="type_cheveux",
         step="cheveux",
-        label="Quelle est la texture naturelle de vos cheveux ?",
-        help="Observez vos cheveux au naturel, après un lavage, sans coiffage.",
-        options=(
-            Option("lisse", "Lisses", "Tombent droit, sans forme.", "texture-lisse"),
-            Option("ondule", "Ondulés", "Forment des vagues en S.", "texture-ondule"),
-            Option("boucle", "Bouclés", "Forment des boucles bien définies.", "texture-boucle"),
-            Option("frise", "Frisés", "Petites boucles serrées, en ressort.", "texture-frise"),
-            Option("crepu", "Crépus", "Motif en zigzag très serré, fort rétrécissement.", "texture-crepu"),
+        label="Quel est votre type de cheveux ?",
+        help="Observez vos cheveux au naturel, après un lavage, sans coiffage. "
+             "Choisissez d'abord la famille, puis le type le plus proche.",
+        options=tuple(
+            Option(t.code, f"{t.code} · {t.nom}", t.description, t.visuel, t.famille)
+            for t in HAIR_TYPES.values()
         ),
     ),
     Question(
@@ -174,7 +174,7 @@ QUESTIONS_BY_ID: dict[str, Question] = {q.id: q for q in QUESTIONS}
 class Answers:
     """Réponses validées au questionnaire."""
 
-    texture: str
+    type_cheveux: str
     epaisseur: str
     densite: str
     porosite: str
@@ -185,6 +185,15 @@ class Answers:
     traitements: list[str] = field(default_factory=list)
     # Intensité de la gêne pour chaque préoccupation : un_peu, beaucoup ou enormement.
     intensites: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def texture(self) -> str:
+        """Grande texture déduite du type : lisse, ondule, boucle, frise ou crepu."""
+        return HAIR_TYPES[self.type_cheveux].texture
+
+    @property
+    def famille(self) -> str:
+        return HAIR_TYPES[self.type_cheveux].famille
 
 
 class InvalidAnswers(ValueError):

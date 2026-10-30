@@ -2,13 +2,13 @@
 {% block content %}
 <section class="hero">
   <h1>Comprendre ses cheveux.<br>Trouver les bons soins.<br>Révéler leur potentiel.</h1>
-  <p>Lisses, ondulés, bouclés, frisés ou crépus : dites-nous ce qui vous gêne, montrez-nous
+  <p>Du type 1A au type 4C, lisses, ondulés, bouclés, frisés ou crépus : dites-nous ce qui vous gêne, montrez-nous
      vos cheveux en photo, et recevez une routine de soins sur mesure.</p>
   <a class="button" href="/diagnostic">Commencer mon diagnostic</a>
   <p class="small">Environ 3 minutes, gratuit et sans inscription.</p>
   <div class="textures">
-    {% for t, label in [('lisse', 'Lisses'), ('ondule', 'Ondulés'), ('boucle', 'Bouclés'), ('frise', 'Frisés'), ('crepu', 'Crépus')] %}
-    <figure><img src="{{ visuel('texture-' ~ t) }}" alt="Cheveux {{ label | lower }}" width="240" height="240"><figcaption>{{ label }}</figcaption></figure>
+    {% for f in FAMILLES.values() %}
+    <figure><img src="{{ visuel(f.visuel) }}" alt="{{ f.label }}" width="240" height="240"><figcaption><strong>{{ f.titre }}</strong><br>{{ f.label }}</figcaption></figure>
     {% endfor %}
   </div>
 </section>

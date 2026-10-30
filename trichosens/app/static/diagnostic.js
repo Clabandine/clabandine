@@ -100,6 +100,23 @@
     update();
   });
 
+  // Type de cheveux : choisir la famille (1 à 4), puis le type (A, B ou C).
+  const subtypeLabel = form.querySelector(".subtype-label");
+  function showFamily(famille) {
+    form.querySelectorAll(".subtype-group").forEach((g) => {
+      const active = g.dataset.famille === famille;
+      g.classList.toggle("active", active);
+      // Un type d'une autre famille n'a plus de sens : on le décoche.
+      if (!active) g.querySelectorAll("input").forEach((i) => (i.checked = false));
+    });
+    if (subtypeLabel) subtypeLabel.hidden = !famille;
+  }
+  form.querySelectorAll('input[name="famille"]').forEach((r) =>
+    r.addEventListener("change", () => showFamily(r.value))
+  );
+  const checkedFamily = form.querySelector('input[name="famille"]:checked');
+  if (checkedFamily) showFamily(checkedFamily.value);
+
   // Après une erreur côté serveur, ouvrir la première étape concernée.
   const firstError = panels.findIndex((p) => p.querySelector(".has-error"));
   show(firstError === -1 ? 0 : firstError);
@@ -118,8 +135,8 @@
   const hidden = document.getElementById("analyse-photo");
   let file = null;
 
+  const FAMILY_LABELS = { 1: "raides (lisses)", 2: "ondulés", 3: "bouclés", 4: "crépus et frisés" };
   const LABELS = {
-    texture: { lisse: "lisses", ondule: "ondulés", boucle: "bouclés", frise: "frisés", crepu: "crépus" },
     signe: {
       secheresse: "Sécheresse", frisottis: "Frisottis", pointes: "Pointes abîmées", casse: "Casse",
       terne: "Manque d'éclat", definition: "Boucles peu définies", volume: "Manque de volume",
@@ -176,6 +193,18 @@
     if (!Array.from(group).some((r) => r.checked)) radio.checked = true;
   }
 
+  function suggestType(code) {
+    const family = form.querySelector(`input[name="famille"][value="${code[0]}"]`);
+    if (!family) return;
+    family.closest(".option").querySelector(".ai-badge").hidden = false;
+    const typeChosen = form.querySelector('input[name="type_cheveux"]:checked');
+    if (!typeChosen) {
+      family.checked = true;
+      showFamily(code[0]);
+    }
+    suggest("type_cheveux", code);
+  }
+
   function render(a) {
     form.querySelectorAll(".ai-badge").forEach((b) => (b.hidden = true));
     if (!a.exploitable) {
@@ -186,9 +215,10 @@
       return;
     }
     let html = "<h3>Ce que l'IA observe</h3>";
-    if (a.texture) {
-      html += `<p>Vos cheveux paraissent <strong>${LABELS.texture[a.texture]}</strong>` +
-        ` (confiance ${a.confiance_texture === "elevee" ? "élevée" : a.confiance_texture}).</p>`;
+    if (a.type_cheveux) {
+      html += `<p>Vos cheveux ressemblent au <strong>type ${a.type_cheveux}</strong>, ` +
+        `${FAMILY_LABELS[a.type_cheveux[0]]} ` +
+        `(confiance ${a.confiance_type === "elevee" ? "élevée" : a.confiance_type}).</p>`;
     }
     html += "<ul>" + a.observations.map((o) => `<li>${escapeHtml(o)}</li>`).join("") + "</ul>";
     if (a.signes.length) {
@@ -202,7 +232,7 @@
     result.innerHTML = html;
     result.hidden = false;
 
-    if (a.texture && a.confiance_texture !== "faible") suggest("texture", a.texture);
+    if (a.type_cheveux && a.confiance_type !== "faible") suggestType(a.type_cheveux);
     if (a.epaisseur && a.epaisseur !== "indetermine") suggest("epaisseur", a.epaisseur);
     if (a.densite && a.densite !== "indetermine") suggest("densite", a.densite);
   }

@@ -34,6 +34,44 @@
     {% endfor %}
   </div>
 
+  {% elif q.id == 'type_cheveux' %}
+  {% set current_famille = current[0] if current else '' %}
+  <div class="families js-only" hidden>
+    <p class="sub-label">1. Votre famille de cheveux</p>
+    <div class="options visual">
+      {% for f in FAMILLES.values() %}
+      <label class="option" data-famille="{{ f.id }}">
+        <input type="radio" name="famille" value="{{ f.id }}" {% if current_famille == f.id %}checked{% endif %}>
+        <img src="{{ visuel(f.visuel) }}" alt="" loading="lazy" width="240" height="240">
+        <span class="option-text">
+          <strong>{{ f.titre }}</strong>
+          <small>{{ f.label }}</small>
+          <em class="ai-badge" hidden>Suggestion de l'IA</em>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="sub-label subtype-label" hidden>2. Le type le plus proche</p>
+  </div>
+  {% for f in FAMILLES.values() %}
+  <div class="subtype-group" data-famille="{{ f.id }}">
+    <h3 class="group-title">{{ f.titre }} : {{ f.label }}</h3>
+    <div class="options visual">
+      {% for o in q.options if o.groupe == f.id %}
+      <label class="option" data-value="{{ o.value }}">
+        <input type="radio" name="{{ q.id }}" value="{{ o.value }}" {% if current == o.value %}checked{% endif %}>
+        <img src="{{ visuel(o.visuel) }}" alt="" loading="lazy" width="240" height="240">
+        <span class="option-text">
+          <strong>{{ o.label }}</strong>
+          <small>{{ o.hint }}</small>
+          <em class="ai-badge" hidden>Suggestion de l'IA</em>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
   {% else %}
   <div class="options{% if q.has_visuals %} visual{% endif %}">
     {% for o in q.options %}

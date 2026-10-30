@@ -2,7 +2,7 @@
 {% block title %}Mon résultat – TrichoSens{% endblock %}
 {% block content %}
 <section class="result-hero">
-  <img src="{{ visuel('texture-' ~ d.texture) }}" alt="" width="120" height="120">
+  <img src="{{ visuel(d.type_cheveux.visuel) }}" alt="" width="120" height="120">
   <div>
     <p class="eyebrow">Votre diagnostic</p>
     <h1>Votre profil capillaire</h1>
@@ -13,6 +13,24 @@
 {% for a in d.alertes %}
 <p class="alert" role="alert">{{ a }}</p>
 {% endfor %}
+
+<section class="card type-card">
+  <h2>Votre type : {{ d.type_cheveux.code }} · {{ d.type_cheveux.nom }}</h2>
+  <p>{{ d.type_cheveux.description }}</p>
+  <h3>Les problèmes fréquents de votre type</h3>
+  <ul class="type-problems">
+    {% for p in d.problemes_type %}
+    <li>
+      <strong>{{ p.label }}</strong>
+      {% if p.signale %}<span class="badge signale">Vous l'avez signalé</span>{% endif %}
+      {% if p.vu_photo %}<span class="badge photo">Vu sur votre photo</span>{% endif %}
+      {% if not p.signale and not p.vu_photo %}<span class="badge surveiller">À surveiller</span>{% endif %}
+      <br><span>{{ p.pourquoi }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="key-tip">💡 {{ d.type_cheveux.conseil_cle }}</p>
+</section>
 
 {% if d.douleurs %}
 <section>

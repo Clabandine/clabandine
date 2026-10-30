@@ -47,8 +47,10 @@ class AnalysePhoto(BaseModel):
     conseil_photo: str | None = Field(
         description="Si la photo n'est pas exploitable : comment en prendre une meilleure."
     )
-    texture: Literal["lisse", "ondule", "boucle", "frise", "crepu"] | None
-    confiance_texture: Literal["faible", "moyenne", "elevee"]
+    type_cheveux: Literal[
+        "1A", "1B", "1C", "2A", "2B", "2C", "3A", "3B", "3C", "4A", "4B", "4C"
+    ] | None
+    confiance_type: Literal["faible", "moyenne", "elevee"]
     epaisseur: Literal["fin", "moyen", "epais", "indetermine"]
     densite: Literal["faible", "moyenne", "forte", "indetermine"]
     signes: list[Signe]
@@ -68,17 +70,24 @@ une routine de soins.
 Observez uniquement les cheveux et, s'il est visible, le cuir chevelu. N'identifiez jamais \
 la personne et ne commentez ni son visage, ni son apparence, ni son origine.
 
-Textures :
-- lisse : tombe droit, sans forme ;
-- ondule : vagues en S ;
-- boucle : boucles bien formées, en spirales lâches ;
-- frise : petites boucles serrées, en ressort ;
-- crepu : motif en zigzag très serré, fort rétrécissement.
+Types de cheveux :
+- 1A : raides, fins, plats et très brillants ;
+- 1B : raides, moyennement épais, avec un peu de corps ;
+- 1C : raides et épais ;
+- 2A : ondulations souples et lâches en S ;
+- 2B : ondulations plus marquées, qui frisent avec l'humidité ;
+- 2C : ondulations prononcées, proches de petites boucles ;
+- 3A : boucles larges, souples et bien définies ;
+- 3B : boucles plus serrées, en ressorts ou tire-bouchons ;
+- 3C : boucles très serrées, denses et volumineuses ;
+- 4A : petites boucles très serrées mais encore définies et rebondies ;
+- 4B : motif en Z, vagues très anguleuses, peu de boucles définies ;
+- 4C : frisure extrêmement serrée, sans boucle vraiment définie, très dense.
 
 Soyez prudent et honnête : ne signalez que ce qui est visible. Si la photo est floue, trop \
 sombre, prise de trop loin, ou ne montre pas de cheveux, indiquez qu'elle n'est pas \
 exploitable et expliquez comment en prendre une meilleure. Les cheveux coiffés, mouillés \
-ou attachés rendent la texture plus difficile à juger : baissez alors votre niveau de confiance.
+ou attachés rendent le type plus difficile à juger : baissez alors votre niveau de confiance.
 
 Vous ne posez pas de diagnostic médical. Si vous voyez des zones sans cheveux, des rougeurs \
 ou des squames importantes, conseillez seulement un avis médical, sans nommer de maladie.

@@ -8,6 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from .hair_types import HAIR_TYPES
+
 if TYPE_CHECKING:
     from .questionnaire import Answers
 
@@ -334,7 +336,11 @@ def explain(a: "Answers") -> list[PainReport]:
     for pid in a.preoccupations:
         p = PAIN_POINTS[pid]
         intensite = a.intensites.get(pid, "beaucoup")
-        causes = list(p.causes) + [text for cond, text in p.causes_profil if cond(a)]
+        causes = list(p.causes)
+        typ = HAIR_TYPES[a.type_cheveux]
+        causes += [f"Fréquent chez le type {typ.code} : {why[0].lower()}{why[1:]}"
+                   for prob, why in typ.problemes if prob == pid]
+        causes += [text for cond, text in p.causes_profil if cond(a)]
         reports.append(PainReport(
             id=p.id, label=p.label, description=p.description,
             intensite=intensite, intensite_label=INTENSITES[intensite],

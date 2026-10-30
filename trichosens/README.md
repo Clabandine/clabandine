@@ -10,7 +10,7 @@ texture : lisse, ondulée, bouclée, frisée ou crépue.
 personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, un
 écosystème de marques et de professionnels.
 
-## Ce que fait la version actuelle (v0.2)
+## Ce que fait la version actuelle (v0.3)
 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
    (sécheresse, casse, frisottis, chute, démêlage…) et leur intensité.
@@ -18,12 +18,17 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    l'IA (Claude, d'Anthropic) observe la texture, l'épaisseur, la densité et les signes
    visibles (sécheresse, frisottis, pointes abîmées…). Elle pré-remplit les réponses,
    confirme ou complète les points de douleur. La photo n'est jamais enregistrée.
-3. **Questionnaire illustré** en 5 étapes : texture, épaisseur, densité et porosité sont
+3. **Les 12 types de cheveux (1A à 4C)** : la personne choisit sa famille (1 raides,
+   2 ondulés, 3 bouclés, 4 crépus et frisés), puis son type, en photo. Chaque type a
+   ses problèmes fréquents (`app/hair_types.py`), qui renforcent les besoins, adaptent
+   le poids des soins et s'affichent dans le résultat (« Vous l'avez signalé », « Vu sur
+   votre photo » ou « À surveiller »).
+4. **Questionnaire illustré** en 5 étapes : épaisseur, densité et porosité sont
    illustrées, puis cuir chevelu, habitudes et objectif.
-4. **Résultat centré sur les problèmes** : pour chaque point de douleur, pourquoi il
+5. **Résultat centré sur les problèmes** : pour chaque point de douleur, pourquoi il
    apparaît chez cette personne, ce qu'on va faire, ce qu'il faut éviter et le délai
    pour voir des résultats.
-5. **Besoins, routine et produits** : scores sur 100, routine du jour de lavage au soin
+6. **Besoins, routine et produits** : scores sur 100, routine du jour de lavage au soin
    de nuit, et produit recommandé pour chaque étape.
 
 Le catalogue (`app/data/produits.json`) contient des **produits génériques d'exemple**,
@@ -83,9 +88,9 @@ Les réponses illustrées utilisent des dessins vectoriels générés par
 
 **Pour les remplacer par des photos HD**, déposez un fichier JPG, PNG ou WebP carré
 (1000 × 1000 pixels conseillés) dans `app/static/img/photos/`, avec le même nom que
-l'illustration : `texture-lisse.jpg`, `texture-ondule.jpg`, `texture-boucle.jpg`,
-`texture-frise.jpg`, `texture-crepu.jpg`, `epaisseur-fin.jpg`, `densite-forte.jpg`,
-`porosite-faible.jpg`… La photo remplace automatiquement l'illustration.
+l'illustration : `type-1a.webp` à `type-4c.webp`, `epaisseur-fin.jpg`,
+`densite-forte.jpg`, `porosite-faible.jpg`… La photo remplace automatiquement
+l'illustration. Les types 2A et 4B n'ont pas encore de photo.
 Utilisez uniquement des photos dont vous avez les droits (vos propres photos avec
 l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels).
 
@@ -125,7 +130,7 @@ Exemple :
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/json" -d '{
-  "texture": "boucle", "epaisseur": "fin", "densite": "moyenne", "porosite": "forte",
+  "type_cheveux": "3A", "epaisseur": "fin", "densite": "moyenne", "porosite": "forte",
   "cuir_chevelu": "normal", "preoccupations": ["secheresse", "frisottis"],
   "intensites": {"secheresse": "enormement", "frisottis": "un_peu"},
   "traitements": [], "chaleur": "parfois", "objectif": "definition"

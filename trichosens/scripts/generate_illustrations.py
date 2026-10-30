@@ -1,10 +1,10 @@
-"""Génère les illustrations SVG du questionnaire (textures, porosité, épaisseur, densité).
+"""Génère les illustrations SVG du questionnaire (types de cheveux, porosité, épaisseur, densité).
 
 Lancer depuis le dossier trichosens/ :  python scripts/generate_illustrations.py
 Les fichiers sont écrits dans app/static/img/illustrations/.
 
-Pour utiliser une photo à la place d'une illustration, déposez un fichier JPG
-du même nom dans app/static/img/photos/ (par exemple texture-boucle.jpg).
+Pour utiliser une photo à la place d'une illustration, déposez un fichier du
+même nom dans app/static/img/photos/ (par exemple type-3b.webp).
 """
 
 import math
@@ -51,51 +51,64 @@ def strand(points, color, width=3.2, opacity=1.0) -> str:
     )
 
 
-def texture_svg(kind: str) -> str:
-    rnd = random.Random(kind)
-    xs = [52, 86, 120, 154, 188]
+# Paramètres de dessin de chaque type de cheveux (classification 1A à 4C).
+TYPES = {
+    "1A": ("straight", {"width": 2.0}),
+    "1B": ("straight", {"width": 3.2}),
+    "1C": ("straight", {"width": 4.8}),
+    "2A": ("wave", {"amp": 5, "cycles": 1.6}),
+    "2B": ("wave", {"amp": 9, "cycles": 2.4}),
+    "2C": ("coil", {"r": 10, "loops": 3.4, "lift": 0.45}),
+    "3A": ("coil", {"r": 13, "loops": 3.6, "lift": 0.95}),
+    "3B": ("coil", {"r": 10, "loops": 5.2, "lift": 0.95}),
+    "3C": ("coil", {"r": 7, "loops": 7.5, "lift": 0.95}),
+    "4A": ("coil", {"r": 5, "loops": 10.5, "lift": 1.0, "width": 2.6}),
+    "4B": ("zigzag", {"amp": 6, "n": 24}),
+    "4C": ("zigzag", {"amp": 4, "n": 44, "strands": 7, "width": 2.2}),
+}
+
+
+def type_svg(code: str, title: str) -> str:
+    kind, p = TYPES[code]
+    rnd = random.Random(code)
+    n_strands = p.get("strands", 5)
+    xs = [40 + (160 / (n_strands - 1)) * i for i in range(n_strands)]
     top, bottom = 34, 206
+    width = p.get("width", 3.2)
     parts = []
     for i, x0 in enumerate(xs):
         color = HAIR[i % len(HAIR)]
         phase = rnd.uniform(0, math.tau)
         pts = []
-        if kind == "lisse":
-            for k in range(0, 21):
+        if kind == "straight":
+            for k in range(21):
                 y = top + (bottom - top) * k / 20
                 pts.append((x0 + 2.5 * math.sin(k / 20 * math.pi + phase), y))
-        elif kind == "ondule":
-            for k in range(0, 61):
+        elif kind == "wave":
+            for k in range(61):
                 t = k / 60
-                y = top + (bottom - top) * t
-                pts.append((x0 + 9 * math.sin(t * 2.6 * math.tau + phase), y))
-        elif kind in {"boucle", "frise"}:
-            # Trochoïde : des boucles apparaissent quand l'amplitude verticale dépasse l'avancée.
-            r, loops = (11, 4.5) if kind == "boucle" else (6.5, 8)
-            steps = 260
+                pts.append((x0 + p["amp"] * math.sin(t * p["cycles"] * math.tau + phase),
+                            top + (bottom - top) * t))
+        elif kind == "coil":
+            # Trochoïde : des boucles apparaissent quand la montée dépasse l'avancée.
+            r, steps = p["r"], 300
             for k in range(steps + 1):
                 t = k / steps
-                a = t * loops * math.tau + phase
-                y = top + 6 + (bottom - top - 12) * t - r * 0.9 * math.cos(a)
+                a = t * p["loops"] * math.tau + phase
+                y = top + 6 + (bottom - top - 12) * t - r * p["lift"] * math.cos(a)
                 pts.append((x0 + r * math.sin(a), y))
-        elif kind == "crepu":
-            n = 26
+        elif kind == "zigzag":
+            n = p["n"]
             for k in range(n + 1):
-                y = top + (bottom - top) * k / n
-                amp = 6 + rnd.uniform(-1.5, 1.5)
-                pts.append((x0 + (amp if k % 2 else -amp), y))
+                amp = p["amp"] + rnd.uniform(-1.2, 1.2)
+                pts.append((x0 + (amp if k % 2 else -amp) + rnd.uniform(-1, 1),
+                            top + (bottom - top) * k / n))
             d = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-            parts.append(
-                f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2.8" '
-                f'stroke-linecap="round" stroke-linejoin="round"/>'
-            )
+            parts.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="{width}" '
+                         f'stroke-linecap="round" stroke-linejoin="round"/>')
             continue
-        parts.append(strand(pts, color))
-    labels = {
-        "lisse": "Cheveux lisses", "ondule": "Cheveux ondulés", "boucle": "Cheveux bouclés",
-        "frise": "Cheveux frisés", "crepu": "Cheveux crépus",
-    }
-    return svg("".join(parts), labels[kind])
+        parts.append(strand(pts, color, width=width))
+    return svg("".join(parts), title)
 
 
 def porosite_svg(kind: str) -> str:
@@ -162,8 +175,8 @@ def densite_svg(kind: str) -> str:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     files = {}
-    for k in ["lisse", "ondule", "boucle", "frise", "crepu"]:
-        files[f"texture-{k}.svg"] = texture_svg(k)
+    for code in TYPES:
+        files[f"type-{code.lower()}.svg"] = type_svg(code, f"Cheveux de type {code}")
     for k in ["faible", "moyenne", "forte"]:
         files[f"porosite-{k}.svg"] = porosite_svg(k)
         files[f"densite-{k}.svg"] = densite_svg(k)

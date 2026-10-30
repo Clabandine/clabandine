@@ -12,7 +12,7 @@ from app.main import app
 client = TestClient(app)
 
 ANALYSE = {
-    "exploitable": True, "conseil_photo": None, "texture": "frise", "confiance_texture": "elevee",
+    "exploitable": True, "conseil_photo": None, "type_cheveux": "3C", "confiance_type": "elevee",
     "epaisseur": "fin", "densite": "forte",
     "signes": [{"signe": "secheresse", "intensite": "modere", "explication": "Pointes sèches."}],
     "observations": ["Vos boucles sont serrées et un peu sèches."], "alerte_medicale": None,
@@ -97,12 +97,12 @@ def test_photo_endpoint(monkeypatch):
     assert client.post("/api/analyse-photo", files=files).status_code == 400  # sans consentement
     r = client.post("/api/analyse-photo", files=files, data={"consentement": "oui"})
     assert r.status_code == 200
-    assert r.json()["texture"] == "frise"
+    assert r.json()["type_cheveux"] == "3C"
 
 
 def test_form_with_photo_analysis_shows_it():
     form = {
-        "texture": "frise", "epaisseur": "fin", "densite": "forte", "porosite": "forte",
+        "type_cheveux": "3C", "epaisseur": "fin", "densite": "forte", "porosite": "forte",
         "cuir_chevelu": "sec", "preoccupations": ["secheresse"], "gene_secheresse": "beaucoup",
         "chaleur": "jamais", "objectif": "hydratation", "analyse_photo": json.dumps(ANALYSE),
     }
@@ -114,7 +114,7 @@ def test_form_with_photo_analysis_shows_it():
 
 def test_form_ignores_tampered_photo_analysis():
     form = {
-        "texture": "frise", "epaisseur": "fin", "densite": "forte", "porosite": "forte",
+        "type_cheveux": "3C", "epaisseur": "fin", "densite": "forte", "porosite": "forte",
         "cuir_chevelu": "sec", "preoccupations": ["secheresse"], "gene_secheresse": "beaucoup",
         "chaleur": "jamais", "objectif": "hydratation", "analyse_photo": '{"texture": "pirate"}',
     }

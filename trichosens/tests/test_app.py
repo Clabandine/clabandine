@@ -7,7 +7,7 @@ from app.main import app
 client = TestClient(app)
 
 FORM = {
-    "texture": "frise",
+    "type_cheveux": "3C",
     "epaisseur": "fin",
     "densite": "forte",
     "porosite": "forte",
@@ -29,7 +29,8 @@ def test_home_page():
 def test_questionnaire_page_lists_all_questions():
     r = client.get("/diagnostic")
     assert r.status_code == 200
-    assert "texture naturelle" in r.text
+    assert "type de cheveux" in r.text
+    assert "4C · Frisure très serrée" in r.text
     assert "objectif principal" in r.text
 
 
@@ -39,14 +40,16 @@ def test_submit_form_shows_result():
     assert "Votre routine sur mesure" in r.text
     assert "Protection thermique" in r.text
     assert "Ce qui vous gêne, et comment y remédier" in r.text
-    assert r.text.index("Casse") < r.text.index("Sécheresse")  # la plus gênante d'abord
+    assert "Votre type : 3C" in r.text
+    pains = r.text[r.text.index("Ce qui vous gêne, et comment y remédier"):]
+    assert pains.index("Casse") < pains.index("Sécheresse")  # la plus gênante d'abord
 
 
 def test_incomplete_form_shows_errors_and_keeps_answers():
-    r = client.post("/diagnostic", data={"texture": "boucle"})
+    r = client.post("/diagnostic", data={"type_cheveux": "3B"})
     assert r.status_code == 422
     assert "Cette question est obligatoire." in r.text
-    assert re.search(r'value="boucle"\s+checked', r.text)
+    assert re.search(r'value="3B"\s+checked', r.text)
 
 
 def test_api_questions():

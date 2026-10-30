@@ -4,12 +4,13 @@ import pytest
 
 from app.catalog import CATEGORIES, load_catalog
 from app.engine import run_diagnostic
+from app.hair_types import HAIR_TYPES, TYPE_POINTS
 from app.pain_points import PAIN_POINTS
 from app.photo import AnalysePhoto
 from app.questionnaire import QUESTIONS_BY_ID, InvalidAnswers, validate
 
 BASE = {
-    "texture": "boucle",
+    "type_cheveux": "3B",
     "epaisseur": "moyen",
     "densite": "moyenne",
     "porosite": "moyenne",
@@ -42,8 +43,8 @@ def test_catalog_is_valid():
 
 def test_missing_answer_is_rejected():
     with pytest.raises(InvalidAnswers) as e:
-        validate({**BASE, "texture": None})
-    assert "texture" in e.value.errors
+        validate({**BASE, "type_cheveux": None})
+    assert "type_cheveux" in e.value.errors
 
 
 def test_unknown_answer_is_rejected():
@@ -60,7 +61,7 @@ def test_too_many_concerns_is_rejected():
 
 
 def test_curly_hair_needs_more_hydration_than_straight():
-    assert diag(texture="crepu").besoins["hydratation"] > diag(texture="lisse").besoins["hydratation"]
+    assert diag(type_cheveux="4C").besoins["hydratation"] > diag(type_cheveux="1B").besoins["hydratation"]
 
 
 def test_bleached_hair_needs_repair_and_proteins():
@@ -86,21 +87,21 @@ def test_sensitive_scalp_gets_fragrance_free_shampoo():
 
 
 def test_fine_straight_hair_gets_light_products():
-    d = diag(texture="lisse", epaisseur="fin", densite="faible", porosite="faible",
+    d = diag(type_cheveux="1A", epaisseur="fin", densite="faible", porosite="faible",
              preoccupations=["volume"], objectif="volume")
     assert d.poids_produits == "leger"
     assert all(s.produit.poids != "riche" for s in d.routine if s.produit)
 
 
 def test_coily_hair_gets_rich_products_and_night_care():
-    d = diag(texture="crepu", epaisseur="epais", porosite="forte")
+    d = diag(type_cheveux="4C", epaisseur="epais", porosite="forte")
     assert d.poids_produits == "riche"
     assert "Protéger les cheveux" in titles(d)
 
 
 def test_every_profile_gets_a_product_for_each_step():
     """Toutes les combinaisons de réponses simples doivent produire une routine complète."""
-    ids = ["texture", "epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif"]
+    ids = ["type_cheveux", "epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif"]
     choices = [[o.value for o in QUESTIONS_BY_ID[i].options] for i in ids]
     for combo in itertools.product(*choices):
         d = diag(**dict(zip(ids, combo)))
@@ -137,8 +138,8 @@ def test_every_pain_point_has_engine_points():
 
 def photo(**overrides):
     data = {
-        "exploitable": True, "conseil_photo": None, "texture": "boucle",
-        "confiance_texture": "elevee", "epaisseur": "moyen", "densite": "moyenne",
+        "exploitable": True, "conseil_photo": None, "type_cheveux": "3B",
+        "confiance_type": "elevee", "epaisseur": "moyen", "densite": "moyenne",
         "signes": [], "observations": ["Les longueurs paraissent sèches."], "alerte_medicale": None,
     }
     return AnalysePhoto.model_validate({**data, **overrides})
@@ -158,10 +159,12 @@ def test_photo_adds_unchosen_signs_and_raises_needs():
     assert d.besoins["proteines"] > diag().besoins["proteines"]
 
 
-def test_photo_texture_disagreement_is_explained():
-    d = diag(photo=photo(texture="crepu"))
-    assert any("crépus" in n for n in d.notes_photo)
-    assert not diag(photo=photo(texture="crepu", confiance_texture="faible")).notes_photo
+def test_photo_type_disagreement_is_explained():
+    d = diag(photo=photo(type_cheveux="4C"))
+    assert any("type 4C" in n and "refaites le diagnostic" in n for n in d.notes_photo)
+    assert not diag(photo=photo(type_cheveux="4C", confiance_type="faible")).notes_photo
+    close = diag(photo=photo(type_cheveux="3A"))  # même famille : simple remarque
+    assert any("restent adaptés" in n for n in close.notes_photo)
 
 
 def test_unusable_photo_changes_nothing():
@@ -175,3 +178,34 @@ def test_unusable_photo_changes_nothing():
 def test_photo_medical_alert_is_shown():
     d = diag(photo=photo(alerte_medicale="Une zone sans cheveux mérite un avis médical."))
     assert "Une zone sans cheveux mérite un avis médical." in d.alertes
+
+
+def test_hair_types_are_complete():
+    assert len(HAIR_TYPES) == 12
+    assert set(TYPE_POINTS) == set(HAIR_TYPES)
+    for t in HAIR_TYPES.values():
+        assert t.problemes, t.code
+        assert all(pid in PAIN_POINTS for pid, _ in t.problemes), t.code
+
+
+def test_type_drives_texture_and_frequent_problems():
+    d = diag(type_cheveux="4C", preoccupations=["casse"])
+    assert d.texture == "crepu"
+    problems = {p["id"]: p for p in d.problemes_type}
+    assert problems["casse"]["signale"] and not problems["pousse"]["signale"]
+    casse = d.douleurs[0]
+    assert any(c.startswith("Fréquent chez le type 4C") for c in casse.causes)
+
+
+def test_type_problem_seen_on_photo_is_flagged():
+    sign = {"signe": "frisottis", "intensite": "modere", "explication": "Halo de frisottis."}
+    d = diag(photo=photo(signes=[sign]))
+    problems = {p["id"]: p for p in d.problemes_type}
+    assert problems["frisottis"]["vu_photo"] and not problems["demelage"]["vu_photo"]
+
+
+def test_fine_type_1a_gets_lighter_products_than_1c():
+    order = ["leger", "moyen", "riche"]
+    light = diag(type_cheveux="1A", epaisseur="moyen", porosite="moyenne").poids_produits
+    heavy = diag(type_cheveux="1C", epaisseur="moyen", porosite="moyenne").poids_produits
+    assert order.index(light) < order.index(heavy)

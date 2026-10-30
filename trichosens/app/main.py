@@ -16,6 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from . import photo as photo_ai
 from .catalog import CATEGORIES
 from .engine import MOMENTS, NEEDS, run_diagnostic
+from .hair_types import FAMILLES
 from .pain_points import INTENSITES
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
 
@@ -43,6 +44,7 @@ def visuel(name: str) -> str:
 
 templates.env.globals.update(
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
+    FAMILLES=FAMILLES,
 )
 
 
@@ -140,6 +142,8 @@ def api_questions():
     return {
         "etapes": [{"id": s.id, "titre": s.titre, "intro": s.intro} for s in STEPS],
         "intensites": INTENSITES,
+        "familles": [{"id": f.id, "titre": f.titre, "label": f.label, "image": visuel(f.visuel)}
+                     for f in FAMILLES.values()],
         "questions": [
             {
                 "id": q.id,
@@ -151,7 +155,8 @@ def api_questions():
                 "max_choices": q.max_choices,
                 "options": [
                     {"value": o.value, "label": o.label, "hint": o.hint,
-                     "image": visuel(o.visuel) if o.visuel else None}
+                     "image": visuel(o.visuel) if o.visuel else None,
+                     "famille": o.groupe or None}
                     for o in q.options
                 ],
             }
