@@ -49,6 +49,20 @@ Lancer les tests :
 pytest
 ```
 
+## Mettre en ligne (Render, gratuit)
+
+Le fichier `render.yaml` à la racine du dépôt décrit tout l'hébergement.
+
+1. Créez un compte sur https://render.com en vous connectant avec GitHub.
+2. Cliquez sur **New +**, puis **Blueprint**, et choisissez le dépôt `Clabandine/clabandine`.
+3. Choisissez la branche à publier (`main` une fois le code fusionné), puis validez.
+4. Après 2 à 3 minutes, le site est en ligne à une adresse du type
+   `https://trichosens.onrender.com`.
+
+Chaque nouvel envoi sur cette branche met le site à jour automatiquement.
+Avec l'offre gratuite, le site se met en veille après 15 minutes sans visite :
+la première page met alors une trentaine de secondes à s'afficher.
+
 ## Organisation du code
 
 ```
@@ -89,12 +103,15 @@ curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/
 
 ## Feuille de route
 
-- **v0.2 – Comptes utilisateurs** : sauvegarder son diagnostic et suivre l'évolution
-  de ses cheveux (journal, photos, rappels de routine).
+- **v0.1 – Mise en ligne** : publier le diagnostic et recueillir les avis des premiers
+  testeurs.
+- **v0.2 – Diagnostic affiné** : ajuster les questions et les règles à partir de ces avis.
 - **v0.3 – Catalogue réel** : base de données de produits (ingrédients, prix, liens),
   filtres (vegan, sans parfum, budget).
-- **v0.4 – E-commerce** : panier, paiement, partenariats avec les marques.
-- **v0.5 – Professionnels** : annuaire de coiffeurs et trichologues, prise de rendez-vous.
+- **v0.4 – Comptes utilisateurs** : sauvegarder son diagnostic et suivre l'évolution
+  de ses cheveux (journal, photos, rappels de routine).
+- **v0.5 – E-commerce** : panier, paiement, partenariats avec les marques.
+- **v0.6 – Professionnels** : annuaire de coiffeurs et trichologues, prise de rendez-vous.
 - **Plus tard** : analyse photo des cheveux, application mobile, plusieurs langues.
 
 ## Avertissement

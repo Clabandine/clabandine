@@ -26,6 +26,12 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.globals.update(NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES)
 
 
+@app.get("/sante", include_in_schema=False)
+def sante():
+    """Utilisé par l'hébergeur pour vérifier que le site répond."""
+    return {"statut": "ok"}
+
+
 # --- Pages -------------------------------------------------------------------
 
 

@@ -62,3 +62,7 @@ def test_api_diagnostic():
 def test_api_diagnostic_rejects_invalid():
     r = client.post("/api/diagnostic", json={"texture": "inconnue"})
     assert r.status_code == 422
+
+
+def test_health_check():
+    assert client.get("/sante").json() == {"statut": "ok"}
