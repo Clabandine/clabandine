@@ -197,6 +197,40 @@
 <p class="help">Prix indicatifs, susceptibles de varier selon les revendeurs. TrichoSens n'est lié à
   aucune de ces marques.</p>
 
+<section class="card rappels">
+  <h2>⏰ Mes rappels</h2>
+  <p>Ajoutez votre routine à l'agenda de votre téléphone : il vous rappellera vos jours de lavage,
+     le soin du mois et la date de votre prochain diagnostic.</p>
+  <form method="get" action="/rappels.ics" class="rappels-form">
+    <fieldset>
+      <legend>Mes jours de lavage</legend>
+      <p class="help">Conseillé pour vous : {{ d.frequence_lavage }}.</p>
+      <div class="chips">
+        {% for code, nom in JOURS.items() %}
+        <label class="chip"><input type="checkbox" name="jours" value="{{ code }}"
+          {% if code in d.jours_lavage %}checked{% endif %}><span>{{ nom[:3] }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <label class="time">Heure du rappel <input type="time" name="heure" value="19:00" required></label>
+    <fieldset>
+      <legend>Me rappeler</legend>
+      {% for code, label in RAPPELS.items() %}
+      {% if code != 'coupe' or d.besoins.reparation >= 50 or 'pointes' in d.suivi.intensites %}
+      <label class="check"><input type="checkbox" name="rappels" value="{{ code }}" checked> {{ label }}
+        {% if code == 'diagnostic' %}({{ d.prochain_point.strftime('%d/%m') }}){% endif %}</label>
+      {% endif %}
+      {% endfor %}
+    </fieldset>
+    <input type="hidden" name="masque" value="{{ 'alterne' if d.phase == 'entretien' else 'chaque' }}">
+    <input type="hidden" name="prochain" value="{{ d.prochain_point.isoformat() }}">
+    <input type="hidden" name="type_cheveux" value="{{ d.type_cheveux.code }}">
+    <button class="button" type="submit">📅 Ajouter à mon agenda</button>
+    <p class="help">Le fichier s'ouvre avec l'agenda de votre téléphone. Sur Android, si rien ne se passe,
+      ouvrez le fichier téléchargé avec Google Agenda.</p>
+  </form>
+</section>
+
 <section class="card suivi-save">
   <h2>Votre suivi</h2>
   <p id="suivi-status">Ce diagnostic est enregistré sur votre appareil pour suivre l'évolution de vos cheveux.</p>

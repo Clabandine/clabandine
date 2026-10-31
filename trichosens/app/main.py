@@ -3,12 +3,13 @@
 Lancer en local :  uvicorn app.main:app --reload   (depuis le dossier trichosens/)
 """
 
+import datetime as dt
 import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -18,9 +19,10 @@ from . import photo as photo_ai
 from .catalog import CATEGORIES
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
-from .hair_types import FAMILLES
+from .hair_types import FAMILLES, HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
+from .reminders import JOURS, RAPPELS, build_ics
 
 logging.basicConfig(level=logging.INFO)
 
@@ -52,7 +54,8 @@ def visuel(name: str) -> str:
 templates.env.globals.update(
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
     FAMILLES=FAMILLES, AVIS_URL=AVIS_URL,
-    PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()}, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
+    PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
+    JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
 )
 
 
@@ -103,6 +106,36 @@ def _parse_precedent(raw: str | None) -> ResumeSuivi | None:
         return ResumeSuivi.model_validate_json(raw)
     except ValidationError:
         return None
+
+
+@app.get("/rappels.ics")
+def rappels_ics(
+    request: Request,
+    jours: list[str] = Query(default=[]),
+    heure: str = "19:00",
+    rappels: list[str] = Query(default=[]),
+    masque: str = "chaque",
+    prochain: str = "",
+    type_cheveux: str = "",
+):
+    """Fichier agenda avec les rappels de routine choisis."""
+    try:
+        h = dt.time.fromisoformat(heure)
+        prochain_point = dt.date.fromisoformat(prochain) if prochain else None
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Heure ou date invalide.")
+    if (set(jours) - set(JOURS) or set(rappels) - set(RAPPELS)
+            or masque not in {"chaque", "alterne"}
+            or (type_cheveux and type_cheveux not in HAIR_TYPES)):
+        raise HTTPException(status_code=422, detail="Paramètres de rappel invalides.")
+    if not rappels:
+        raise HTTPException(status_code=422, detail="Choisissez au moins un rappel.")
+    site = str(request.base_url).rstrip("/")
+    ics = build_ics(jours=jours, heure=h, rappels=rappels, masque=masque,
+                    prochain_point=prochain_point, type_cheveux=type_cheveux or "?",
+                    site_url=site)
+    return Response(ics, media_type="text/calendar; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="trichosens-rappels.ics"'})
 
 
 @app.get("/suivi", response_class=HTMLResponse)

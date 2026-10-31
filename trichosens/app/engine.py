@@ -15,6 +15,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from . import seasons
+from .reminders import jours_suggeres
 from .catalog import Product, load_catalog
 from .evolution import Evolution, ResumeSuivi, compare
 from .hair_types import FAMILLES, HAIR_TYPES, TYPE_POIDS, TYPE_POINTS, HairType
@@ -171,6 +172,7 @@ class Diagnostic:
     evolution: Evolution | None = None
     suivi: dict = field(default_factory=dict)
     cout_total: float = 0.0
+    jours_lavage: list[str] = field(default_factory=list)
     preferences: list[str] = field(default_factory=list)
     budget: str = "indifferent"
     douleurs: list[PainReport] = field(default_factory=list)
@@ -201,6 +203,7 @@ class Diagnostic:
             } if self.evolution else None,
             "suivi": self.suivi,
             "cout_total": self.cout_total,
+            "jours_lavage": self.jours_lavage,
             "preferences": self.preferences,
             "budget": self.budget,
             "photo": self.photo.model_dump() if self.photo else None,
@@ -268,6 +271,13 @@ def _frequence_lavage(a: Answers) -> str:
         }[a.texture]
         return faster
     return base
+
+
+def lavages_par_semaine(a: Answers) -> float:
+    """Nombre de lavages par semaine conseillé (pour proposer des jours de rappel)."""
+    if a.cuir_chevelu == "gras":
+        return {"lisse": 4, "ondule": 2.5, "boucle": 2, "frise": 1.5, "crepu": 1}[a.texture]
+    return {"lisse": 2.5, "ondule": 2, "boucle": 1.5, "frise": 1, "crepu": 1}[a.texture]
 
 
 def _poids_produits(a: Answers) -> str:
@@ -708,6 +718,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         prochain_point=prochain_point,
         evolution=evolution,
         cout_total=cout_routine(routine),
+        jours_lavage=jours_suggeres(lavages_par_semaine(a)),
         preferences=[PREFERENCES[p] for p in a.preferences],
         budget=a.budget,
     )

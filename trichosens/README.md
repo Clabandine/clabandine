@@ -33,6 +33,10 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    produit (petit : 12 € environ, moyen : 25 € environ). Les produits qui respectent le
    plus de préférences passent en premier ; sinon, le résultat le signale. Le budget de
    départ de la routine est affiché, et les préférences sont reprises au diagnostic suivant.
+10. **Rappels dans l'agenda** : la personne choisit ses jours de lavage et une heure, puis
+    télécharge un fichier agenda (.ics) avec ses rappels : jours de lavage, shampoing
+    clarifiant et mesure de la mèche témoin (une fois par mois), coupe des pointes (tous
+    les 3 mois) et prochain diagnostic. Aucun compte ni serveur de notifications.
 
 ### Le catalogue
 
@@ -126,6 +130,7 @@ trichosens/
 │   ├── photo.py           # Analyse photo par l'IA (Claude)
 │   ├── seasons.py         # Adaptation à la saison
 │   ├── evolution.py       # Comparaison avec le diagnostic précédent
+│   ├── reminders.py       # Rappels : fichier agenda (.ics)
 │   ├── engine.py          # Moteur : besoins, programme, routine, produits, conseils
 │   ├── catalog.py         # Lecture et vérification du catalogue
 │   ├── data/produits.csv  # Catalogue de produits (tableau)
@@ -147,6 +152,7 @@ en haut de `app/engine.py` (`TEXTURE_POINTS`, `PREOCCUPATION_POINTS`, etc.).
 | GET     | `/api/questions`   | Étapes, questions et réponses possibles |
 | POST    | `/api/analyse-photo` | Envoie une photo (`photo`, `consentement=oui`), renvoie l'analyse |
 | POST    | `/api/diagnostic`  | Envoie les réponses (JSON), renvoie le diagnostic |
+| GET     | `/rappels.ics`     | Fichier agenda des rappels (`jours`, `heure`, `rappels`, `prochain`…) |
 
 Exemple :
 
@@ -168,8 +174,7 @@ curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/
 - **v0.3 – Les 12 types de cheveux** (1A à 4C) et leurs problèmes fréquents.
 - **v0.4 – Catalogue réel, programme, saisons et suivi** : produits réels, phases de soins,
   conseils de saison, historique et comparaison des diagnostics sur l'appareil.
-- **Ensuite** : rappels de routine, photos dans le
-  suivi, puis comptes utilisateurs pour retrouver son suivi sur tous ses appareils.
+- **Ensuite** : photos dans le suivi, puis comptes utilisateurs pour retrouver son suivi sur tous ses appareils.
 - **v0.5 – E-commerce** : panier, paiement, partenariats avec les marques.
 - **v0.6 – Professionnels** : annuaire de coiffeurs et trichologues, prise de rendez-vous.
 - **Plus tard** : analyse photo des cheveux, application mobile, plusieurs langues.
