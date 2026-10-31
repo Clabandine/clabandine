@@ -163,7 +163,7 @@
           {% for o in s.produit.offres[:3] %}
           <a class="buy{% if loop.first %} first{% endif %}" href="/acheter/{{ o.id }}" target="_blank"
              rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">
-            Acheter chez {{ o.marchand }}{% if o.prix %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
+            {{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}{% if o.prix %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
           </a>
           {% if o.affilie %}<small class="affiliate">Lien affilié</small>{% endif %}
           {% endfor %}
@@ -208,6 +208,8 @@
   {% if d.liens_affilies %}Certains liens d'achat sont des liens affiliés : si vous achetez par leur
   intermédiaire, TrichoSens peut toucher une commission, sans surcoût pour vous. Nos recommandations
   restent choisies selon les besoins de vos cheveux, jamais selon les commissions.
+  {% if d.liens_amazon %}En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
+  remplissant les conditions requises.{% endif %}
   {% else %}TrichoSens n'est lié à aucune de ces marques.{% endif %}</p>
 
 <section class="card rappels">

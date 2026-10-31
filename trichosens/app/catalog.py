@@ -47,6 +47,15 @@ class Offre:
     prix: float | None = None
     affilie: bool = False
 
+    @property
+    def recherche(self) -> bool:
+        """Lien vers une page de recherche (et non vers la fiche du produit)."""
+        return "/s?" in self.url
+
+    @property
+    def amazon(self) -> bool:
+        return "amazon." in self.url
+
 
 @dataclass(frozen=True)
 class Product:

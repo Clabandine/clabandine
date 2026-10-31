@@ -59,9 +59,25 @@ def test_result_shows_buy_buttons_and_affiliate_notice(with_links):
     assert "n'est lié à aucune" not in r.text
 
 
-def test_without_affiliate_links_the_old_notice_stays():
+def test_without_affiliate_links_the_old_notice_stays(tmp_path, monkeypatch):
+    cat = catalog_with(tmp_path, HEADER)
+    monkeypatch.setattr(engine, "load_catalog", lambda: cat)
     r = client.post("/diagnostic", data=FORM)
     assert "n'est lié à aucune de ces marques" in r.text
+    assert "Acheter chez" not in r.text
+
+
+def test_real_catalogue_has_amazon_links_with_partner_tag():
+    for p in load_catalog():
+        amazon = [o for o in p.offres if o.amazon]
+        assert amazon, p.id
+        assert all("tag=trichosens-21" in o.url and o.affilie and o.prix is None for o in amazon), p.id
+
+
+def test_amazon_disclosure_and_search_label():
+    r = client.post("/diagnostic", data=FORM)
+    assert "En tant que Partenaire Amazon, TrichoSens réalise un bénéfice" in r.text
+    assert "Voir sur Amazon" in r.text
 
 
 def test_buy_link_counts_and_redirects(with_links):

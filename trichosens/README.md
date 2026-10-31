@@ -77,6 +77,13 @@ Dès qu'un lien affilié s'affiche, le résultat explique que TrichoSens peut to
 commission (obligation légale en France). Le choix des produits ne dépend jamais des
 commissions.
 
+**Amazon Partenaires (identifiant `trichosens-21`) :** chaque produit a un lien de recherche
+Amazon avec cet identifiant, créé par `python scripts/liens_amazon.py` (le script n'ajoute un
+lien qu'aux produits qui n'en ont pas). Pour vendre davantage, remplacez peu à peu ces liens par
+le lien direct de la fiche, créé avec la barre SiteStripe d'Amazon. Ne renseignez jamais de prix
+pour Amazon : son règlement l'interdit hors de son interface officielle. La phrase obligatoire
+« En tant que Partenaire Amazon… » s'affiche automatiquement.
+
 **Clics :** les boutons passent par `/acheter/...`, qui compte le clic puis redirige vers le
 revendeur. Les statistiques sont sur `/admin/clics?cle=VOTRE_CLE`. La clé `ADMIN_CLE` est
 générée par Render (service trichosens, puis **Environment**). Les compteurs repartent à
