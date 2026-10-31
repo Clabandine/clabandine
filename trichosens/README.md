@@ -54,6 +54,7 @@ Google Sheets ou Excel. **Les prix sont indicatifs et toutes les fiches sont à 
 | `saisons` | hiver, printemps, été, automne : le produit est favorisé à cette saison |
 | `sans_parfum`, `sans_sulfates`, `sans_silicones`, `vegan` | oui, non, ou vide si inconnu |
 | `prix_indicatif`, `contenance` | prix moyen constaté et format |
+| `a_verifier`, `date_verification` | `non` + date une fois la fiche vérifiée (voir plus bas) |
 
 Dans les colonnes à plusieurs valeurs, séparez les valeurs par `|`. Après modification,
 lancez `pytest` : les tests signalent toute ligne mal remplie.
@@ -89,6 +90,20 @@ revendeur. Les statistiques sont sur `/admin/clics?cle=VOTRE_CLE`. La clé `ADMI
 générée par Render (service trichosens, puis **Environment**). Les compteurs repartent à
 zéro à chaque redémarrage du site : pour les ventes et les commissions, fiez-vous aux
 tableaux de bord des programmes d'affiliation.
+
+### Garder le catalogue à jour
+
+- **Date de vérification :** après avoir vérifié une fiche (composition, prix, labels, types de
+  cheveux), mettez `a_verifier` à `non` et la date du jour dans `date_verification`
+  (`2026-11-30` ou `30/11/2026`). Une fiche est à revoir si elle n'a jamais été vérifiée, si
+  elle est marquée « à vérifier », si sa vérification date de plus de 6 mois, ou si elle n'a
+  aucun lien d'achat. La liste est sur `/admin/catalogue?cle=VOTRE_CLE`.
+- **Contrôle des liens chaque lundi :** GitHub lance `scripts/verifier_catalogue.py`. En cas de
+  lien mort (page introuvable), le contrôle échoue et GitHub vous prévient par e-mail ; le
+  rapport s'affiche dans l'onglet **Actions** du dépôt. Les liens de recherche Amazon ne sont
+  pas contrôlés (une recherche existe toujours) et certains sites bloquent les robots : ils
+  apparaissent comme « non vérifiables ». Lancement à la main : onglet **Actions**,
+  « Contrôle du catalogue TrichoSens », **Run workflow**.
 
 ## Lancer le projet
 
@@ -170,7 +185,7 @@ trichosens/
 │   ├── clicks.py          # Comptage des clics sur les liens d'achat
 │   ├── templates/         # Pages HTML (accueil, questionnaire, résultat, suivi)
 │   └── static/            # Mise en page, scripts (questionnaire, suivi), images
-├── scripts/               # Génération des illustrations
+├── scripts/               # Illustrations, liens Amazon, contrôle du catalogue
 └── tests/                 # Tests automatiques (pytest)
 ```
 

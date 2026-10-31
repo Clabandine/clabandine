@@ -7,6 +7,7 @@ valeurs, séparez les valeurs par « | ». La colonne `types` accepte des plages
 """
 
 import csv
+import datetime as dt
 import re
 import unicodedata
 from dataclasses import asdict, dataclass, replace
@@ -77,6 +78,7 @@ class Product:
     contenance: str = ""
     ingredients_cles: tuple[str, ...] = ()
     a_verifier: bool = True
+    verifie_le: dt.date | None = None
     offres: tuple[Offre, ...] = ()
 
     @property
@@ -165,6 +167,14 @@ def parse_product(row: dict) -> Product:
     except ValueError:
         errors.append(f"prix illisible « {prix_txt} »")
         prix = None
+    date_txt = (row.get("date_verification") or "").strip()
+    verifie_le = None
+    if date_txt:
+        try:
+            verifie_le = (dt.datetime.strptime(date_txt, "%d/%m/%Y").date() if "/" in date_txt
+                          else dt.date.fromisoformat(date_txt))
+        except ValueError:
+            errors.append(f"date de vérification illisible « {date_txt} » (format 2026-11-30 ou 30/11/2026)")
     if errors:
         raise ValueError(f"Produit {pid or '(sans id)'} : " + " ; ".join(errors))
 
@@ -187,6 +197,7 @@ def parse_product(row: dict) -> Product:
         contenance=(row.get("contenance") or "").strip(),
         ingredients_cles=_list(row.get("ingredients_cles", "")),
         a_verifier=_bool(row.get("a_verifier", "")) is not False,
+        verifie_le=verifie_le,
     )
 
 
@@ -250,3 +261,21 @@ def load_catalog(path: Path = CATALOG_PATH, liens: Path = LIENS_PATH) -> list[Pr
 
 def offres_par_id(catalog: list[Product]) -> dict[str, Offre]:
     return {o.id: o for p in catalog for o in p.offres}
+
+
+# Une fiche doit être revérifiée au moins tous les 6 mois (formules et prix changent).
+VERIFICATION_MAX_JOURS = 183
+
+
+def raison_a_revoir(p: Product, today: dt.date | None = None) -> str | None:
+    """Pourquoi la fiche produit doit être revue, ou None si elle est à jour."""
+    today = today or dt.date.today()
+    if p.verifie_le is None:
+        return "Jamais vérifiée"
+    if p.a_verifier:
+        return "Marquée « à vérifier »"
+    if (today - p.verifie_le).days > VERIFICATION_MAX_JOURS:
+        return f"Dernière vérification le {p.verifie_le.strftime('%d/%m/%Y')} (plus de 6 mois)"
+    if not p.offres:
+        return "Aucun lien d'achat"
+    return None

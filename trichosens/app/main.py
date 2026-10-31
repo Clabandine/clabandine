@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from . import photo as photo_ai
-from .catalog import CATEGORIES, load_catalog, offres_par_id
+from .catalog import CATEGORIES, VERIFICATION_MAX_JOURS, load_catalog, offres_par_id, raison_a_revoir
 from .clicks import counter as clics
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
@@ -120,12 +120,29 @@ def acheter(offre_id: str):
     return RedirectResponse(offre.url, status_code=302)
 
 
-@app.get("/admin/clics", response_class=HTMLResponse, include_in_schema=False)
-def admin_clics(request: Request, cle: str = ""):
-    """Statistiques de clics, protégées par la clé ADMIN_CLE (variable d'environnement)."""
+def _verifier_cle(cle: str) -> None:
+    """Pages d'administration : clé ADMIN_CLE obligatoire, sinon la page « n'existe pas »."""
     attendue = os.environ.get("ADMIN_CLE", "")
     if not attendue or not hmac.compare_digest(cle, attendue):
         raise HTTPException(status_code=404)
+
+
+@app.get("/admin/catalogue", response_class=HTMLResponse, include_in_schema=False)
+def admin_catalogue(request: Request, cle: str = ""):
+    """Fiches produits à revoir (jamais vérifiées, trop anciennes, sans lien)."""
+    _verifier_cle(cle)
+    catalog = load_catalog()
+    a_revoir = [(p, r) for p in catalog if (r := raison_a_revoir(p))]
+    return templates.TemplateResponse(request, "admin_catalogue.html", {
+        "a_revoir": a_revoir, "nb_produits": len(catalog), "cle": cle,
+        "mois": VERIFICATION_MAX_JOURS // 30,
+    })
+
+
+@app.get("/admin/clics", response_class=HTMLResponse, include_in_schema=False)
+def admin_clics(request: Request, cle: str = ""):
+    """Statistiques de clics, protégées par la clé ADMIN_CLE (variable d'environnement)."""
+    _verifier_cle(cle)
     catalog = load_catalog()
     offres = offres_par_id(catalog)
     produits = {p.id: p for p in catalog}
