@@ -52,7 +52,7 @@ STEPS: tuple[Step, ...] = (
          "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic."),
     Step("cheveux", "Vos cheveux", "Apprenons à connaître la nature de vos cheveux."),
     Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien."),
-    Step("objectif", "Votre objectif", "Dernière question !"),
+    Step("objectif", "Objectif et préférences", "Dernières questions !"),
 )
 
 QUESTIONS: tuple[Question, ...] = (
@@ -165,6 +165,31 @@ QUESTIONS: tuple[Question, ...] = (
             Option("brillance", "Plus de brillance"),
         ),
     ),
+    Question(
+        id="preferences",
+        step="objectif",
+        label="Avez-vous des préférences pour vos produits ?",
+        help="Facultatif. Plusieurs réponses possibles.",
+        multiple=True,
+        required=False,
+        options=(
+            Option("vegan", "Vegan", "Sans ingrédient d'origine animale."),
+            Option("sans_parfum", "Sans parfum", "Pour les peaux et cuirs chevelus réactifs."),
+            Option("sans_sulfates", "Sans sulfates", "Lavants plus doux."),
+            Option("sans_silicones", "Sans silicones", "Pas de film sur la fibre."),
+        ),
+    ),
+    Question(
+        id="budget",
+        step="objectif",
+        label="Quel budget par produit ?",
+        required=False,
+        options=(
+            Option("petit", "Petit budget", "Jusqu'à 12 € environ."),
+            Option("moyen", "Budget moyen", "Jusqu'à 25 € environ."),
+            Option("indifferent", "Peu importe", "Seule l'efficacité compte."),
+        ),
+    ),
 )
 
 QUESTIONS_BY_ID: dict[str, Question] = {q.id: q for q in QUESTIONS}
@@ -183,6 +208,8 @@ class Answers:
     objectif: str
     preoccupations: list[str] = field(default_factory=list)
     traitements: list[str] = field(default_factory=list)
+    preferences: list[str] = field(default_factory=list)
+    budget: str = "indifferent"
     # Intensité de la gêne pour chaque préoccupation : un_peu, beaucoup ou enormement.
     intensites: dict[str, str] = field(default_factory=dict)
 
@@ -232,6 +259,8 @@ def validate(raw: dict) -> Answers:
         else:
             if isinstance(value, list):
                 value = value[0] if value else None
+            if not value and not q.required:
+                continue  # valeur par défaut de Answers
             if not value:
                 errors[q.id] = "Cette question est obligatoire."
             elif value not in q.values():

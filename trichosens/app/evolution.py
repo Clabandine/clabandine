@@ -35,6 +35,8 @@ class ResumeSuivi(BaseModel):
     besoins: dict[str, int] = {}
     phase: str = "intensive"
     prochain_point: dt.date | None = None
+    preferences: list[str] = []
+    budget: str = "indifferent"
 
 
 @dataclass

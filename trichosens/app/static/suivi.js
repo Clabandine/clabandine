@@ -62,6 +62,14 @@
     const last = history[history.length - 1];
     if (last) {
       precedent.value = JSON.stringify(last);
+      // Reprendre les préférences du dernier diagnostic si rien n'est encore coché.
+      const form = precedent.form;
+      const prefs = form.querySelectorAll('input[name="preferences"]');
+      const budgets = form.querySelectorAll('input[name="budget"]');
+      if (![...prefs, ...budgets].some((i) => i.checked)) {
+        prefs.forEach((i) => (i.checked = (last.preferences || []).includes(i.value)));
+        budgets.forEach((i) => (i.checked = i.value === last.budget));
+      }
       const info = document.querySelector(".suivi-info");
       if (info) {
         info.querySelector("span").textContent = frDate(last.date);

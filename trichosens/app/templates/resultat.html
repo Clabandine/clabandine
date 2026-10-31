@@ -157,6 +157,7 @@
         {% if s.produit.ingredients_cles %}<small class="ingredients">{{ s.produit.ingredients_cles | join(', ') }}</small>{% endif %}
         {% if s.produit.labels %}<span class="labels">{% for l in s.produit.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
         {% if s.produit.prix %}<span class="price">≈ {{ '%.2f' | format(s.produit.prix) | replace('.', ',') }} €{% if s.produit.contenance %} <small>· {{ s.produit.contenance }}</small>{% endif %}</span>{% endif %}
+        {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
         {% if s.produit.lien %}<a class="product-link" href="{{ s.produit.lien }}" target="_blank" rel="noopener">Voir le produit</a>{% endif %}
       </div>
       {% endif %}
@@ -166,6 +167,13 @@
   {% endif %}
   {% endfor %}
 </section>
+
+{% if d.cout_total %}
+<p class="key-tip">💶 Budget de départ de cette routine : <strong>≈ {{ '%.0f' | format(d.cout_total) }} €</strong>
+  (chaque produit compté une fois ; un flacon dure en général plusieurs semaines).
+  {% if d.preferences or d.budget != 'indifferent' %}<br>Vos préférences :
+  {{ (d.preferences + ([{'petit': 'petit budget', 'moyen': 'budget moyen'}[d.budget]] if d.budget != 'indifferent' else [])) | join(', ') }}.{% endif %}</p>
+{% endif %}
 
 {% if d.conseils %}
 <section class="card">
@@ -184,6 +192,7 @@
   <a class="button" href="{{ AVIS_URL }}" target="_blank" rel="noopener">Donner mon avis</a>
 </section>
 {% endif %}
+
 
 <p class="help">Prix indicatifs, susceptibles de varier selon les revendeurs. TrichoSens n'est lié à
   aucune de ces marques.</p>

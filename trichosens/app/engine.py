@@ -149,6 +149,7 @@ class Step:
     conseil: str
     categorie: str | None = None
     produit: Product | None = None
+    hors_preferences: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -169,6 +170,9 @@ class Diagnostic:
     prochain_point: dt.date | None = None
     evolution: Evolution | None = None
     suivi: dict = field(default_factory=dict)
+    cout_total: float = 0.0
+    preferences: list[str] = field(default_factory=list)
+    budget: str = "indifferent"
     douleurs: list[PainReport] = field(default_factory=list)
     conseils: list[str] = field(default_factory=list)
     alertes: list[str] = field(default_factory=list)
@@ -196,6 +200,9 @@ class Diagnostic:
                 "messages": self.evolution.messages,
             } if self.evolution else None,
             "suivi": self.suivi,
+            "cout_total": self.cout_total,
+            "preferences": self.preferences,
+            "budget": self.budget,
             "photo": self.photo.model_dump() if self.photo else None,
             "notes_photo": self.notes_photo,
             "signes_photo_en_plus": self.signes_photo_en_plus,
@@ -210,6 +217,7 @@ class Diagnostic:
                     "conseil": s.conseil,
                     "categorie": s.categorie,
                     "produit": s.produit.to_dict() if s.produit else None,
+                    "hors_preferences": s.hors_preferences,
                 }
                 for s in self.routine
             ],
@@ -502,18 +510,50 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
     return score
 
 
+PREFERENCES = {
+    "vegan": "vegan",
+    "sans_parfum": "sans parfum",
+    "sans_sulfates": "sans sulfates",
+    "sans_silicones": "sans silicones",
+}
+BUDGET_MAX = {"petit": 12.0, "moyen": 25.0}
+
+
+def preferences_non_respectees(p: Product, a: Answers) -> list[str]:
+    """Préférences que le produit ne respecte pas (ou dont on n'est pas sûr)."""
+    manque = [PREFERENCES[pref] for pref in a.preferences if getattr(p, pref) is not True]
+    limite = BUDGET_MAX.get(a.budget)
+    if limite and p.prix is not None and p.prix > limite:
+        manque.append("budget")
+    return manque
+
+
 def recommend(category: str, a: Answers, besoins: dict[str, int], poids: str,
-              catalog: list[Product], saison: str | None = None) -> Product | None:
-    best: tuple[float, Product] | None = None
+              catalog: list[Product], saison: str | None = None
+              ) -> tuple[Product | None, list[str]]:
+    """Meilleur produit de la catégorie.
+
+    On choisit d'abord parmi les produits qui respectent le plus de préférences,
+    puis selon l'adéquation au profil. Renvoie aussi les préférences non respectées.
+    """
+    best: tuple[tuple[int, float], Product, list[str]] | None = None
     for p in catalog:
         if p.categorie != category:
             continue
         s = score_product(p, a, besoins, poids, saison)
         if s is None:
             continue
-        if best is None or s > best[0]:
-            best = (s, p)
-    return best[1] if best else None
+        manque = preferences_non_respectees(p, a)
+        key = (-len(manque), s)
+        if best is None or key > best[0]:
+            best = (key, p, manque)
+    return (best[1], best[2]) if best else (None, [])
+
+
+def cout_routine(routine: list[Step]) -> float:
+    """Prix indicatif total des produits de la routine (chaque produit compté une fois)."""
+    produits = {s.produit.id: s.produit for s in routine if s.produit}
+    return round(sum(p.prix or 0 for p in produits.values()), 2)
 
 
 # --- Point d'entrée ----------------------------------------------------------
@@ -610,7 +650,7 @@ def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
     return ResumeSuivi(
         id=uuid.uuid4().hex, date=today, type_cheveux=a.type_cheveux,
         intensites=dict(a.intensites), besoins=d.besoins, phase=d.phase,
-        prochain_point=d.prochain_point,
+        prochain_point=d.prochain_point, preferences=list(a.preferences), budget=a.budget,
     ).model_dump(mode="json")
 
 
@@ -627,7 +667,8 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
     routine = _build_routine(a, besoins, poids)
     for step in routine:
         if step.categorie:
-            step.produit = recommend(step.categorie, a, besoins, poids, catalog, saison.id)
+            step.produit, step.hors_preferences = recommend(
+                step.categorie, a, besoins, poids, catalog, saison.id)
         if step.categorie == "masque" and phase == "entretien":
             step.conseil = "Un lavage sur deux, en alternance avec un après-shampoing. " + step.conseil
 
@@ -666,6 +707,9 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         programme=programme,
         prochain_point=prochain_point,
         evolution=evolution,
+        cout_total=cout_routine(routine),
+        preferences=[PREFERENCES[p] for p in a.preferences],
+        budget=a.budget,
     )
     d.suivi = resume_suivi(d, a, today)
     return d

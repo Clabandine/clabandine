@@ -10,7 +10,7 @@ texture : lisse, ondulée, bouclée, frisée ou crépue.
 personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, un
 écosystème de marques et de professionnels.
 
-## Ce que fait la version actuelle (v0.4)
+## Ce que fait la version actuelle (v0.5)
 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
    (sécheresse, casse, frisottis, chute, démêlage…) et leur intensité.
@@ -29,6 +29,10 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    **Mon suivi** montre l'historique, l'évolution des besoins et un journal de pousse
    (mèche témoin).
 8. **Catalogue de produits réels** : 51 produits de marques disponibles en France.
+9. **Préférences** : vegan, sans parfum, sans sulfates, sans silicones, et budget par
+   produit (petit : 12 € environ, moyen : 25 € environ). Les produits qui respectent le
+   plus de préférences passent en premier ; sinon, le résultat le signale. Le budget de
+   départ de la routine est affiché, et les préférences sont reprises au diagnostic suivant.
 
 ### Le catalogue
 
@@ -164,7 +168,7 @@ curl -X POST http://127.0.0.1:8000/api/diagnostic -H "Content-Type: application/
 - **v0.3 – Les 12 types de cheveux** (1A à 4C) et leurs problèmes fréquents.
 - **v0.4 – Catalogue réel, programme, saisons et suivi** : produits réels, phases de soins,
   conseils de saison, historique et comparaison des diagnostics sur l'appareil.
-- **Ensuite** : préférences (budget, vegan, sans parfum), rappels de routine, photos dans le
+- **Ensuite** : rappels de routine, photos dans le
   suivi, puis comptes utilisateurs pour retrouver son suivi sur tous ses appareils.
 - **v0.5 – E-commerce** : panier, paiement, partenariats avec les marques.
 - **v0.6 – Professionnels** : annuaire de coiffeurs et trichologues, prise de rendez-vous.
