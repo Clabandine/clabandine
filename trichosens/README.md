@@ -53,10 +53,35 @@ Google Sheets ou Excel. **Les prix sont indicatifs et toutes les fiches sont à 
 | `cuir_chevelu` | normal, sec, gras, sensible, pellicules. Vide = tous |
 | `saisons` | hiver, printemps, été, automne : le produit est favorisé à cette saison |
 | `sans_parfum`, `sans_sulfates`, `sans_silicones`, `vegan` | oui, non, ou vide si inconnu |
-| `prix_indicatif`, `contenance`, `lien` | informations d'achat (le lien peut être un lien affilié) |
+| `prix_indicatif`, `contenance` | prix moyen constaté et format |
 
 Dans les colonnes à plusieurs valeurs, séparez les valeurs par `|`. Après modification,
 lancez `pytest` : les tests signalent toute ligne mal remplie.
+
+### Liens d'achat et affiliation
+
+Les liens d'achat sont dans un second tableau, `app/data/liens.csv` : une ligne par
+revendeur et par produit. Un produit peut avoir plusieurs revendeurs ; les 3 moins chers
+s'affichent sous forme de boutons « Acheter chez… ».
+
+| Colonne | Contenu |
+|---|---|
+| `produit_id` | l'`id` du produit dans `produits.csv` |
+| `marchand` | nom affiché : Amazon, Sephora, Notino… |
+| `url` | votre lien (affilié ou non), qui doit commencer par `https://` |
+| `prix` | prix chez ce revendeur (facultatif) |
+| `affilie` | `oui` si c'est un lien d'affiliation : la mention « Lien affilié » s'affiche |
+| `actif` | `non` pour masquer le lien sans le supprimer |
+
+Dès qu'un lien affilié s'affiche, le résultat explique que TrichoSens peut toucher une
+commission (obligation légale en France). Le choix des produits ne dépend jamais des
+commissions.
+
+**Clics :** les boutons passent par `/acheter/...`, qui compte le clic puis redirige vers le
+revendeur. Les statistiques sont sur `/admin/clics?cle=VOTRE_CLE`. La clé `ADMIN_CLE` est
+générée par Render (service trichosens, puis **Environment**). Les compteurs repartent à
+zéro à chaque redémarrage du site : pour les ventes et les commissions, fiez-vous aux
+tableaux de bord des programmes d'affiliation.
 
 ## Lancer le projet
 
@@ -134,6 +159,8 @@ trichosens/
 │   ├── engine.py          # Moteur : besoins, programme, routine, produits, conseils
 │   ├── catalog.py         # Lecture et vérification du catalogue
 │   ├── data/produits.csv  # Catalogue de produits (tableau)
+│   ├── data/liens.csv     # Liens d'achat par revendeur (affiliation)
+│   ├── clicks.py          # Comptage des clics sur les liens d'achat
 │   ├── templates/         # Pages HTML (accueil, questionnaire, résultat, suivi)
 │   └── static/            # Mise en page, scripts (questionnaire, suivi), images
 ├── scripts/               # Génération des illustrations

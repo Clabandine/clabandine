@@ -158,7 +158,17 @@
         {% if s.produit.labels %}<span class="labels">{% for l in s.produit.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
         {% if s.produit.prix %}<span class="price">≈ {{ '%.2f' | format(s.produit.prix) | replace('.', ',') }} €{% if s.produit.contenance %} <small>· {{ s.produit.contenance }}</small>{% endif %}</span>{% endif %}
         {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
-        {% if s.produit.lien %}<a class="product-link" href="{{ s.produit.lien }}" target="_blank" rel="noopener">Voir le produit</a>{% endif %}
+        {% if s.produit.offres %}
+        <div class="offres">
+          {% for o in s.produit.offres[:3] %}
+          <a class="buy{% if loop.first %} first{% endif %}" href="/acheter/{{ o.id }}" target="_blank"
+             rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">
+            Acheter chez {{ o.marchand }}{% if o.prix %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
+          </a>
+          {% if o.affilie %}<small class="affiliate">Lien affilié</small>{% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
       {% endif %}
     </li>
@@ -194,8 +204,11 @@
 {% endif %}
 
 
-<p class="help">Prix indicatifs, susceptibles de varier selon les revendeurs. TrichoSens n'est lié à
-  aucune de ces marques.</p>
+<p class="help">Prix indicatifs, susceptibles de varier selon les revendeurs.
+  {% if d.liens_affilies %}Certains liens d'achat sont des liens affiliés : si vous achetez par leur
+  intermédiaire, TrichoSens peut toucher une commission, sans surcoût pour vous. Nos recommandations
+  restent choisies selon les besoins de vos cheveux, jamais selon les commissions.
+  {% else %}TrichoSens n'est lié à aucune de ces marques.{% endif %}</p>
 
 <section class="card rappels">
   <h2>⏰ Mes rappels</h2>

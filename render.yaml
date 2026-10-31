@@ -22,3 +22,6 @@ services:
         value: "5"
       - key: PHOTO_MAX_PAR_JOUR
         value: "200"
+      # Mot de passe de la page de statistiques des clics : /admin/clics?cle=...
+      - key: ADMIN_CLE
+        generateValue: true

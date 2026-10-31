@@ -7,13 +7,16 @@ valeurs, séparez les valeurs par « | ». La colonne `types` accepte des plages
 """
 
 import csv
-from dataclasses import asdict, dataclass
+import re
+import unicodedata
+from dataclasses import asdict, dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 
 from .hair_types import HAIR_TYPES
 
 CATALOG_PATH = Path(__file__).parent / "data" / "produits.csv"
+LIENS_PATH = Path(__file__).parent / "data" / "liens.csv"
 
 CATEGORIES = {
     "shampoing": "Shampoing",
@@ -34,6 +37,18 @@ TYPE_CODES = list(HAIR_TYPES)  # dans l'ordre, de 1A à 4C
 
 
 @dataclass(frozen=True)
+class Offre:
+    """Un revendeur qui vend le produit (lien d'achat, affilié ou non)."""
+
+    id: str
+    produit_id: str
+    marchand: str
+    url: str
+    prix: float | None = None
+    affilie: bool = False
+
+
+@dataclass(frozen=True)
 class Product:
     id: str
     marque: str
@@ -51,9 +66,9 @@ class Product:
     saisons: tuple[str, ...] = ()
     prix: float | None = None
     contenance: str = ""
-    lien: str = ""
     ingredients_cles: tuple[str, ...] = ()
     a_verifier: bool = True
+    offres: tuple[Offre, ...] = ()
 
     @property
     def nom_complet(self) -> str:
@@ -161,14 +176,57 @@ def parse_product(row: dict) -> Product:
         saisons=saisons,
         prix=prix,
         contenance=(row.get("contenance") or "").strip(),
-        lien=(row.get("lien") or "").strip(),
         ingredients_cles=_list(row.get("ingredients_cles", "")),
         a_verifier=_bool(row.get("a_verifier", "")) is not False,
     )
 
 
+def _slug(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def load_offres(path: Path, produits: set[str]) -> dict[str, list[Offre]]:
+    """Lit liens.csv : une ligne = un revendeur pour un produit."""
+    offres: dict[str, list[Offre]] = {}
+    if not path.exists():
+        return offres
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        rows = [r for r in csv.DictReader(f, delimiter=";") if (r.get("produit_id") or "").strip()]
+    ids = set()
+    for n, row in enumerate(rows, start=2):
+        pid = row["produit_id"].strip()
+        marchand = (row.get("marchand") or "").strip()
+        url = (row.get("url") or "").strip()
+        where = f"liens.csv, ligne {n}"
+        if pid not in produits:
+            raise ValueError(f"{where} : produit inconnu « {pid} »")
+        if not marchand:
+            raise ValueError(f"{where} : marchand manquant")
+        if not url.startswith("https://"):
+            raise ValueError(f"{where} : l'adresse doit commencer par https://")
+        if _bool(row.get("actif", "")) is False:
+            continue
+        prix_txt = (row.get("prix") or "").strip().replace(",", ".")
+        try:
+            prix = float(prix_txt) if prix_txt else None
+        except ValueError:
+            raise ValueError(f"{where} : prix illisible « {prix_txt} »")
+        oid = f"{pid}--{_slug(marchand)}"
+        if oid in ids:
+            raise ValueError(f"{where} : deux liens pour {marchand} sur le même produit")
+        ids.add(oid)
+        offres.setdefault(pid, []).append(Offre(
+            id=oid, produit_id=pid, marchand=marchand, url=url, prix=prix,
+            affilie=_bool(row.get("affilie", "")) is True,
+        ))
+    for pid in offres:  # le moins cher d'abord
+        offres[pid].sort(key=lambda o: (o.prix is None, o.prix or 0))
+    return offres
+
+
 @lru_cache
-def load_catalog(path: Path = CATALOG_PATH) -> list[Product]:
+def load_catalog(path: Path = CATALOG_PATH, liens: Path = LIENS_PATH) -> list[Product]:
     # utf-8-sig : accepte les fichiers enregistrés par Excel.
     with open(path, encoding="utf-8-sig", newline="") as f:
         rows = [r for r in csv.DictReader(f, delimiter=";") if (r.get("id") or "").strip()]
@@ -177,4 +235,9 @@ def load_catalog(path: Path = CATALOG_PATH) -> list[Product]:
     doubles = {i for i in ids if ids.count(i) > 1}
     if doubles:
         raise ValueError(f"Identifiants en double : {', '.join(sorted(doubles))}")
-    return products
+    offres = load_offres(liens, set(ids))
+    return [replace(p, offres=tuple(offres.get(p.id, ()))) for p in products]
+
+
+def offres_par_id(catalog: list[Product]) -> dict[str, Offre]:
+    return {o.id: o for p in catalog for o in p.offres}

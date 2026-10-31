@@ -8,7 +8,7 @@ ROW = {
     "description": "", "besoins": "hydratation", "poids": "moyen", "types": "3A-4C",
     "cuir_chevelu": "", "sans_parfum": "", "sans_sulfates": "oui", "sans_silicones": "",
     "vegan": "non", "saisons": "été|hiver", "prix_indicatif": "12,50", "contenance": "",
-    "lien": "", "ingredients_cles": "", "a_verifier": "oui",
+    "ingredients_cles": "", "a_verifier": "oui",
 }
 
 

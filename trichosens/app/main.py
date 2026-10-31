@@ -4,19 +4,21 @@ Lancer en local :  uvicorn app.main:app --reload   (depuis le dossier trichosens
 """
 
 import datetime as dt
+import hmac
 import logging
 import os
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from . import photo as photo_ai
-from .catalog import CATEGORIES
+from .catalog import CATEGORIES, load_catalog, offres_par_id
+from .clicks import counter as clics
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
 from .hair_types import FAMILLES, HAIR_TYPES
@@ -106,6 +108,37 @@ def _parse_precedent(raw: str | None) -> ResumeSuivi | None:
         return ResumeSuivi.model_validate_json(raw)
     except ValidationError:
         return None
+
+
+@app.get("/acheter/{offre_id}")
+def acheter(offre_id: str):
+    """Compte le clic puis redirige vers le revendeur (seulement les liens du catalogue)."""
+    offre = offres_par_id(load_catalog()).get(offre_id)
+    if not offre:
+        raise HTTPException(status_code=404, detail="Lien introuvable.")
+    clics.add(offre.id)
+    return RedirectResponse(offre.url, status_code=302)
+
+
+@app.get("/admin/clics", response_class=HTMLResponse, include_in_schema=False)
+def admin_clics(request: Request, cle: str = ""):
+    """Statistiques de clics, protégées par la clé ADMIN_CLE (variable d'environnement)."""
+    attendue = os.environ.get("ADMIN_CLE", "")
+    if not attendue or not hmac.compare_digest(cle, attendue):
+        raise HTTPException(status_code=404)
+    catalog = load_catalog()
+    offres = offres_par_id(catalog)
+    produits = {p.id: p for p in catalog}
+    lignes = []
+    for oid, n in clics.snapshot():
+        o = offres.get(oid)
+        if o:
+            lignes.append({"produit": produits[o.produit_id].nom_complet, "marchand": o.marchand,
+                           "affilie": o.affilie, "clics": n})
+    return templates.TemplateResponse(request, "admin_clics.html", {
+        "lignes": lignes, "depuis": clics.depuis, "nb_liens": len(offres),
+        "nb_produits_avec_lien": sum(1 for p in catalog if p.offres), "nb_produits": len(catalog),
+    })
 
 
 @app.get("/rappels.ics")

@@ -173,6 +173,7 @@ class Diagnostic:
     suivi: dict = field(default_factory=dict)
     cout_total: float = 0.0
     jours_lavage: list[str] = field(default_factory=list)
+    liens_affilies: bool = False
     preferences: list[str] = field(default_factory=list)
     budget: str = "indifferent"
     douleurs: list[PainReport] = field(default_factory=list)
@@ -719,6 +720,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         evolution=evolution,
         cout_total=cout_routine(routine),
         jours_lavage=jours_suggeres(lavages_par_semaine(a)),
+        liens_affilies=any(o.affilie for s in routine if s.produit for o in s.produit.offres),
         preferences=[PREFERENCES[p] for p in a.preferences],
         budget=a.budget,
     )
