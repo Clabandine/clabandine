@@ -1,0 +1,21 @@
+name: Contrôle du catalogue TrichoSens
+
+# Chaque lundi matin, et à la demande (onglet Actions > Run workflow).
+# En cas de lien mort, le contrôle échoue et GitHub vous prévient par e-mail.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trichosens
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/verifier_catalogue.py

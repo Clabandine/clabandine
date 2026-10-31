@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Comprendre ses cheveux.<br>Trouver les bons soins.<br>Révéler leur potentiel.</h1>
+  <p>Du type 1A au type 4C, lisses, ondulés, bouclés, frisés ou crépus : dites-nous ce qui vous gêne, montrez-nous
+     vos cheveux en photo, et recevez une routine de soins sur mesure.</p>
+  <a class="button" href="/diagnostic">Commencer mon diagnostic</a>
+  <p class="small">Environ 3 minutes, gratuit et sans inscription.</p>
+  <div class="textures">
+    {% for f in FAMILLES.values() %}
+    <figure><img src="{{ visuel(f.visuel) }}" alt="{{ f.label }}" width="240" height="240"><figcaption><strong>{{ f.titre }}</strong><br>{{ f.label }}</figcaption></figure>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="features">
+  <article>
+    <h2>Vos problèmes, expliqués</h2>
+    <p>Sécheresse, casse, frisottis, chute : nous expliquons pourquoi cela vous arrive, et comment y remédier.</p>
+  </article>
+  <article>
+    <h2>Une analyse photo par IA</h2>
+    <p>Prenez vos cheveux en photo : notre intelligence artificielle affine le diagnostic.</p>
+  </article>
+  <article>
+    <h2>Une routine sur mesure</h2>
+    <p>Des gestes clairs, étape par étape, pour le jour du lavage, le quotidien et la nuit.</p>
+  </article>
+  <article>
+    <h2>Les bons produits</h2>
+    <p>Des recommandations choisies selon les besoins réels de vos cheveux, pas selon les tendances.</p>
+  </article>
+</section>
+{% endblock %}

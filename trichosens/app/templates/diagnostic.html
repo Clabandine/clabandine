@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Mon diagnostic – TrichoSens{% endblock %}
+
+{% macro question_block(q, num) %}
+{% set current = answers.get(q.id) %}
+<fieldset class="question{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
+          data-required="{{ 'true' if q.required else 'false' }}"
+          {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
+  <legend><span class="num">{{ num }}</span> {{ q.label }}</legend>
+  {% if q.help %}<p class="help">{{ q.help }}</p>{% endif %}
+  <p class="error" {% if not errors.get(q.id) %}hidden{% endif %}>{{ errors.get(q.id, '') }}</p>
+
+  {% if q.id == 'preoccupations' %}
+  <div class="pains">
+    {% for o in q.options %}
+    {% set checked = current and o.value in current %}
+    {% set gene = (answers.get('intensites') or {}).get(o.value) %}
+    <div class="pain{% if errors.get('gene_' ~ o.value) %} has-error{% endif %}">
+      <label class="pain-head">
+        <input type="checkbox" name="preoccupations" value="{{ o.value }}" {% if checked %}checked{% endif %}>
+        <span><strong>{{ o.label }}</strong><small>{{ o.hint }}</small></span>
+      </label>
+      <div class="intensity" role="radiogroup" aria-label="À quel point cela vous gêne-t-il ?">
+        <span class="intensity-label">Cela me gêne :</span>
+        {% for value, label in INTENSITES.items() %}
+        <label class="chip">
+          <input type="radio" name="gene_{{ o.value }}" value="{{ value }}" {% if gene == value %}checked{% endif %}>
+          <span>{{ label }}</span>
+        </label>
+        {% endfor %}
+        {% if errors.get('gene_' ~ o.value) %}<p class="error">{{ errors['gene_' ~ o.value] }}</p>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% elif q.id == 'type_cheveux' %}
+  {% set current_famille = current[0] if current else '' %}
+  <div class="families js-only" hidden>
+    <p class="sub-label">1. Votre famille de cheveux</p>
+    <div class="options visual">
+      {% for f in FAMILLES.values() %}
+      <label class="option" data-famille="{{ f.id }}">
+        <input type="radio" name="famille" value="{{ f.id }}" {% if current_famille == f.id %}checked{% endif %}>
+        <img src="{{ visuel(f.visuel) }}" alt="" loading="lazy" width="240" height="240">
+        <span class="option-text">
+          <strong>{{ f.titre }}</strong>
+          <small>{{ f.label }}</small>
+          <em class="ai-badge" hidden>Suggestion de l'IA</em>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="sub-label subtype-label" hidden>2. Le type le plus proche</p>
+  </div>
+  {% for f in FAMILLES.values() %}
+  <div class="subtype-group" data-famille="{{ f.id }}">
+    <h3 class="group-title">{{ f.titre }} : {{ f.label }}</h3>
+    <div class="options visual">
+      {% for o in q.options if o.groupe == f.id %}
+      <label class="option" data-value="{{ o.value }}">
+        <input type="radio" name="{{ q.id }}" value="{{ o.value }}" {% if current == o.value %}checked{% endif %}>
+        <img src="{{ visuel(o.visuel) }}" alt="" loading="lazy" width="240" height="240">
+        <span class="option-text">
+          <strong>{{ o.label }}</strong>
+          <small>{{ o.hint }}</small>
+          <em class="ai-badge" hidden>Suggestion de l'IA</em>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div class="options{% if q.has_visuals %} visual{% endif %}">
+    {% for o in q.options %}
+    {% if q.multiple %}
+      {% set checked = current and o.value in current %}
+    {% else %}
+      {% set checked = current == o.value %}
+    {% endif %}
+    <label class="option" data-value="{{ o.value }}">
+      <input type="{{ 'checkbox' if q.multiple else 'radio' }}" name="{{ q.id }}" value="{{ o.value }}"
+             {% if checked %}checked{% endif %}>
+      {% if o.visuel %}<img src="{{ visuel(o.visuel) }}" alt="" loading="lazy" width="240" height="240">{% endif %}
+      <span class="option-text">
+        <strong>{{ o.label }}</strong>
+        {% if o.hint %}<small>{{ o.hint }}</small>{% endif %}
+        <em class="ai-badge" hidden>Suggestion de l'IA</em>
+      </span>
+    </label>
+    {% endfor %}
+  </div>
+  {% endif %}
+</fieldset>
+{% endmacro %}
+
+{% block content %}
+<h1>Mon diagnostic capillaire</h1>
+
+{% if errors %}
+<p class="error-box" role="alert">Certaines réponses manquent ou sont à corriger.</p>
+{% endif %}
+
+<div class="progress js-only" hidden>
+  <div class="progress-text">Étape <span id="step-num">1</span> sur <span id="step-total">{{ steps | length }}</span> · <span id="step-name"></span></div>
+  <div class="progress-bar"><span id="progress-fill"></span></div>
+</div>
+
+<form method="post" action="/diagnostic" class="questionnaire" id="diagnostic-form" novalidate>
+  {% set ns = namespace(num=0) %}
+  {% for s in steps %}
+  {% if s.id != 'photo' or photo_active %}
+  <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}">
+    <h2>{{ s.titre }}</h2>
+    <p class="step-intro">{{ s.intro }}</p>
+
+    {% if s.id == 'photo' %}
+    <div class="photo-box">
+      <ul class="photo-tips">
+        <li>Lumière du jour, sans flash.</li>
+        <li>Cheveux secs, au naturel, sans produit coiffant si possible.</li>
+        <li>De près : on doit bien voir les longueurs et les pointes.</li>
+        <li>Inutile de montrer votre visage.</li>
+      </ul>
+      <label class="photo-drop">
+        <input type="file" accept="image/*" id="photo-input">
+        <img id="photo-preview" alt="Aperçu de votre photo" hidden>
+        <span id="photo-drop-text">📷 Prendre ou choisir une photo</span>
+      </label>
+      <label class="consent">
+        <input type="checkbox" id="photo-consent">
+        <span>J'accepte que ma photo soit envoyée à notre prestataire d'intelligence artificielle
+          (Anthropic) pour être analysée. TrichoSens ne conserve pas la photo.</span>
+      </label>
+      <button type="button" class="button" id="photo-analyse" disabled>Analyser ma photo</button>
+      <p id="photo-status" class="photo-status" role="status" aria-live="polite"></p>
+      <div id="photo-result" class="photo-result" hidden></div>
+      <input type="hidden" name="analyse_photo" id="analyse-photo" value="{{ photo_json or '' }}">
+      <noscript><p class="help">L'analyse photo nécessite JavaScript.</p></noscript>
+    </div>
+    {% endif %}
+
+    {% for q in questions if q.step == s.id %}
+    {% set ns.num = ns.num + 1 %}
+    {{ question_block(q, ns.num) }}
+    {% endfor %}
+
+    <div class="step-nav js-only" hidden>
+      {% if not loop.first %}<button type="button" class="button secondary" data-prev>Retour</button>{% endif %}
+      {% if not loop.last %}
+      <button type="button" class="button" data-next>{{ 'Passer cette étape' if s.id == 'photo' else 'Continuer' }}</button>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+  {% endfor %}
+  <input type="hidden" name="precedent" id="precedent" value="">
+  <p class="help suivi-info" hidden>📈 Nous comparerons ce diagnostic avec celui du <span></span>.</p>
+  <button class="button submit" type="submit">Voir mon diagnostic</button>
+</form>
+<script src="{{ url_for('static', path='diagnostic.js') }}" defer></script>
+{% endblock %}

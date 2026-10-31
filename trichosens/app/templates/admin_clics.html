@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Clics – TrichoSens{% endblock %}
+{% block content %}
+<h1>Clics sur les liens d'achat</h1>
+<p class="help">Depuis le dernier redémarrage du site ({{ depuis.strftime('%d/%m/%Y %H:%M') }} UTC).
+  Les compteurs repartent à zéro à chaque mise à jour ou mise en veille. Les ventes et les
+  commissions se suivent dans les tableaux de bord des programmes d'affiliation.</p>
+<p>{{ nb_produits_avec_lien }} produits sur {{ nb_produits }} ont au moins un lien ({{ nb_liens }} liens au total).</p>
+{% if lignes %}
+<div class="table-wrap">
+<table class="timeline">
+  <thead><tr><th>Produit</th><th>Revendeur</th><th>Clics</th></tr></thead>
+  <tbody>
+  {% for l in lignes %}
+  <tr><th>{{ l.produit }}</th><td>{{ l.marchand }}{% if l.affilie %} · affilié{% endif %}</td><td>{{ l.clics }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p>Aucun clic pour l'instant.</p>
+{% endif %}
+{% endblock %}

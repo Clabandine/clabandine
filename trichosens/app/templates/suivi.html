@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Mon suivi – TrichoSens{% endblock %}
+{% block content %}
+<h1>Mon suivi capillaire</h1>
+<p class="lead">Vos diagnostics et vos mesures, pour voir vos cheveux évoluer au fil des semaines.</p>
+<p class="help">Votre suivi est gardé sur cet appareil, dans ce navigateur. Il n'est pas envoyé sur nos
+  serveurs. Exportez-le de temps en temps pour ne pas le perdre.</p>
+
+<div id="suivi-root">
+  <noscript><p class="note">Le suivi nécessite JavaScript.</p></noscript>
+</div>
+
+<section class="card">
+  <h2>📏 Journal de pousse</h2>
+  <p class="help">Choisissez une mèche témoin (toujours la même, par exemple à la nuque), étirez-la et
+    mesurez-la une fois par mois. C'est le meilleur moyen de voir la vraie pousse, surtout pour les
+    cheveux qui se rétractent.</p>
+  <form id="journal-form" class="journal-form">
+    <label>Date <input type="date" name="date" required></label>
+    <label>Longueur (cm) <input type="number" name="longueur" min="1" max="200" step="0.5" inputmode="decimal"></label>
+    <label class="wide">Note <input type="text" name="note" maxlength="200"
+      placeholder="Ex. : nouveau masque, moins de frisottis…"></label>
+    <button class="button" type="submit">Ajouter</button>
+  </form>
+  <div id="journal-list"></div>
+</section>
+
+<section class="card">
+  <h2>Mes données</h2>
+  <p><button class="button secondary" type="button" id="export">Exporter mon suivi</button>
+     <button class="button secondary" type="button" id="import-btn">Importer</button>
+     <input type="file" id="import-file" accept="application/json" hidden></p>
+  <p><button class="button danger" type="button" id="clear">Effacer mon suivi</button></p>
+</section>
+
+<script type="application/json" id="suivi-labels">{{ {
+  "douleurs": PAIN_LABELS, "besoins": NEEDS, "intensites": INTENSITES, "phases": PHASES
+} | tojson }}</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TrichoSens{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="/">Tricho<span>Sens</span></a>
+    <nav><a href="/suivi">Mon suivi</a><a href="/diagnostic">Mon diagnostic</a></nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>Comprendre ses cheveux. Trouver les bons soins. Révéler leur potentiel.</p>
+    <p class="small">TrichoSens donne des conseils de soin et ne remplace pas l'avis d'un médecin ou d'un dermatologue.
+      Vos réponses ne sont pas enregistrées sur nos serveurs : votre historique reste sur votre appareil.</p>
+  </footer>
+<script src="{{ url_for('static', path='suivi.js') }}" defer></script>
+</body>
+</html>

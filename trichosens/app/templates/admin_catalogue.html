@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Catalogue – TrichoSens{% endblock %}
+{% block content %}
+<h1>Fiches produits à revoir</h1>
+<p><strong>{{ a_revoir | length }}</strong> fiches sur {{ nb_produits }} sont à revoir.
+  Une fiche doit être revérifiée au moins tous les {{ mois }} mois.</p>
+<p class="help">Pour chaque fiche : vérifiez la composition, le prix, les labels (vegan, sans parfum…)
+  et les types de cheveux. Puis, dans <code>app/data/produits.csv</code>, mettez <code>a_verifier</code>
+  à <code>non</code> et la date du jour dans <code>date_verification</code>.
+  Les liens morts sont signalés chaque lundi par le contrôle automatique de GitHub.</p>
+{% if a_revoir %}
+<div class="table-wrap">
+<table class="timeline">
+  <thead><tr><th>Produit</th><th>Catégorie</th><th>Raison</th><th>Liens</th></tr></thead>
+  <tbody>
+  {% for p, raison in a_revoir %}
+  <tr><th>{{ p.nom_complet }}<br><small>{{ p.id }}</small></th><td>{{ CATEGORIES[p.categorie] }}</td>
+      <td>{{ raison }}</td><td>{{ p.offres | length }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p>Toutes les fiches sont à jour. ✅</p>
+{% endif %}
+<p><a href="/admin/clics?cle={{ cle | urlencode }}">Voir les clics</a></p>
+{% endblock %}
