@@ -34,7 +34,7 @@ def main() -> None:
     deja = {r["produit_id"] for r in liens if r.get("marchand", "").strip().lower() == "amazon"}
     ajouts = [
         {"produit_id": p["id"], "marchand": "Amazon", "url": recherche(p["marque"], p["nom"]),
-         "prix": "", "affilie": "oui", "actif": ""}
+         "prix": "", "affilie": "oui", "actif": "", "awin_mid": ""}
         for p in produits if p["id"] not in deja
     ]
     with open(liens_path, "w", encoding="utf-8", newline="") as f:

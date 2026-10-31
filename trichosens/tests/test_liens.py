@@ -6,7 +6,7 @@ from app.catalog import CATALOG_PATH, load_catalog
 from app.clicks import ClickCounter
 
 client = TestClient(main.app)
-HEADER = "produit_id;marchand;url;prix;affilie;actif\n"
+HEADER = "produit_id;marchand;url;prix;affilie;actif;awin_mid\n"
 LIENS = HEADER + (
     "cantu-leave-in;Amazon;https://www.amazon.fr/dp/EXEMPLE?tag=trichosens-21;8,90;oui;\n"
     "cantu-leave-in;Pharmacie;https://pharmacie.example/cantu;9,50;non;\n"
@@ -96,3 +96,16 @@ def test_stats_page_needs_the_admin_key(with_links, monkeypatch):
     client.get("/acheter/cantu-leave-in--amazon", follow_redirects=False)
     r = client.get("/admin/clics", params={"cle": "secret"})
     assert r.status_code == 200 and "Amazon · affilié" in r.text
+
+
+def test_awin_link_is_built_from_product_page_and_advertiser_id(tmp_path):
+    cat = catalog_with(tmp_path, HEADER + "cantu-leave-in;Notino;https://www.notino.fr/cantu/leave-in/?a=1;;;;12345\n")
+    o = next(p for p in cat if p.id == "cantu-leave-in").offres[0]
+    assert o.affilie
+    assert o.url == ("https://www.awin1.com/cread.php?awinmid=12345&awinaffid=2944635"
+                     "&ued=https%3A%2F%2Fwww.notino.fr%2Fcantu%2Fleave-in%2F%3Fa%3D1")
+
+
+def test_bad_awin_id_is_explained(tmp_path):
+    with pytest.raises(ValueError, match="Awin"):
+        catalog_with(tmp_path, HEADER + "cantu-leave-in;Notino;https://www.notino.fr/x;;;;abc\n")

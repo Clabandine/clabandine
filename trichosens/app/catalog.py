@@ -8,16 +8,26 @@ valeurs, séparez les valeurs par « | ». La colonne `types` accepte des plages
 
 import csv
 import datetime as dt
+import os
 import re
 import unicodedata
 from dataclasses import asdict, dataclass, replace
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote
 
 from .hair_types import HAIR_TYPES
 
 CATALOG_PATH = Path(__file__).parent / "data" / "produits.csv"
 LIENS_PATH = Path(__file__).parent / "data" / "liens.csv"
+# Identifiant éditeur Awin de TrichoSens (modifiable avec la variable d'environnement AWIN_ID).
+AWIN_ID = os.environ.get("AWIN_ID", "2944635")
+
+
+def lien_awin(url: str, awin_mid: str, awin_id: str = AWIN_ID) -> str:
+    """Transforme l'adresse d'une page produit en lien affilié Awin (« deep link »)."""
+    return (f"https://www.awin1.com/cread.php?awinmid={awin_mid}&awinaffid={awin_id}"
+            f"&ued={quote(url, safe='')}")
 
 CATEGORIES = {
     "shampoing": "Shampoing",
@@ -232,13 +242,18 @@ def load_offres(path: Path, produits: set[str]) -> dict[str, list[Offre]]:
             prix = float(prix_txt) if prix_txt else None
         except ValueError:
             raise ValueError(f"{where} : prix illisible « {prix_txt} »")
+        affilie = _bool(row.get("affilie", "")) is True
+        awin_mid = (row.get("awin_mid") or "").strip()
+        if awin_mid:
+            if not awin_mid.isdigit():
+                raise ValueError(f"{where} : l'ID annonceur Awin doit être un nombre (« {awin_mid} »)")
+            url, affilie = lien_awin(url, awin_mid), True
         oid = f"{pid}--{_slug(marchand)}"
         if oid in ids:
             raise ValueError(f"{where} : deux liens pour {marchand} sur le même produit")
         ids.add(oid)
         offres.setdefault(pid, []).append(Offre(
-            id=oid, produit_id=pid, marchand=marchand, url=url, prix=prix,
-            affilie=_bool(row.get("affilie", "")) is True,
+            id=oid, produit_id=pid, marchand=marchand, url=url, prix=prix, affilie=affilie,
         ))
     for pid in offres:  # le moins cher d'abord
         offres[pid].sort(key=lambda o: (o.prix is None, o.prix or 0))

@@ -73,6 +73,7 @@ s'affichent sous forme de boutons « Acheter chez… ».
 | `prix` | prix chez ce revendeur (facultatif) |
 | `affilie` | `oui` si c'est un lien d'affiliation : la mention « Lien affilié » s'affiche |
 | `actif` | `non` pour masquer le lien sans le supprimer |
+| `awin_mid` | pour un revendeur Awin : son **ID annonceur** (voir ci-dessous) |
 
 Dès qu'un lien affilié s'affiche, le résultat explique que TrichoSens peut toucher une
 commission (obligation légale en France). Le choix des produits ne dépend jamais des
@@ -84,6 +85,11 @@ lien qu'aux produits qui n'en ont pas). Pour vendre davantage, remplacez peu à 
 le lien direct de la fiche, créé avec la barre SiteStripe d'Amazon. Ne renseignez jamais de prix
 pour Amazon : son règlement l'interdit hors de son interface officielle. La phrase obligatoire
 « En tant que Partenaire Amazon… » s'affiche automatiquement.
+
+**Awin (identifiant éditeur `2944635`) :** pour un revendeur auquel vous êtes acceptée sur
+Awin, collez dans `url` l'adresse normale de la page produit, et dans `awin_mid` l'ID annonceur
+du revendeur (tableau de bord Awin, rubrique des annonceurs : le numéro à côté du nom). Le
+site fabrique alors le lien affilié avec votre identifiant, et le marque comme affilié.
 
 **Clics :** les boutons passent par `/acheter/...`, qui compte le clic puis redirige vers le
 revendeur. Les statistiques sont sur `/admin/clics?cle=VOTRE_CLE`. La clé `ADMIN_CLE` est
