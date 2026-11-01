@@ -171,6 +171,15 @@ l'illustration.
 Utilisez uniquement des photos dont vous avez les droits (vos propres photos avec
 l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels).
 
+## Charte graphique
+
+- **Couleurs et polices :** toutes en tête de `app/static/style.css` (bloc `:root`) : couleur
+  principale, accent, fonds, polices des titres et du texte.
+- **Logo :** déposez `logo.svg` (idéal), `logo.png` ou `logo.webp` dans `app/static/img/`. Il
+  remplace automatiquement le logo texte dans l'en-tête et sert d'icône d'onglet.
+- **Animations :** légères et désactivées automatiquement si le téléphone demande de réduire
+  les animations (réglage d'accessibilité).
+
 ## Organisation du code
 
 ```

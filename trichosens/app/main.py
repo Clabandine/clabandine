@@ -53,7 +53,16 @@ def visuel(name: str) -> str:
     return f"/static/img/illustrations/{name}.svg"
 
 
+def logo_url() -> str | None:
+    """Logo de la marque s'il a été déposé dans static/img/ (logo.svg, logo.png ou logo.webp)."""
+    for ext in ("svg", "png", "webp", "jpg"):
+        if (STATIC_DIR / "img" / f"logo.{ext}").exists():
+            return f"/static/img/logo.{ext}"
+    return None
+
+
 templates.env.globals.update(
+    logo_url=logo_url,
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
     FAMILLES=FAMILLES, AVIS_URL=AVIS_URL,
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},

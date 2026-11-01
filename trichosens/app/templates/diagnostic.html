@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Mon diagnostic – TrichoSens{% endblock %}
+{% block main_class %}page-diagnostic{% endblock %}
 
 {% macro question_block(q, num) %}
 {% set current = answers.get(q.id) %}
@@ -97,7 +98,17 @@
 {% endmacro %}
 
 {% block content %}
-<h1>Mon diagnostic capillaire</h1>
+{% set icones = {
+  'douleurs': '<path d="M24 40s-14-8-14-19a8 8 0 0 1 14-5 8 8 0 0 1 14 5c0 11-14 19-14 19z"/>',
+  'photo': '<rect x="8" y="14" width="32" height="24" rx="5"/><circle cx="24" cy="26" r="6"/><path d="M18 14l3-4h6l3 4"/>',
+  'cheveux': '<path d="M16 8c6 5-6 11 0 16s-6 11 0 16M24 8c6 5-6 11 0 16s-6 11 0 16M32 8c6 5-6 11 0 16s-6 11 0 16"/>',
+  'habitudes': '<path d="M14 40V20a10 10 0 0 1 20 0v20"/><path d="M10 40h28M24 10v4"/>',
+  'objectif': '<circle cx="24" cy="24" r="16"/><circle cx="24" cy="24" r="9"/><circle cx="24" cy="24" r="2"/>',
+} %}
+<div class="diag-head">
+  <h1>Mon diagnostic capillaire</h1>
+  <p class="lead">Quelques questions simples, et votre routine sur mesure.</p>
+</div>
 
 {% if errors %}
 <p class="error-box" role="alert">Certaines réponses manquent ou sont à corriger.</p>
@@ -106,6 +117,9 @@
 <div class="progress js-only" hidden>
   <div class="progress-text">Étape <span id="step-num">1</span> sur <span id="step-total">{{ steps | length }}</span> · <span id="step-name"></span></div>
   <div class="progress-bar"><span id="progress-fill"></span></div>
+  <ol class="stepper" aria-hidden="true">
+    {% for s in steps if s.id != 'photo' or photo_active %}<li data-for="{{ s.id }}"><span>{{ loop.index }}</span></li>{% endfor %}
+  </ol>
 </div>
 
 <form method="post" action="/diagnostic" class="questionnaire" id="diagnostic-form" novalidate>
@@ -113,8 +127,13 @@
   {% for s in steps %}
   {% if s.id != 'photo' or photo_active %}
   <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}">
-    <h2>{{ s.titre }}</h2>
-    <p class="step-intro">{{ s.intro }}</p>
+    <div class="step-head">
+      <svg class="step-icon" viewBox="0 0 48 48" aria-hidden="true">{{ icones[s.id] | safe }}</svg>
+      <div>
+        <h2>{{ s.titre }}</h2>
+        <p class="step-intro">{{ s.intro }}</p>
+      </div>
+    </div>
 
     {% if s.id == 'photo' %}
     <div class="photo-box">
@@ -160,5 +179,14 @@
   <p class="help suivi-info" hidden>📈 Nous comparerons ce diagnostic avec celui du <span></span>.</p>
   <button class="button submit" type="submit">Voir mon diagnostic</button>
 </form>
+<div class="loading-screen" id="loading-screen" hidden role="status" aria-live="polite">
+  <svg class="loading-strands" viewBox="0 0 120 120" aria-hidden="true">
+    <path d="M30 10c14 10-14 20 0 30s-14 20 0 30s-14 20 0 30"/>
+    <path d="M60 10c14 10-14 20 0 30s-14 20 0 30s-14 20 0 30"/>
+    <path d="M90 10c14 10-14 20 0 30s-14 20 0 30s-14 20 0 30"/>
+  </svg>
+  <p class="loading-title">Analyse de vos réponses…</p>
+  <p class="loading-step" id="loading-step">Nous étudions votre type de cheveux</p>
+</div>
 <script src="{{ url_for('static', path='diagnostic.js') }}" defer></script>
 {% endblock %}

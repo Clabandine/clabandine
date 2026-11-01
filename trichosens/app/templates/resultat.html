@@ -1,12 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Mon résultat – TrichoSens{% endblock %}
+{% block main_class %}page-result{% endblock %}
 {% block content %}
-<section class="result-hero">
-  <img src="{{ visuel(d.type_cheveux.visuel) }}" alt="" width="120" height="120">
-  <div>
+
+{# Produits de la routine, sans doublon, avec les étapes où ils servent. #}
+{% set ns = namespace(ids=[], produits=[]) %}
+{% for s in d.routine if s.produit and s.produit.id not in ns.ids %}
+  {% set ns.ids = ns.ids + [s.produit.id] %}
+  {% set ns.produits = ns.produits + [s] %}
+{% endfor %}
+
+<section class="result-hero reveal">
+  <div class="result-hero-media">
+    <img src="{{ visuel(d.type_cheveux.visuel) }}" alt="Cheveux de type {{ d.type_cheveux.code }}" width="160" height="160">
+    <span class="type-pill">{{ d.type_cheveux.code }}</span>
+  </div>
+  <div class="result-hero-text">
     <p class="eyebrow">Votre diagnostic</p>
     <h1>Votre profil capillaire</h1>
     <p class="lead">{{ d.resume }}</p>
+    <div class="hero-chips">
+      {% for p in d.priorites %}<span class="chip static">{{ NEEDS[p] }}</span>{% endfor %}
+    </div>
   </div>
 </section>
 
@@ -14,46 +29,86 @@
 <p class="alert" role="alert">{{ a }}</p>
 {% endfor %}
 
-{% if d.evolution %}
-<section class="card evolution">
-  <h2>📈 Votre évolution</h2>
-  <p class="help">Depuis votre diagnostic du {{ d.evolution.depuis.strftime('%d/%m/%Y') }}.</p>
-  {% if d.evolution.changements %}
-  <ul class="changes">
-    {% for c in d.evolution.changements %}
-    <li class="trend-{{ c.tendance }}">
-      <strong>{{ c.label }}</strong>
-      <span class="trend">{{ TENDANCE_LABEL[c.tendance] }}</span>
-      <small>{{ c.avant }} → {{ c.apres }}</small>
-    </li>
-    {% endfor %}
-  </ul>
+<nav class="tabs" role="tablist" aria-label="Sections du résultat" hidden>
+  <button role="tab" id="tab-synthese" aria-controls="panel-synthese" data-tab="synthese">Synthèse</button>
+  {% if d.douleurs or d.photo %}<button role="tab" id="tab-problemes" aria-controls="panel-problemes" data-tab="problemes">Problèmes{% if d.douleurs %} <span class="count">{{ d.douleurs | length }}</span>{% endif %}</button>{% endif %}
+  <button role="tab" id="tab-routine" aria-controls="panel-routine" data-tab="routine">Routine</button>
+  <button role="tab" id="tab-produits" aria-controls="panel-produits" data-tab="produits">Produits <span class="count">{{ ns.produits | length }}</span></button>
+  <button role="tab" id="tab-conseils" aria-controls="panel-conseils" data-tab="conseils">Conseils</button>
+  <button role="tab" id="tab-suivi" aria-controls="panel-suivi" data-tab="suivi">Suivi &amp; rappels</button>
+</nav>
+
+{# ---------------------------------------------------------------- Synthèse #}
+<section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
+  <h2 class="panel-title">Synthèse</h2>
+
+  <div class="stat-grid">
+    <div class="stat"><span class="stat-label">Type</span><strong>{{ d.type_cheveux.code }}</strong><small>{{ d.type_cheveux.nom }}</small></div>
+    <div class="stat"><span class="stat-label">Programme</span><strong>{{ {'intensive': 'Intensif', 'entretien': 'Entretien', 'ajustement': 'Ajustement'}[d.phase] }}</strong><small>{{ d.programme[0].periode }}</small></div>
+    <div class="stat"><span class="stat-label">Lavages</span><strong>{{ d.jours_lavage | length }}<span class="unit">/sem.</span></strong><small>Conseillé : {{ d.frequence_lavage }}</small></div>
+    <div class="stat"><span class="stat-label">Prochain point</span><strong>{{ d.prochain_point.strftime('%d/%m') }}</strong><small>Refaire le diagnostic</small></div>
+  </div>
+
+  {% if d.evolution %}
+  <div class="card evolution">
+    <h3>📈 Votre évolution</h3>
+    <p class="help">Depuis votre diagnostic du {{ d.evolution.depuis.strftime('%d/%m/%Y') }}.</p>
+    {% if d.evolution.changements %}
+    <ul class="changes">
+      {% for c in d.evolution.changements %}
+      <li class="trend-{{ c.tendance }}">
+        <strong>{{ c.label }}</strong>
+        <span class="trend">{{ TENDANCE_LABEL[c.tendance] }}</span>
+        <small>{{ c.avant }} → {{ c.apres }}</small>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% for m in d.evolution.messages %}<p>{{ m }}</p>{% endfor %}
+  </div>
   {% endif %}
-  {% for m in d.evolution.messages %}<p>{{ m }}</p>{% endfor %}
-</section>
-{% endif %}
 
-<section class="card type-card">
-  <h2>Votre type : {{ d.type_cheveux.code }} · {{ d.type_cheveux.nom }}</h2>
-  <p>{{ d.type_cheveux.description }}</p>
-  <h3>Les problèmes fréquents de votre type</h3>
-  <ul class="type-problems">
-    {% for p in d.problemes_type %}
-    <li>
-      <strong>{{ p.label }}</strong>
-      {% if p.signale %}<span class="badge signale">Vous l'avez signalé</span>{% endif %}
-      {% if p.vu_photo %}<span class="badge photo">Vu sur votre photo</span>{% endif %}
-      {% if not p.signale and not p.vu_photo %}<span class="badge surveiller">À surveiller</span>{% endif %}
-      <br><span>{{ p.pourquoi }}</span>
-    </li>
-    {% endfor %}
-  </ul>
-  <p class="key-tip">💡 {{ d.type_cheveux.conseil_cle }}</p>
+  <div class="card">
+    <h3>Les besoins de vos cheveux</h3>
+    <ul class="needs">
+      {% for need, score in d.besoins.items() | sort(attribute='1', reverse=True) %}
+      {% if score > 0 %}
+      <li{% if need in d.priorites %} class="priority"{% endif %}>
+        <span class="need-label">{{ NEEDS[need] }}{% if need in d.priorites %} <em>priorité</em>{% endif %}</span>
+        <span class="bar" role="img" aria-label="{{ score }} sur 100"><span style="--w: {{ score }}%"></span></span>
+        <span class="score">{{ score }}</span>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card type-card">
+    <h3>Votre type : {{ d.type_cheveux.code }} · {{ d.type_cheveux.nom }}</h3>
+    <p>{{ d.type_cheveux.description }}</p>
+    <h4>Les problèmes fréquents de votre type</h4>
+    <ul class="type-problems">
+      {% for p in d.problemes_type %}
+      <li>
+        <div><strong>{{ p.label }}</strong>
+          {% if p.signale %}<span class="badge signale">Vous l'avez signalé</span>{% endif %}
+          {% if p.vu_photo %}<span class="badge photo">Vu sur votre photo</span>{% endif %}
+          {% if not p.signale and not p.vu_photo %}<span class="badge surveiller">À surveiller</span>{% endif %}
+        </div>
+        <span>{{ p.pourquoi }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="key-tip">💡 {{ d.type_cheveux.conseil_cle }}</p>
+  </div>
+
+  <div class="panel-next"><button type="button" class="button" data-goto="{{ 'problemes' if d.douleurs or d.photo else 'routine' }}">Voir la suite →</button></div>
 </section>
 
-{% if d.douleurs %}
-<section>
-  <h2>Ce qui vous gêne, et comment y remédier</h2>
+{# --------------------------------------------------------------- Problèmes #}
+{% if d.douleurs or d.photo %}
+<section class="tab-panel" id="panel-problemes" role="tabpanel" aria-labelledby="tab-problemes">
+  <h2 class="panel-title">Ce qui vous gêne, et comment y remédier</h2>
   <div class="pain-reports">
     {% for p in d.douleurs %}
     <article class="pain-report level-{{ p.intensite }}">
@@ -64,194 +119,209 @@
       {% if p.vu_sur_photo %}
       <p class="photo-confirm">📷 Confirmé sur votre photo : {{ p.note_photo }}</p>
       {% endif %}
-      <h4>Pourquoi chez vous</h4>
-      <ul>{% for c in p.causes %}<li>{{ c }}</li>{% endfor %}</ul>
-      <h4>Ce que nous allons faire</h4>
-      <ul class="check">{% for c in p.actions %}<li>{{ c }}</li>{% endfor %}</ul>
-      <h4>À éviter</h4>
-      <ul class="cross">{% for c in p.a_eviter %}<li>{{ c }}</li>{% endfor %}</ul>
+      <div class="pain-cols">
+        <div>
+          <h4>Pourquoi chez vous</h4>
+          <ul>{% for c in p.causes %}<li>{{ c }}</li>{% endfor %}</ul>
+        </div>
+        <div>
+          <h4>Ce que nous allons faire</h4>
+          <ul class="check">{% for c in p.actions %}<li>{{ c }}</li>{% endfor %}</ul>
+          <h4>À éviter</h4>
+          <ul class="cross">{% for c in p.a_eviter %}<li>{{ c }}</li>{% endfor %}</ul>
+        </div>
+      </div>
       <p class="delay">⏱ {{ p.delai }}</p>
     </article>
     {% endfor %}
   </div>
-</section>
-{% endif %}
 
-{% if d.photo %}
-<section class="card">
-  <h2>📷 L'analyse de votre photo</h2>
-  {% if d.photo.exploitable %}
-  <ul>{% for o in d.photo.observations %}<li>{{ o }}</li>{% endfor %}</ul>
-  {% endif %}
-  {% for n in d.notes_photo %}<p class="note">{{ n }}</p>{% endfor %}
-  {% if d.signes_photo_en_plus %}
-  <h3>L'IA a aussi remarqué</h3>
-  <ul>
-    {% for s in d.signes_photo_en_plus %}
-    <li><strong>{{ s.label }}</strong> ({{ s.intensite }}) : {{ s.explication }}</li>
-    {% endfor %}
-  </ul>
-  <p class="help">Nous en avons tenu compte dans votre routine.</p>
-  {% endif %}
-</section>
-{% endif %}
-
-<section class="card">
-  <h2>Les besoins de vos cheveux</h2>
-  <ul class="needs">
-    {% for need, score in d.besoins.items() | sort(attribute='1', reverse=True) %}
-    {% if score > 0 %}
-    <li{% if need in d.priorites %} class="priority"{% endif %}>
-      <span class="need-label">{{ NEEDS[need] }}{% if need in d.priorites %} <em>priorité</em>{% endif %}</span>
-      <span class="bar" role="img" aria-label="{{ score }} sur 100"><span style="width: {{ score }}%"></span></span>
-      <span class="score">{{ score }}</span>
-    </li>
+  {% if d.photo %}
+  <div class="card">
+    <h3>📷 L'analyse de votre photo</h3>
+    {% if d.photo.exploitable %}
+    <ul>{% for o in d.photo.observations %}<li>{{ o }}</li>{% endfor %}</ul>
     {% endif %}
-    {% endfor %}
-  </ul>
-  <p><strong>Lavage conseillé :</strong> {{ d.frequence_lavage }}.</p>
-</section>
-
-<section class="card programme">
-  <h2>Votre programme · {{ PHASES[d.phase] }}</h2>
-  <div class="phases">
-    {% for ph in d.programme %}
-    <div class="phase">
-      <p class="eyebrow">{{ ph.periode }}</p>
-      <h3>{{ ph.titre }}</h3>
-      <ul>{% for a in ph.actions %}<li>{{ a }}</li>{% endfor %}</ul>
-    </div>
-    {% endfor %}
+    {% for n in d.notes_photo %}<p class="note">{{ n }}</p>{% endfor %}
+    {% if d.signes_photo_en_plus %}
+    <h4>L'IA a aussi remarqué</h4>
+    <ul>
+      {% for s in d.signes_photo_en_plus %}
+      <li><strong>{{ s.label }}</strong> ({{ s.intensite }}) : {{ s.explication }}</li>
+      {% endfor %}
+    </ul>
+    <p class="help">Nous en avons tenu compte dans votre routine.</p>
+    {% endif %}
   </div>
-  <p class="key-tip">📅 Prochain point : refaites votre diagnostic vers le
-    <strong>{{ d.prochain_point.strftime('%d/%m/%Y') }}</strong> pour suivre l'évolution de vos cheveux
-    et adapter votre routine.</p>
-</section>
-
-{% if d.conseils_saison %}
-<section class="card saison saison-{{ d.saison.id }}">
-  <h2>{{ {'hiver': '❄️', 'printemps': '🌱', 'ete': '☀️', 'automne': '🍂'}[d.saison.id] }} Vos cheveux {{ d.saison.article }}</h2>
-  <ul class="tips">{% for c in d.conseils_saison %}<li>{{ c }}</li>{% endfor %}</ul>
+  {% endif %}
+  <div class="panel-next"><button type="button" class="button" data-goto="routine">Voir ma routine →</button></div>
 </section>
 {% endif %}
 
-<section>
-  <h2>Votre routine sur mesure</h2>
+{# ----------------------------------------------------------------- Routine #}
+<section class="tab-panel" id="panel-routine" role="tabpanel" aria-labelledby="tab-routine">
+  <h2 class="panel-title">Votre routine sur mesure</h2>
+
+  <div class="card programme">
+    <h3>Votre programme · {{ PHASES[d.phase] }}</h3>
+    <div class="phases">
+      {% for ph in d.programme %}
+      <div class="phase">
+        <p class="eyebrow">{{ ph.periode }}</p>
+        <h4>{{ ph.titre }}</h4>
+        <ul>{% for a in ph.actions %}<li>{{ a }}</li>{% endfor %}</ul>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="key-tip">📅 Prochain point : refaites votre diagnostic vers le
+      <strong>{{ d.prochain_point.strftime('%d/%m/%Y') }}</strong> pour suivre l'évolution de vos cheveux
+      et adapter votre routine.</p>
+  </div>
+
+  {% if d.conseils_saison %}
+  <div class="card saison saison-{{ d.saison.id }}">
+    <h3>{{ {'hiver': '❄️', 'printemps': '🌱', 'ete': '☀️', 'automne': '🍂'}[d.saison.id] }} Vos cheveux {{ d.saison.article }}</h3>
+    <ul class="tips">{% for c in d.conseils_saison %}<li>{{ c }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <p class="help">Lavage conseillé : {{ d.frequence_lavage }}.</p>
   {% for moment, label in MOMENTS.items() %}
   {% set steps = d.routine | selectattr('moment', 'equalto', moment) | list %}
   {% if steps %}
-  <h3>{{ label }}</h3>
+  <h3 class="moment">{{ label }}</h3>
   <ol class="routine">
     {% for s in steps %}
     <li class="step">
-      <div>
-        <strong>{{ s.titre }}</strong>
-        <p>{{ s.conseil }}</p>
-      </div>
+      <strong class="step-title">{{ s.titre }}</strong>
+      <p>{{ s.conseil }}</p>
       {% if s.produit %}
-      <div class="product">
+      <button type="button" class="product-mini" data-goto="produits" data-product="{{ s.produit.id }}">
         <span class="tag">{{ CATEGORIES[s.produit.categorie] }}</span>
-        <span class="brand">{{ s.produit.marque }}</span>
-        <strong>{{ s.produit.nom }}</strong>
-        <small>{{ s.produit.description }}</small>
-        {% if s.produit.ingredients_cles %}<small class="ingredients">{{ s.produit.ingredients_cles | join(', ') }}</small>{% endif %}
-        {% if s.produit.labels %}<span class="labels">{% for l in s.produit.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
-        {% if s.produit.prix %}<span class="price">≈ {{ '%.2f' | format(s.produit.prix) | replace('.', ',') }} €{% if s.produit.contenance %} <small>· {{ s.produit.contenance }}</small>{% endif %}</span>{% endif %}
-        {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
-        {% if s.produit.offres %}
-        <div class="offres">
-          {% for o in s.produit.offres[:3] %}
-          <a class="buy{% if loop.first %} first{% endif %}" href="/acheter/{{ o.id }}" target="_blank"
-             rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">
-            {{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}{% if o.prix %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
-          </a>
-          {% if o.affilie %}<small class="affiliate">Lien affilié</small>{% endif %}
-          {% endfor %}
-        </div>
-        {% endif %}
-      </div>
+        <span>{{ s.produit.marque }} – {{ s.produit.nom }}</span>
+      </button>
       {% endif %}
     </li>
     {% endfor %}
   </ol>
   {% endif %}
   {% endfor %}
+  <div class="panel-next"><button type="button" class="button" data-goto="produits">Voir mes produits →</button></div>
 </section>
 
-{% if d.cout_total %}
-<p class="key-tip">💶 Budget de départ de cette routine : <strong>≈ {{ '%.0f' | format(d.cout_total) }} €</strong>
-  (chaque produit compté une fois ; un flacon dure en général plusieurs semaines).
-  {% if d.preferences or d.budget != 'indifferent' %}<br>Vos préférences :
-  {{ (d.preferences + ([{'petit': 'petit budget', 'moyen': 'budget moyen'}[d.budget]] if d.budget != 'indifferent' else [])) | join(', ') }}.{% endif %}</p>
-{% endif %}
+{# ---------------------------------------------------------------- Produits #}
+<section class="tab-panel" id="panel-produits" role="tabpanel" aria-labelledby="tab-produits">
+  <h2 class="panel-title">Vos produits</h2>
+  {% if d.cout_total %}
+  <p class="key-tip">💶 Budget de départ : <strong>≈ {{ '%.0f' | format(d.cout_total) }} €</strong>
+    (chaque produit compté une fois ; un flacon dure en général plusieurs semaines).
+    {% if d.preferences or d.budget != 'indifferent' %}<br>Vos préférences :
+    {{ (d.preferences + ([{'petit': 'petit budget', 'moyen': 'budget moyen'}[d.budget]] if d.budget != 'indifferent' else [])) | join(', ') }}.{% endif %}</p>
+  {% endif %}
 
-{% if d.conseils %}
-<section class="card">
-  <h2>Nos conseils</h2>
-  <ul class="tips">
-    {% for c in d.conseils %}<li>{{ c }}</li>{% endfor %}
-  </ul>
-</section>
-{% endif %}
-
-{% if AVIS_URL %}
-<section class="card feedback">
-  <h2>Votre avis compte</h2>
-  <p>TrichoSens est tout jeune. Ce diagnostic vous semble-t-il juste ? Vos conseils sont-ils utiles ?
-     Dites-le-nous en 2 minutes : vos réponses nous aident à l'améliorer.</p>
-  <a class="button" href="{{ AVIS_URL }}" target="_blank" rel="noopener">Donner mon avis</a>
-</section>
-{% endif %}
-
-
-<p class="help">Prix indicatifs, susceptibles de varier selon les revendeurs.
-  {% if d.liens_affilies %}Certains liens d'achat sont des liens affiliés : si vous achetez par leur
-  intermédiaire, TrichoSens peut toucher une commission, sans surcoût pour vous. Nos recommandations
-  restent choisies selon les besoins de vos cheveux, jamais selon les commissions.
-  {% if d.liens_amazon %}En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
-  remplissant les conditions requises.{% endif %}
-  {% else %}TrichoSens n'est lié à aucune de ces marques.{% endif %}</p>
-
-<section class="card rappels">
-  <h2>⏰ Mes rappels</h2>
-  <p>Ajoutez votre routine à l'agenda de votre téléphone : il vous rappellera vos jours de lavage,
-     le soin du mois et la date de votre prochain diagnostic.</p>
-  <form method="get" action="/rappels.ics" class="rappels-form">
-    <fieldset>
-      <legend>Mes jours de lavage</legend>
-      <p class="help">Conseillé pour vous : {{ d.frequence_lavage }}.</p>
-      <div class="chips">
-        {% for code, nom in JOURS.items() %}
-        <label class="chip"><input type="checkbox" name="jours" value="{{ code }}"
-          {% if code in d.jours_lavage %}checked{% endif %}><span>{{ nom[:3] }}</span></label>
+  <div class="product-grid">
+    {% for s in ns.produits %}
+    {% set p = s.produit %}
+    <article class="product" id="produit-{{ p.id }}">
+      <span class="tag">{{ CATEGORIES[p.categorie] }}</span>
+      <span class="brand">{{ p.marque }}</span>
+      <h3>{{ p.nom }}</h3>
+      <p class="product-desc">{{ p.description }}</p>
+      <small class="used-for">Pour : {{ d.routine | selectattr('produit') | selectattr('produit.id', 'equalto', p.id) | map(attribute='titre') | unique | join(', ') | lower }}</small>
+      {% if p.ingredients_cles %}<small class="ingredients">{{ p.ingredients_cles | join(', ') }}</small>{% endif %}
+      {% if p.labels %}<span class="labels">{% for l in p.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
+      {% if p.prix %}<span class="price">≈ {{ '%.2f' | format(p.prix) | replace('.', ',') }} €{% if p.contenance %} <small>· {{ p.contenance }}</small>{% endif %}</span>{% endif %}
+      {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
+      {% if p.offres %}
+      <div class="offres">
+        {% for o in p.offres[:3] %}
+        <a class="buy{% if loop.first %} first{% endif %}" href="/acheter/{{ o.id }}" target="_blank"
+           rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">
+          {{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}{% if o.prix %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
+        </a>
+        {% if o.affilie %}<small class="affiliate">Lien affilié</small>{% endif %}
         {% endfor %}
       </div>
-    </fieldset>
-    <label class="time">Heure du rappel <input type="time" name="heure" value="19:00" required></label>
-    <fieldset>
-      <legend>Me rappeler</legend>
-      {% for code, label in RAPPELS.items() %}
-      {% if code != 'coupe' or d.besoins.reparation >= 50 or 'pointes' in d.suivi.intensites %}
-      <label class="check"><input type="checkbox" name="rappels" value="{{ code }}" checked> {{ label }}
-        {% if code == 'diagnostic' %}({{ d.prochain_point.strftime('%d/%m') }}){% endif %}</label>
       {% endif %}
-      {% endfor %}
-    </fieldset>
-    <input type="hidden" name="masque" value="{{ 'alterne' if d.phase == 'entretien' else 'chaque' }}">
-    <input type="hidden" name="prochain" value="{{ d.prochain_point.isoformat() }}">
-    <input type="hidden" name="type_cheveux" value="{{ d.type_cheveux.code }}">
-    <button class="button" type="submit">📅 Ajouter à mon agenda</button>
-    <p class="help">Le fichier s'ouvre avec l'agenda de votre téléphone. Sur Android, si rien ne se passe,
-      ouvrez le fichier téléchargé avec Google Agenda.</p>
-  </form>
+    </article>
+    {% endfor %}
+  </div>
+
+  <p class="help legal">Prix indicatifs, susceptibles de varier selon les revendeurs.
+    {% if d.liens_affilies %}Certains liens d'achat sont des liens affiliés : si vous achetez par leur
+    intermédiaire, TrichoSens peut toucher une commission, sans surcoût pour vous. Nos recommandations
+    restent choisies selon les besoins de vos cheveux, jamais selon les commissions.
+    {% if d.liens_amazon %}En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
+    remplissant les conditions requises.{% endif %}
+    {% else %}TrichoSens n'est lié à aucune de ces marques.{% endif %}</p>
+  <div class="panel-next"><button type="button" class="button" data-goto="conseils">Voir nos conseils →</button></div>
 </section>
 
-<section class="card suivi-save">
-  <h2>Votre suivi</h2>
-  <p id="suivi-status">Ce diagnostic est enregistré sur votre appareil pour suivre l'évolution de vos cheveux.</p>
-  <p><a class="button" href="/suivi">Voir mon suivi</a></p>
+{# ---------------------------------------------------------------- Conseils #}
+<section class="tab-panel" id="panel-conseils" role="tabpanel" aria-labelledby="tab-conseils">
+  <h2 class="panel-title">Nos conseils</h2>
+  <ul class="tip-cards">
+    {% for c in d.conseils %}<li>{{ c }}</li>{% endfor %}
+  </ul>
+  <div class="panel-next"><button type="button" class="button" data-goto="suivi">Suivi et rappels →</button></div>
 </section>
 
-<p><a class="button secondary" href="/diagnostic">Refaire le diagnostic</a></p>
+{# ------------------------------------------------------------------- Suivi #}
+<section class="tab-panel" id="panel-suivi" role="tabpanel" aria-labelledby="tab-suivi">
+  <h2 class="panel-title">Suivi et rappels</h2>
+
+  <div class="card suivi-save">
+    <h3>Votre suivi</h3>
+    <p id="suivi-status">Ce diagnostic est enregistré sur votre appareil pour suivre l'évolution de vos cheveux.</p>
+    <p><a class="button" href="/suivi">Voir mon suivi</a></p>
+  </div>
+
+  <div class="card rappels">
+    <h3>⏰ Mes rappels</h3>
+    <p>Ajoutez votre routine à l'agenda de votre téléphone : il vous rappellera vos jours de lavage,
+       le soin du mois et la date de votre prochain diagnostic.</p>
+    <form method="get" action="/rappels.ics" class="rappels-form">
+      <fieldset>
+        <legend>Mes jours de lavage</legend>
+        <p class="help">Conseillé pour vous : {{ d.frequence_lavage }}.</p>
+        <div class="chips">
+          {% for code, nom in JOURS.items() %}
+          <label class="chip"><input type="checkbox" name="jours" value="{{ code }}"
+            {% if code in d.jours_lavage %}checked{% endif %}><span>{{ nom[:3] }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <label class="time">Heure du rappel <input type="time" name="heure" value="19:00" required></label>
+      <fieldset>
+        <legend>Me rappeler</legend>
+        {% for code, label in RAPPELS.items() %}
+        {% if code != 'coupe' or d.besoins.reparation >= 50 or 'pointes' in d.suivi.intensites %}
+        <label class="check"><input type="checkbox" name="rappels" value="{{ code }}" checked> {{ label }}
+          {% if code == 'diagnostic' %}({{ d.prochain_point.strftime('%d/%m') }}){% endif %}</label>
+        {% endif %}
+        {% endfor %}
+      </fieldset>
+      <input type="hidden" name="masque" value="{{ 'alterne' if d.phase == 'entretien' else 'chaque' }}">
+      <input type="hidden" name="prochain" value="{{ d.prochain_point.isoformat() }}">
+      <input type="hidden" name="type_cheveux" value="{{ d.type_cheveux.code }}">
+      <button class="button" type="submit">📅 Ajouter à mon agenda</button>
+      <p class="help">Le fichier s'ouvre avec l'agenda de votre téléphone. Sur Android, si rien ne se passe,
+        ouvrez le fichier téléchargé avec Google Agenda.</p>
+    </form>
+  </div>
+
+  {% if AVIS_URL %}
+  <div class="card feedback">
+    <h3>Votre avis compte</h3>
+    <p>TrichoSens est tout jeune. Ce diagnostic vous semble-t-il juste ? Vos conseils sont-ils utiles ?
+       Dites-le-nous en 2 minutes : vos réponses nous aident à l'améliorer.</p>
+    <a class="button" href="{{ AVIS_URL }}" target="_blank" rel="noopener">Donner mon avis</a>
+  </div>
+  {% endif %}
+
+  <p class="center"><a class="button secondary" href="/diagnostic">Refaire le diagnostic</a></p>
+</section>
+
 <script type="application/json" id="suivi-data">{{ d.suivi | tojson }}</script>
+<script src="{{ url_for('static', path='resultat.js') }}" defer></script>
 {% endblock %}
