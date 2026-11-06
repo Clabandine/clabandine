@@ -182,6 +182,13 @@
   <div class="card saison saison-{{ d.saison.id }}">
     <h3>{{ {'hiver': '❄️', 'printemps': '🌱', 'ete': '☀️', 'automne': '🍂'}[d.saison.id] }} Vos cheveux {{ d.saison.article }}</h3>
     <ul class="tips">{% for c in d.conseils_saison %}<li>{{ c }}</li>{% endfor %}</ul>
+    {% if d.anticipation %}
+    <div class="anticipation">
+      <h4>À l'approche {{ {'hiver': "de l'hiver", 'printemps': 'du printemps', 'ete': "de l'été", 'automne': "de l'automne"}[d.prochaine_saison.id] }}</h4>
+      <ul>{% for c in d.anticipation %}<li>{{ c }}</li>{% endfor %}</ul>
+      <p class="help">Refaites votre diagnostic au changement de saison : votre routine et vos produits s'adapteront.</p>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -260,6 +267,13 @@
 {# ---------------------------------------------------------------- Conseils #}
 <section class="tab-panel" id="panel-conseils" role="tabpanel" aria-labelledby="tab-conseils">
   <h2 class="panel-title">Nos conseils</h2>
+  {% if d.conseils_vie %}
+  <div class="card vie">
+    <h3>Selon votre âge et votre période de vie</h3>
+    <ul class="tips">{% for c in d.conseils_vie %}<li>{{ c }}</li>{% endfor %}</ul>
+    <p class="help">Ces conseils sont généraux et ne remplacent pas l'avis d'un médecin.</p>
+  </div>
+  {% endif %}
   <ul class="tip-cards">
     {% for c in d.conseils %}<li>{{ c }}</li>{% endfor %}
   </ul>

@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}TrichoSens · Diagnostic capillaire personnalisé{% endblock %}</title>
   <meta name="description" content="TrichoSens : diagnostic capillaire personnalisé, routine sur mesure et produits adaptés, du type 1A au type 4C.">
-  <meta name="theme-color" content="#8a4b2f">
+  <meta name="theme-color" content="#3B1F3B">
   {% set logo = logo_url() %}
-  {% if logo %}<link rel="icon" href="{{ logo }}">{% endif %}
+  <link rel="icon" href="{{ url_for('static', path='img/favicon.svg') }}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
@@ -20,8 +20,7 @@
         {% if logo %}
         <img src="{{ logo }}" alt="TrichoSens" height="40">
         {% else %}
-        <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M10 4c6 4-6 8 0 12s-6 8 0 12M16 4c6 4-6 8 0 12s-6 8 0 12M22 4c6 4-6 8 0 12s-6 8 0 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-        <span class="logo-text">Tricho<span>Sens</span></span>
+        <span class="logo-text">TrichoSens</span>
         {% endif %}
       </a>
       <nav class="main-nav">
@@ -38,14 +37,15 @@
   <footer class="site-footer">
     <div class="container footer-inner">
       <div>
-        <p class="footer-brand">Tricho<span>Sens</span></p>
+        <p class="footer-brand">TrichoSens</p>
         <p>Comprendre ses cheveux. Trouver les bons soins. Révéler leur potentiel.</p>
       </div>
       <nav class="footer-nav">
         <a href="/diagnostic">Faire mon diagnostic</a>
         <a href="/suivi">Mon suivi</a>
       </nav>
-      <p class="small footer-legal">TrichoSens donne des conseils de soin et ne remplace pas l'avis d'un médecin ou d'un dermatologue.
+      <p class="small footer-legal">Une analyse du questionnaire n'est pas un diagnostic médical : TrichoSens donne des conseils
+        de soin adaptés à votre profil et ne remplace pas l'avis d'un médecin ou d'un dermatologue.
         Vos réponses ne sont pas enregistrées sur nos serveurs : votre historique reste sur votre appareil.</p>
     </div>
   </footer>

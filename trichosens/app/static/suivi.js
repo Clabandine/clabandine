@@ -70,6 +70,13 @@
         prefs.forEach((i) => (i.checked = (last.preferences || []).includes(i.value)));
         budgets.forEach((i) => (i.checked = i.value === last.budget));
       }
+      // Âge et réaction aux saisons : repris du dernier diagnostic (modifiables).
+      const ages = form.querySelectorAll('input[name="age"]');
+      const sens = form.querySelectorAll('input[name="saisons_sensibles"]');
+      if (![...ages, ...sens].some((i) => i.checked)) {
+        ages.forEach((i) => (i.checked = last.age && last.age !== "nc" && i.value === last.age));
+        sens.forEach((i) => (i.checked = (last.saisons_sensibles || []).includes(i.value)));
+      }
       const info = document.querySelector(".suivi-info");
       if (info) {
         info.querySelector("span").textContent = frDate(last.date);

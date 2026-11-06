@@ -24,6 +24,13 @@ SAISONS = {
 }
 
 
+ORDRE = ["hiver", "printemps", "ete", "automne"]
+
+
+def prochaine(s: Saison) -> Saison:
+    return SAISONS[ORDRE[(ORDRE.index(s.id) + 1) % 4]]
+
+
 def saison_du(jour: date) -> Saison:
     m = jour.month
     if m in (12, 1, 2):

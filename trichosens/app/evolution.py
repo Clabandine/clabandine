@@ -37,6 +37,8 @@ class ResumeSuivi(BaseModel):
     prochain_point: dt.date | None = None
     preferences: list[str] = []
     budget: str = "indifferent"
+    age: str = "nc"
+    saisons_sensibles: list[str] = []
 
 
 @dataclass
