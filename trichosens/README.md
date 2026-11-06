@@ -116,6 +116,18 @@ tableaux de bord des programmes d'affiliation.
   apparaissent comme « non vérifiables ». Lancement à la main : onglet **Actions**,
   « Contrôle du catalogue TrichoSens », **Run workflow**.
 
+### Relier les avis des testeurs aux diagnostics
+
+Le bouton « Donner mon avis » peut pré-remplir votre Google Form avec le résultat de la
+personne (aucune donnée personnelle : ni âge, ni période de vie, ni photo).
+
+1. Dans le formulaire, ajoutez une question à **réponse courte** « Référence du diagnostic »
+   (et, si vous voulez, d'autres questions à réponse courte pour le type, les gênes, etc.).
+2. Menu ⋮ > **Obtenir le lien prérempli**. Dans chaque champ, tapez un mot-repère :
+   `TS_RESUME` (résumé complet), `TS_TYPE`, `TS_PROBLEMES`, `TS_PRIORITES`, `TS_PRODUITS`,
+   `TS_PHASE` ou `TS_ID`. Cliquez sur **Obtenir le lien**, puis **Copier le lien**.
+3. Dans Render, service trichosens > **Environment**, donnez ce lien comme valeur à `AVIS_URL`.
+
 ## Lancer le projet
 
 Il faut Python 3.10 ou plus récent.

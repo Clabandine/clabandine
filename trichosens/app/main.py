@@ -21,6 +21,7 @@ from .catalog import CATEGORIES, VERIFICATION_MAX_JOURS, load_catalog, offres_pa
 from .clicks import counter as clics
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
+from .feedback import lien_avis
 from .hair_types import FAMILLES, HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
@@ -64,7 +65,7 @@ def logo_url() -> str | None:
 templates.env.globals.update(
     logo_url=logo_url,
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
-    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL,
+    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL, lien_avis=lien_avis,
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
 )
