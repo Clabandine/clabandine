@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#3B1F3B">
   {% set logo = logo_url() %}
   <link rel="icon" href="{{ url_for('static', path='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', path='img/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', path='site.webmanifest') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -18,7 +20,7 @@
     <div class="container header-inner">
       <a class="logo" href="/" aria-label="TrichoSens, accueil">
         {% if logo %}
-        <img src="{{ logo }}" alt="TrichoSens" height="40">
+        <img src="{{ logo }}" alt="TrichoSens" width="171" height="38">
         {% else %}
         <span class="logo-text">TrichoSens</span>
         {% endif %}
@@ -37,7 +39,7 @@
   <footer class="site-footer">
     <div class="container footer-inner">
       <div>
-        <p class="footer-brand">TrichoSens</p>
+        <img class="footer-logo" src="{{ url_for('static', path='img/logo-blanc.svg') }}" alt="TrichoSens" width="198" height="44" loading="lazy">
         <p>Comprendre ses cheveux. Trouver les bons soins. Révéler leur potentiel.</p>
       </div>
       <nav class="footer-nav">

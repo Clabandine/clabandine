@@ -184,10 +184,10 @@ l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels)
   `#6B8F71` (accent naturel, assombri pour la lisibilité). Polices : Playfair Display (marque et
   grands titres), Montserrat (titres fonctionnels, navigation, boutons), Inter (textes).
 - **Couleurs et polices :** toutes en tête de `app/static/style.css` (bloc `:root`).
-- **Logo :** déposez `logo.svg` (idéal), `logo.png` ou `logo.webp` dans `app/static/img/`. Il
-  remplace automatiquement le logo texte « TrichoSens » (Playfair Display) de l'en-tête.
-  L'icône d'onglet est `app/static/img/favicon.svg` (monogramme TS provisoire, à remplacer par
-  l'icône carrée officielle).
+- **Logos (kit de marque) :** dans `app/static/img/` : `logo.svg` (horizontal couleur, en-tête),
+  `logo-blanc.svg` (horizontal blanc, pied de page prune), `logo-prune.svg` (monochrome),
+  `favicon.svg` (icône d'onglet), `icone-app.svg` et ses exports PNG `apple-touch-icon.png`
+  (180 px) et `icone-512.png` (icône d'écran d'accueil, via `static/site.webmanifest`).
 - **Animations :** légères et désactivées automatiquement si le téléphone demande de réduire
   les animations (réglage d'accessibilité).
 
