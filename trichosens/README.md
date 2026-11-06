@@ -203,6 +203,14 @@ l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels)
 - **Animations :** légères et désactivées automatiquement si le téléphone demande de réduire
   les animations (réglage d'accessibilité).
 
+### Carrousel de l'accueil
+
+Déposez des portraits (JPG, PNG ou WebP, idéalement carrés ou 4:5, 1000 px de large) dans
+`app/static/img/carrousel/`. Ils défilent par ordre alphabétique. Un nom de fichier qui
+commence par un type de cheveux (ex. `3b-portrait.jpg`) ajoute la légende « Type 3B · … ».
+Tant que le dossier est vide, le carrousel montre les photos des types de cheveux. N'utilisez
+que des photos dont vous avez les droits, avec l'accord des personnes photographiées.
+
 ## Organisation du code
 
 ```

@@ -118,7 +118,8 @@ main { padding: 28px 0 64px; min-height: 60vh; }
 .footer-nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .footer-nav a { font-family: var(--font-ui); color: var(--bg); text-decoration: none; font-weight: 600; }
 .footer-nav a:hover { color: var(--copper); }
-.footer-legal { color: #C9B3BE; border-top: 1px solid #573657; padding-top: 16px; margin: 0; }
+.footer-legal { color: #B9A2AE; border-top: 1px solid #573657; padding-top: 12px; margin: 0; font-size: .68rem; line-height: 1.45; }
+.eyebrow sup { font-size: .8em; margin-left: 1px; }
 @media (min-width: 760px) { .footer-inner { grid-template-columns: 2fr 1fr; } .footer-legal { grid-column: 1 / -1; } }
 
 /* --- Cartes, alertes, puces ------------------------------------------------- */
@@ -160,20 +161,30 @@ main { padding: 28px 0 64px; min-height: 60vh; }
 .trust li { margin: 0; }
 .home-hero-media { position: relative; width: 100%; max-width: 520px; margin: 0 auto; }
 @media (max-width: 859px) {
-  /* Tablette et téléphone : collage plus compact, centré sous le texte. */
+  /* Tablette : photos plus compactes, texte centré au-dessus. */
   .home-hero-text { text-align: center; }
   .home-hero-text .lead { margin-left: auto; margin-right: auto; max-width: 600px; }
   .hero-actions, .trust { justify-content: center; }
 }
-.collage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.collage-item { margin: 0; position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 1; }
-.collage-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
-.collage-item:hover img { transform: scale(1.05); }
-.collage-item figcaption {
-  position: absolute; left: 10px; bottom: 10px; background: rgba(255, 255, 255, .92); color: var(--ink);
-  font-size: .8rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+.carousel { position: relative; }
+.carousel-track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  border-radius: 26px; box-shadow: var(--shadow-lg); aspect-ratio: 4 / 5; background: var(--brand-soft);
 }
-.collage .c2, .collage .c4 { transform: translateY(18px); }
+.carousel-track::-webkit-scrollbar { display: none; }
+.carousel-track:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.slide { flex: 0 0 100%; margin: 0; position: relative; scroll-snap-align: start; }
+.slide img { width: 100%; height: 100%; object-fit: cover; }
+.slide figcaption {
+  position: absolute; left: 14px; bottom: 14px; background: rgba(255, 249, 244, .92); color: var(--brand);
+  font-family: var(--font-ui); font-size: .78rem; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+}
+.carousel-dots { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
+.carousel-dots button {
+  width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: var(--line); cursor: pointer;
+  transition: width .3s var(--ease), background .3s;
+}
+.carousel-dots button[aria-current] { width: 24px; background: var(--accent); }
 .floating-badge {
   position: absolute; right: -6px; top: -14px; margin: 0; background: var(--surface); border-radius: 999px;
   padding: 8px 16px; box-shadow: var(--shadow-lg); font-size: .9rem; animation: float 4s ease-in-out infinite;
@@ -551,3 +562,74 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .type-pill, .stepper li.done span { background: var(--brand); }
 .chip.static { background: var(--brand-soft); color: var(--accent); }
 .how svg, .features svg, .step-icon { stroke: var(--accent); }
+
+/* --- Téléphone : typographie plus fine et blocs plus aérés ------------------------- */
+@media (max-width: 640px) {
+  body { font-size: .9rem; line-height: 1.55; }
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: .98rem; }
+  .lead { font-size: .95rem; }
+  .help, .small, small { font-size: .8rem; }
+  main { padding: 20px 0 48px; }
+  .card, .question, .photo-box, .pain-report, .how li, .features article, .product { padding: 16px; border-radius: 16px; }
+
+  /* Accueil */
+  .home-hero { gap: 22px; padding: 22px 0 8px; }
+  .home-hero h1 { font-size: clamp(1.55rem, 7.2vw, 1.85rem); line-height: 1.15; }
+  .home-hero-text { text-align: left; }
+  .home-hero-text .lead { margin-left: 0; }
+  .hero-actions { margin: 18px 0 12px; }
+  .hero-actions .button.big { width: 100%; padding: 14px 20px; font-size: .95rem; }
+  .hero-actions .button.secondary { display: none; }  /* « Mon suivi » reste dans l'en-tête */
+  .button { white-space: nowrap; }
+  .cta-band .button.big { padding: 14px 22px; font-size: .92rem; }
+  .trust { justify-content: flex-start; gap: 6px 14px; font-size: .8rem; }
+  .home-hero-media { max-width: 340px; }
+  .carousel-track { aspect-ratio: 1; border-radius: 22px; }
+  .floating-badge { font-size: .78rem; padding: 6px 12px; top: -10px; right: 6px; }
+  .home-section { padding: 36px 0 4px; }
+  .section-head { margin-bottom: 18px; }
+  .how { gap: 12px; }
+  .how svg, .features svg { width: 38px; height: 38px; padding: 7px; margin-bottom: 8px; }
+  .how-num { font-size: 1.4rem; top: 12px; right: 14px; }
+  /* Cartes compactes : icône à gauche du texte. */
+  .how li, .features article { display: grid; grid-template-columns: 38px 1fr; column-gap: 12px; align-items: start; }
+  .how li svg, .features article svg { grid-row: span 2; margin: 0; }
+  .how li h3, .features article h3 { margin: 2px 0 2px; padding-right: 24px; }
+  .how p, .features p { font-size: .86rem; }
+  .families-grid { gap: 10px; }
+  .family-card span { font-size: .78rem; padding: 32px 10px 10px; }
+  .family-card strong { font-size: 1rem; }
+  .features { gap: 12px; }
+  .cta-band { margin-top: 40px; padding: 28px 18px; border-radius: 22px; }
+  .cta-band h2 { font-size: 1.3rem; }
+
+  /* Questionnaire et résultat */
+  .diag-head { margin-bottom: 12px; }
+  .step-head { gap: 12px; margin: 8px 0 14px; }
+  .step-head .step-icon { width: 42px; height: 42px; padding: 7px; }
+  .step-head h2 { font-size: 1.2rem; }
+  .question legend { font-size: .95rem; }
+  .option, .pain-head { padding: 10px 12px; gap: 10px; }
+  .option-text strong, .pain-head strong { font-size: .92rem; }
+  .option-text small, .pain-head small { font-size: .78rem; line-height: 1.35; }
+  .options.visual { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .chip span, .chip.static { font-size: .82rem; padding: 4px 12px; }
+  .result-hero { padding: 18px; gap: 12px; }
+  .result-hero h1 { font-size: 1.4rem; }
+  .result-hero .lead { font-size: .88rem; }
+  .tabbed .tab-panel .panel-title { font-size: 1.25rem; }
+  .tabs [role=tab] { font-size: .82rem; padding: 7px 13px; }
+  .stat { padding: 12px; }
+  .stat strong { font-size: 1.3rem; }
+  .pain-report h3 { font-size: 1.05rem; }
+  .step { padding: 14px 14px 14px 50px; }
+  .step::before { left: 12px; top: 14px; width: 26px; height: 26px; }
+  .tip-cards li { padding: 14px 14px 14px 46px; }
+  .tip-cards li::before { left: 14px; top: 13px; }
+
+  /* Pied de page */
+  .site-footer { padding: 28px 0 22px; font-size: .85rem; }
+  .footer-logo { height: 36px; }
+}
