@@ -14,7 +14,7 @@ import datetime as dt
 import uuid
 from dataclasses import dataclass, field
 
-from . import seasons
+from . import profil, seasons
 from .reminders import jours_suggeres
 from .catalog import Product, load_catalog
 from .evolution import Evolution, ResumeSuivi, compare
@@ -121,6 +121,8 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None,
     add(TYPE_POINTS[a.type_cheveux])
     if saison:
         add(saison.points)
+    for pts in profil.points(a, saison):
+        add(pts)
     add(EPAISSEUR_POINTS[a.epaisseur])
     add(POROSITE_POINTS[a.porosite])
     add(CUIR_POINTS[a.cuir_chevelu])
@@ -166,6 +168,9 @@ class Diagnostic:
     routine: list[Step]
     saison: seasons.Saison | None = None
     conseils_saison: list[str] = field(default_factory=list)
+    conseils_vie: list[str] = field(default_factory=list)
+    prochaine_saison: seasons.Saison | None = None
+    anticipation: list[str] = field(default_factory=list)
     phase: str = "intensive"
     programme: list[dict] = field(default_factory=list)
     prochain_point: dt.date | None = None
@@ -193,6 +198,9 @@ class Diagnostic:
             "douleurs": [d.to_dict() for d in self.douleurs],
             "saison": self.saison.id if self.saison else None,
             "conseils_saison": self.conseils_saison,
+            "conseils_vie": self.conseils_vie,
+            "prochaine_saison": self.prochaine_saison.id if self.prochaine_saison else None,
+            "anticipation": self.anticipation,
             "phase": self.phase,
             "programme": self.programme,
             "prochain_point": self.prochain_point.isoformat() if self.prochain_point else None,
@@ -282,7 +290,7 @@ def lavages_par_semaine(a: Answers) -> float:
     return {"lisse": 2.5, "ondule": 2, "boucle": 1.5, "frise": 1, "crepu": 1}[a.texture]
 
 
-def _poids_produits(a: Answers) -> str:
+def _poids_produits(a: Answers, saison: seasons.Saison | None = None) -> str:
     """Texture des soins à privilégier : légère, moyenne ou riche."""
     score = {"lisse": -2, "ondule": -1, "boucle": 0, "frise": 1, "crepu": 2}[a.texture]
     score += {"fin": -2, "moyen": 0, "epais": 1}[a.epaisseur]
@@ -290,6 +298,7 @@ def _poids_produits(a: Answers) -> str:
     if "alourdis" in a.preoccupations:
         score -= 1
     score += TYPE_POIDS.get(a.type_cheveux, 0)
+    score += profil.ajustement_poids(a, saison)
     if score <= -2:
         return "leger"
     if score >= 2:
@@ -508,7 +517,7 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
     vrais_besoins = [b for b in p.besoins if b in NEEDS]
     score = sum(besoins.get(b, 0) for b in vrais_besoins) / max(1, len(vrais_besoins))
     if "anti_chute" in p.besoins:
-        if "chute" not in a.preoccupations:
+        if "chute" not in a.preoccupations or "grossesse" in a.periodes:
             return None  # pas de soin anti-chute sans chute
         score += 25
     if p.poids == poids:
@@ -663,6 +672,7 @@ def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
         id=uuid.uuid4().hex, date=today, type_cheveux=a.type_cheveux,
         intensites=dict(a.intensites), besoins=d.besoins, phase=d.phase,
         prochain_point=d.prochain_point, preferences=list(a.preferences), budget=a.budget,
+        age=a.age, saisons_sensibles=list(a.saisons_sensibles),
     ).model_dump(mode="json")
 
 
@@ -673,7 +683,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
     today = today or dt.date.today()
     saison = seasons.saison_du(today)
     besoins = compute_needs(a, photo, saison)
-    poids = _poids_produits(a)
+    poids = _poids_produits(a, saison)
     evolution = compare(precedent, a, besoins, today) if precedent else None
     phase = evolution.phase if evolution else "intensive"
     routine = _build_routine(a, besoins, poids)
@@ -714,7 +724,13 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         notes_photo=notes_photo,
         signes_photo_en_plus=en_plus,
         saison=saison,
-        conseils_saison=seasons.conseils(saison, a),
+        conseils_saison=profil.conseils_saison_perso(a, saison) + seasons.conseils(saison, a),
+        conseils_vie=profil.conseils_vie(a),
+        prochaine_saison=seasons.prochaine(saison),
+        # Ce qui changera à la saison suivante : la réaction propre à la personne si elle
+        # l'a indiquée, sinon le principal conseil de la saison.
+        anticipation=(profil.anticipation(a, seasons.prochaine(saison))
+                      or seasons.conseils(seasons.prochaine(saison), a)[:1]),
         phase=phase,
         programme=programme,
         prochain_point=prochain_point,

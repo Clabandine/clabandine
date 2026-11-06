@@ -3,22 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}TrichoSens{% endblock %}</title>
+  <title>{% block title %}TrichoSens · Diagnostic capillaire personnalisé{% endblock %}</title>
+  <meta name="description" content="TrichoSens : diagnostic capillaire personnalisé, routine sur mesure et produits adaptés, du type 1A au type 4C.">
+  <meta name="theme-color" content="#3B1F3B">
+  {% set logo = logo_url() %}
+  <link rel="icon" href="{{ url_for('static', path='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', path='img/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', path='site.webmanifest') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
 </head>
 <body>
   <header class="site-header">
-    <a class="logo" href="/">Tricho<span>Sens</span></a>
-    <nav><a href="/suivi">Mon suivi</a><a href="/diagnostic">Mon diagnostic</a></nav>
+    <div class="container header-inner">
+      <a class="logo" href="/" aria-label="TrichoSens, accueil">
+        {% if logo %}
+        <img src="{{ logo }}" alt="TrichoSens" width="171" height="38">
+        {% else %}
+        <span class="logo-text">TrichoSens</span>
+        {% endif %}
+      </a>
+      <nav class="main-nav">
+        <a href="/suivi">Mon suivi</a>
+        <a class="nav-cta" href="/diagnostic">Diagnostic</a>
+      </nav>
+    </div>
   </header>
-  <main>
-    {% block content %}{% endblock %}
+  <main class="{% block main_class %}page{% endblock %}">
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
   </main>
   <footer class="site-footer">
-    <p>Comprendre ses cheveux. Trouver les bons soins. Révéler leur potentiel.</p>
-    <p class="small">TrichoSens donne des conseils de soin et ne remplace pas l'avis d'un médecin ou d'un dermatologue.
-      Vos réponses ne sont pas enregistrées sur nos serveurs : votre historique reste sur votre appareil.</p>
+    <div class="container footer-inner">
+      <div>
+        <img class="footer-logo" src="{{ url_for('static', path='img/logo-blanc.svg') }}" alt="TrichoSens" width="198" height="44" loading="lazy">
+        <p>Comprendre ses cheveux. Trouver les bons soins. Révéler leur potentiel.</p>
+      </div>
+      <nav class="footer-nav">
+        <a href="/diagnostic">Faire mon diagnostic</a>
+        <a href="/suivi">Mon suivi</a>
+      </nav>
+      <p class="small footer-legal">Une analyse du questionnaire n'est pas un diagnostic médical : TrichoSens donne des conseils
+        de soin adaptés à votre profil et ne remplace pas l'avis d'un médecin ou d'un dermatologue.
+        Vos réponses ne sont pas enregistrées sur nos serveurs : votre historique reste sur votre appareil.</p>
+    </div>
   </footer>
-<script src="{{ url_for('static', path='suivi.js') }}" defer></script>
+  <script src="{{ url_for('static', path='app.js') }}" defer></script>
+  <script src="{{ url_for('static', path='suivi.js') }}" defer></script>
 </body>
 </html>

@@ -1,0 +1,14 @@
+{
+  "name": "TrichoSens",
+  "short_name": "TrichoSens",
+  "description": "Diagnostic capillaire personnalisé",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF9F4",
+  "theme_color": "#3B1F3B",
+  "icons": [
+    {"src": "/static/img/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"},
+    {"src": "/static/img/icone-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/static/img/icone-app.svg", "sizes": "any", "type": "image/svg+xml"}
+  ]
+}

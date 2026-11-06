@@ -17,7 +17,12 @@ RAPPELS = {
     "pousse": "Mesure de la mèche témoin (1 fois par mois)",
     "coupe": "Coupe des pointes (tous les 3 mois)",
     "diagnostic": "Prochain diagnostic",
+    "saison": "Changement de saison (adapter ma routine)",
 }
+
+# Début approximatif de chaque saison (hémisphère nord) : (mois, jour, titre du rappel).
+DEBUTS_SAISON = [(3, 20, "C'est le printemps"), (6, 21, "C'est l'été"),
+                 (9, 22, "C'est l'automne"), (12, 21, "C'est l'hiver")]
 
 
 def jours_suggeres(lavages_par_semaine: float) -> list[str]:
@@ -142,6 +147,17 @@ def build_ics(*, jours: list[str], heure: dt.time, rappels: list[str], masque: s
             "C'est le moment de faire le point : refaites votre diagnostic pour suivre "
             "l'évolution de vos cheveux et adapter votre routine.",
             dt.datetime.combine(prochain_point, heure), None, site_url + "/diagnostic", now)
+
+    if "saison" in rappels:
+        for mois, jour, titre in DEBUTS_SAISON:
+            d = dt.date(today.year, mois, jour)
+            if d <= today:
+                d = dt.date(today.year + 1, mois, jour)
+            events += _event(
+                f"TrichoSens · {titre}",
+                "Nouvelle saison : refaites votre diagnostic pour adapter votre routine et vos "
+                "produits.",
+                dt.datetime.combine(d, heure), "FREQ=YEARLY", site_url + "/diagnostic", now)
 
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TrichoSens//Rappels//FR",
              "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:TrichoSens",

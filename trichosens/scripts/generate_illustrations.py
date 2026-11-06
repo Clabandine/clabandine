@@ -14,7 +14,7 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / "app" / "static" / "img" / "illustrations"
 
 W, H = 240, 240
-BG = "#f6ece4"
+BG = "#F8E8EC"
 HAIR = ["#3b2418", "#4a2c1d", "#5a3622", "#3f271a", "#523120"]
 
 
@@ -23,7 +23,7 @@ def svg(body: str, title: str) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" role="img" aria-label="{title}">'
         f"<title>{title}</title>"
         f'<defs><radialGradient id="bg" cx="50%" cy="35%" r="75%">'
-        f'<stop offset="0" stop-color="#fbf5f0"/><stop offset="1" stop-color="{BG}"/></radialGradient></defs>'
+        f'<stop offset="0" stop-color="#FFF9F4"/><stop offset="1" stop-color="{BG}"/></radialGradient></defs>'
         f'<rect width="{W}" height="{H}" rx="24" fill="url(#bg)"/>'
         f"{body}</svg>\n"
     )

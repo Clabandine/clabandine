@@ -16,9 +16,23 @@
   form.classList.add("wizard");
   document.getElementById("step-total").textContent = panels.length;
 
+  const stepper = Array.from(document.querySelectorAll(".stepper li"));
+
   function show(index) {
+    const forward = index >= current;
     current = index;
-    panels.forEach((p, i) => (p.hidden = i !== index));
+    panels.forEach((p, i) => {
+      p.hidden = i !== index;
+      if (i === index) {
+        p.classList.remove("enter-left", "enter-right");
+        void p.offsetWidth; // relance l'animation
+        p.classList.add(forward ? "enter-right" : "enter-left");
+      }
+    });
+    stepper.forEach((li, i) => {
+      li.classList.toggle("done", i < index);
+      li.classList.toggle("current", i === index);
+    });
     submit.hidden = index !== panels.length - 1;
     document.getElementById("step-num").textContent = index + 1;
     document.getElementById("step-name").textContent = panels[index].dataset.title;
@@ -80,6 +94,16 @@
     }
     submit.disabled = true;
     submit.textContent = "Préparation de votre diagnostic…";
+    // Écran d'attente animé pendant le calcul du résultat.
+    const screen = document.getElementById("loading-screen");
+    if (screen) {
+      screen.hidden = false;
+      const msgs = ["Nous étudions votre type de cheveux", "Nous analysons ce qui vous gêne",
+        "Nous composons votre routine", "Nous choisissons vos produits"];
+      const line = document.getElementById("loading-step");
+      let k = 0;
+      setInterval(() => { k = (k + 1) % msgs.length; line.textContent = msgs[k]; }, 900);
+    }
   });
 
   // Une réponse efface le message d'erreur de sa question.

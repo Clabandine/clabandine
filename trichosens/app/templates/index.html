@@ -1,34 +1,109 @@
 {% extends "base.html" %}
+{% block main_class %}page-home{% endblock %}
 {% block content %}
-<section class="hero">
-  <h1>Comprendre ses cheveux.<br>Trouver les bons soins.<br>Révéler leur potentiel.</h1>
-  <p>Du type 1A au type 4C, lisses, ondulés, bouclés, frisés ou crépus : dites-nous ce qui vous gêne, montrez-nous
-     vos cheveux en photo, et recevez une routine de soins sur mesure.</p>
-  <a class="button" href="/diagnostic">Commencer mon diagnostic</a>
-  <p class="small">Environ 3 minutes, gratuit et sans inscription.</p>
-  <div class="textures">
+<section class="home-hero">
+  <div class="home-hero-text reveal">
+    <p class="eyebrow">Diagnostic capillaire personnalisé</p>
+    <h1>Comprendre ses cheveux.<br><span>Trouver les bons soins.</span><br>Révéler leur potentiel.</h1>
+    <p class="lead">Du type 1A au type 4C, lisses, ondulés, bouclés, frisés ou crépus : dites-nous ce qui
+      vous gêne, montrez-nous vos cheveux, et recevez une routine de soins faite pour vous.</p>
+    <div class="hero-actions">
+      <a class="button big" href="/diagnostic">Commencer mon diagnostic</a>
+      <a class="button secondary big" href="/suivi">Mon suivi</a>
+    </div>
+    <ul class="trust">
+      <li><span aria-hidden="true">⏱</span> 3 minutes</li>
+      <li><span aria-hidden="true">✓</span> Gratuit</li>
+      <li><span aria-hidden="true">🔒</span> Sans inscription</li>
+    </ul>
+  </div>
+  <div class="home-hero-media reveal">
+    <div class="collage">
+      {% for f in FAMILLES.values() %}
+      <figure class="collage-item c{{ loop.index }}">
+        <img src="{{ visuel(f.visuel) }}" alt="{{ f.label }}" width="300" height="300" {% if loop.index > 2 %}loading="lazy"{% endif %}>
+        <figcaption>{{ f.titre }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    <p class="floating-badge"><strong>12 types</strong> de 1A à 4C</p>
+  </div>
+</section>
+
+<section class="home-section">
+  <div class="section-head reveal">
+    <p class="eyebrow">Comment ça marche</p>
+    <h2>Votre routine en trois étapes</h2>
+  </div>
+  <ol class="how">
+    <li class="reveal">
+      <span class="how-num">1</span>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M24 15v10l6 4"/></svg>
+      <h3>Dites-nous ce qui vous gêne</h3>
+      <p>Sécheresse, casse, frisottis, chute… et à quel point cela vous dérange.</p>
+    </li>
+    <li class="reveal">
+      <span class="how-num">2</span>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="14" width="32" height="24" rx="5"/><circle cx="24" cy="26" r="6"/><path d="M18 14l3-4h6l3 4"/></svg>
+      <h3>Présentez-nous vos cheveux</h3>
+      <p>Type, porosité, cuir chevelu, habitudes, et une photo si vous le souhaitez.</p>
+    </li>
+    <li class="reveal">
+      <span class="how-num">3</span>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 10h20v28H14z"/><path d="M19 18h10M19 24h10M19 30h6"/></svg>
+      <h3>Recevez votre routine</h3>
+      <p>Des explications claires, une routine étape par étape et les bons produits.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="home-section">
+  <div class="section-head reveal">
+    <p class="eyebrow">Tous les cheveux</p>
+    <h2>Quelle que soit votre texture</h2>
+  </div>
+  <div class="families-grid">
     {% for f in FAMILLES.values() %}
-    <figure><img src="{{ visuel(f.visuel) }}" alt="{{ f.label }}" width="240" height="240"><figcaption><strong>{{ f.titre }}</strong><br>{{ f.label }}</figcaption></figure>
+    <a class="family-card reveal" href="/diagnostic">
+      <img src="{{ visuel(f.visuel) }}" alt="" width="300" height="300" loading="lazy">
+      <span><strong>{{ f.titre }}</strong>{{ f.label }}</span>
+    </a>
     {% endfor %}
   </div>
 </section>
 
-<section class="features">
-  <article>
-    <h2>Vos problèmes, expliqués</h2>
-    <p>Sécheresse, casse, frisottis, chute : nous expliquons pourquoi cela vous arrive, et comment y remédier.</p>
-  </article>
-  <article>
-    <h2>Une analyse photo par IA</h2>
-    <p>Prenez vos cheveux en photo : notre intelligence artificielle affine le diagnostic.</p>
-  </article>
-  <article>
-    <h2>Une routine sur mesure</h2>
-    <p>Des gestes clairs, étape par étape, pour le jour du lavage, le quotidien et la nuit.</p>
-  </article>
-  <article>
-    <h2>Les bons produits</h2>
-    <p>Des recommandations choisies selon les besoins réels de vos cheveux, pas selon les tendances.</p>
-  </article>
+<section class="home-section">
+  <div class="section-head reveal">
+    <p class="eyebrow">Pourquoi TrichoSens</p>
+    <h2>Des conseils qui partent de vos cheveux</h2>
+  </div>
+  <div class="features">
+    <article class="reveal">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 40s-14-8-14-19a8 8 0 0 1 14-5 8 8 0 0 1 14 5c0 11-14 19-14 19z"/></svg>
+      <h3>Vos problèmes, expliqués</h3>
+      <p>Pourquoi cela vous arrive, ce qu'il faut faire, ce qu'il faut éviter, et quand espérer des résultats.</p>
+    </article>
+    <article class="reveal">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6l3.5 10.5L38 20l-10.5 3.5L24 34l-3.5-10.5L10 20l10.5-3.5z"/><path d="M36 32l1.5 4.5L42 38l-4.5 1.5L36 44l-1.5-4.5L30 38l4.5-1.5z"/></svg>
+      <h3>Analyse photo par IA</h3>
+      <p>Notre intelligence artificielle observe vos cheveux et affine le diagnostic.</p>
+    </article>
+    <article class="reveal">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34l10-10 7 7 15-15"/><path d="M32 16h8v8"/></svg>
+      <h3>Un suivi dans le temps</h3>
+      <p>Votre routine évolue avec vos cheveux et avec les saisons.</p>
+    </article>
+    <article class="reveal">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 8h12l2 8H16z"/><rect x="14" y="16" width="20" height="24" rx="4"/><path d="M19 26h10"/></svg>
+      <h3>Les bons produits</h3>
+      <p>Choisis selon les besoins réels de vos cheveux et vos préférences, pas selon les tendances.</p>
+    </article>
+  </div>
+</section>
+
+<section class="cta-band reveal">
+  <h2>Envie de mieux comprendre vos cheveux ?</h2>
+  <p>Votre diagnostic personnalisé en 3 minutes, gratuitement.</p>
+  <a class="button light big" href="/diagnostic">Commencer mon diagnostic</a>
 </section>
 {% endblock %}

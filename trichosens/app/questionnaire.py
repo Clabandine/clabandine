@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 from .hair_types import HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
+from .profil import AGES, PERIODES, SENSIBILITES
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,8 @@ STEPS: tuple[Step, ...] = (
     Step("photo", "Votre photo",
          "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic."),
     Step("cheveux", "Vos cheveux", "Apprenons à connaître la nature de vos cheveux."),
+    Step("vous", "Vos cheveux au fil du temps",
+         "Âge, période de vie, saisons : vos cheveux changent avec vous. Ces questions sont facultatives."),
     Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien."),
     Step("objectif", "Objectif et préférences", "Dernières questions !"),
 )
@@ -114,6 +117,32 @@ QUESTIONS: tuple[Question, ...] = (
                    "porosite-forte"),
             Option("inconnue", "Je ne sais pas", "Nous vous expliquerons comment la tester."),
         ),
+    ),
+    Question(
+        id="age",
+        step="vous",
+        label="Quel âge avez-vous ?",
+        help="Les besoins des cheveux évoluent avec l'âge.",
+        required=False,
+        options=tuple(Option(k, v) for k, v in AGES.items()),
+    ),
+    Question(
+        id="periodes",
+        step="vous",
+        label="Traversez-vous une période particulière ?",
+        help="Plusieurs réponses possibles. Ces informations restent sur votre appareil.",
+        multiple=True,
+        required=False,
+        options=tuple(Option(k, label, hint) for k, (label, hint) in PERIODES.items()),
+    ),
+    Question(
+        id="saisons_sensibles",
+        step="vous",
+        label="Vos cheveux changent-ils selon les saisons ?",
+        help="Plusieurs réponses possibles : votre routine s'adaptera à chaque saison.",
+        multiple=True,
+        required=False,
+        options=tuple(Option(k, s.label) for k, s in SENSIBILITES.items()),
     ),
     Question(
         id="cuir_chevelu",
@@ -210,6 +239,9 @@ class Answers:
     traitements: list[str] = field(default_factory=list)
     preferences: list[str] = field(default_factory=list)
     budget: str = "indifferent"
+    age: str = "nc"
+    periodes: list[str] = field(default_factory=list)
+    saisons_sensibles: list[str] = field(default_factory=list)
     # Intensité de la gêne pour chaque préoccupation : un_peu, beaucoup ou enormement.
     intensites: dict[str, str] = field(default_factory=dict)
 
@@ -281,6 +313,11 @@ def validate(raw: dict) -> Answers:
         else:
             intensites[pid] = value
     clean["intensites"] = intensites
+
+    # « Rien de particulier » / « Pas de différence » n'ont de sens que seuls.
+    for qid in ("periodes", "saisons_sensibles"):
+        if len(clean.get(qid, [])) > 1 and "aucune" in clean[qid]:
+            clean[qid] = [v for v in clean[qid] if v != "aucune"]
 
     if errors:
         raise InvalidAnswers(errors)

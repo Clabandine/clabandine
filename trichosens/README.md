@@ -17,7 +17,12 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
 2. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
    de cheveux et les signes visibles, et pré-remplit les réponses. La photo n'est jamais
    enregistrée.
-3. **Les 12 types de cheveux (1A à 4C)**, chacun avec ses problèmes fréquents
+3. **Vos cheveux au fil du temps (facultatif)** : âge, période de vie (cycle, grossesse,
+   post-partum, ménopause, stress, nouveau traitement) et réaction des cheveux aux saisons (plus
+   secs en hiver, frisottis à l'humidité, plus gras l'été…). Besoins, poids des soins, produits
+   et conseils s'adaptent à la saison en cours, et le résultat annonce ce qui changera à la
+   saison suivante (`app/profil.py`). Aucun soin anti-chute n'est proposé pendant la grossesse.
+4. **Les 12 types de cheveux (1A à 4C)**, chacun avec ses problèmes fréquents
    (`app/hair_types.py`).
 4. **Résultat centré sur les problèmes** : causes propres au profil, actions, à éviter, délai.
 5. **Programme de soins** : phase intensive (4 semaines), puis entretien, avec la date du
@@ -170,6 +175,21 @@ l'illustration : `type-1a.webp` à `type-4c.webp`, `epaisseur-fin.jpg`,
 l'illustration.
 Utilisez uniquement des photos dont vous avez les droits (vos propres photos avec
 l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels).
+
+## Charte graphique
+
+- **Charte appliquée : guide de marque Option C (v1.0).** Prune profond `#3B1F3B` (principale),
+  rose intense `#8E3B63` (accent éditorial), cuivre rosé `#D5A08C` (signature), or champagne
+  `#D4AF37` (ponctuel), ivoire `#FFF9F4` (fond), rose crème `#F8E8EC` (fond secondaire), sauge
+  `#6B8F71` (accent naturel, assombri pour la lisibilité). Polices : Playfair Display (marque et
+  grands titres), Montserrat (titres fonctionnels, navigation, boutons), Inter (textes).
+- **Couleurs et polices :** toutes en tête de `app/static/style.css` (bloc `:root`).
+- **Logos (kit de marque) :** dans `app/static/img/` : `logo.svg` (horizontal couleur, en-tête),
+  `logo-blanc.svg` (horizontal blanc, pied de page prune), `logo-prune.svg` (monochrome),
+  `favicon.svg` (icône d'onglet), `icone-app.svg` et ses exports PNG `apple-touch-icon.png`
+  (180 px) et `icone-512.png` (icône d'écran d'accueil, via `static/site.webmanifest`).
+- **Animations :** légères et désactivées automatiquement si le téléphone demande de réduire
+  les animations (réglage d'accessibilité).
 
 ## Organisation du code
 
