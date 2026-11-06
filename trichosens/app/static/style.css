@@ -158,7 +158,13 @@ main { padding: 28px 0 64px; min-height: 60vh; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 18px; }
 .trust { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--muted); font-size: .92rem; font-weight: 500; }
 .trust li { margin: 0; }
-.home-hero-media { position: relative; }
+.home-hero-media { position: relative; width: 100%; max-width: 520px; margin: 0 auto; }
+@media (max-width: 859px) {
+  /* Tablette et téléphone : collage plus compact, centré sous le texte. */
+  .home-hero-text { text-align: center; }
+  .home-hero-text .lead { margin-left: auto; margin-right: auto; max-width: 600px; }
+  .hero-actions, .trust { justify-content: center; }
+}
 .collage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .collage-item { margin: 0; position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 1; }
 .collage-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
@@ -176,6 +182,7 @@ main { padding: 28px 0 64px; min-height: 60vh; }
 .floating-badge::before { content: "★ "; color: var(--gold); }
 @media (min-width: 860px) {
   .home-hero { grid-template-columns: 1.05fr 1fr; gap: 56px; padding: 64px 0 48px; }
+  .home-hero-media { max-width: none; }
 }
 
 .home-section { padding: 48px 0 8px; }
