@@ -116,6 +116,18 @@ tableaux de bord des programmes d'affiliation.
   apparaissent comme « non vérifiables ». Lancement à la main : onglet **Actions**,
   « Contrôle du catalogue TrichoSens », **Run workflow**.
 
+### Relier les avis des testeurs aux diagnostics
+
+Le bouton « Donner mon avis » peut pré-remplir votre Google Form avec le résultat de la
+personne (aucune donnée personnelle : ni âge, ni période de vie, ni photo).
+
+1. Dans le formulaire, ajoutez une question à **réponse courte** « Référence du diagnostic »
+   (et, si vous voulez, d'autres questions à réponse courte pour le type, les gênes, etc.).
+2. Menu ⋮ > **Obtenir le lien prérempli**. Dans chaque champ, tapez un mot-repère :
+   `TS_RESUME` (résumé complet), `TS_TYPE`, `TS_PROBLEMES`, `TS_PRIORITES`, `TS_PRODUITS`,
+   `TS_PHASE` ou `TS_ID`. Cliquez sur **Obtenir le lien**, puis **Copier le lien**.
+3. Dans Render, service trichosens > **Environment**, donnez ce lien comme valeur à `AVIS_URL`.
+
 ## Lancer le projet
 
 Il faut Python 3.10 ou plus récent.
@@ -190,6 +202,14 @@ l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels)
   (180 px) et `icone-512.png` (icône d'écran d'accueil, via `static/site.webmanifest`).
 - **Animations :** légères et désactivées automatiquement si le téléphone demande de réduire
   les animations (réglage d'accessibilité).
+
+### Carrousel de l'accueil
+
+Déposez des portraits (JPG, PNG ou WebP, idéalement carrés ou 4:5, 1000 px de large) dans
+`app/static/img/carrousel/`. Ils défilent par ordre alphabétique. Un nom de fichier qui
+commence par un type de cheveux (ex. `3b-portrait.jpg`) ajoute la légende « Type 3B · … ».
+Tant que le dossier est vide, le carrousel montre les photos des types de cheveux. N'utilisez
+que des photos dont vous avez les droits, avec l'accord des personnes photographiées.
 
 ## Organisation du code
 

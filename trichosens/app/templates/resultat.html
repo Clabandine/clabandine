@@ -329,7 +329,9 @@
     <h3>Votre avis compte</h3>
     <p>TrichoSens est tout jeune. Ce diagnostic vous semble-t-il juste ? Vos conseils sont-ils utiles ?
        Dites-le-nous en 2 minutes : vos réponses nous aident à l'améliorer.</p>
-    <a class="button" href="{{ AVIS_URL }}" target="_blank" rel="noopener">Donner mon avis</a>
+    <a class="button" href="{{ lien_avis(AVIS_URL, d) }}" target="_blank" rel="noopener">Donner mon avis</a>
+    <p class="help">Votre résultat (type de cheveux, ce qui vous gêne, produits proposés) sera joint
+      à votre avis, sans aucune donnée personnelle.</p>
   </div>
   {% endif %}
 

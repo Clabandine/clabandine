@@ -3,7 +3,7 @@
 {% block content %}
 <section class="home-hero">
   <div class="home-hero-text reveal">
-    <p class="eyebrow">Diagnostic capillaire personnalisé</p>
+    <p class="eyebrow">Diagnostic capillaire personnalisé<sup>*</sup></p>
     <h1>Comprendre ses cheveux.<br><span>Trouver les bons soins.</span><br>Révéler leur potentiel.</h1>
     <p class="lead">Du type 1A au type 4C, lisses, ondulés, bouclés, frisés ou crépus : dites-nous ce qui
       vous gêne, montrez-nous vos cheveux, et recevez une routine de soins faite pour vous.</p>
@@ -18,13 +18,19 @@
     </ul>
   </div>
   <div class="home-hero-media reveal">
-    <div class="collage">
-      {% for f in FAMILLES.values() %}
-      <figure class="collage-item c{{ loop.index }}">
-        <img src="{{ visuel(f.visuel) }}" alt="{{ f.label }}" width="300" height="300" {% if loop.index > 2 %}loading="lazy"{% endif %}>
-        <figcaption>{{ f.titre }}</figcaption>
-      </figure>
-      {% endfor %}
+    {% set slides = carrousel() %}
+    <div class="carousel" data-carousel aria-roledescription="carrousel" aria-label="Différents types de cheveux">
+      <div class="carousel-track" tabindex="0">
+        {% for s in slides %}
+        <figure class="slide" aria-roledescription="diapositive" aria-label="{{ loop.index }} sur {{ slides | length }}">
+          <img src="{{ s.src }}" alt="{{ s.alt }}" width="900" height="900" {% if not loop.first %}loading="lazy"{% endif %}>
+          {% if s.legende %}<figcaption>{{ s.legende }}</figcaption>{% endif %}
+        </figure>
+        {% endfor %}
+      </div>
+      <div class="carousel-dots" role="group" aria-label="Choisir une photo">
+        {% for s in slides %}<button type="button" aria-label="Photo {{ loop.index }}"{% if loop.first %} aria-current="true"{% endif %}></button>{% endfor %}
+      </div>
     </div>
     <p class="floating-badge"><strong>12 types</strong> de 1A à 4C</p>
   </div>

@@ -21,6 +21,7 @@ from .catalog import CATEGORIES, VERIFICATION_MAX_JOURS, load_catalog, offres_pa
 from .clicks import counter as clics
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
+from .feedback import lien_avis
 from .hair_types import FAMILLES, HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
@@ -53,6 +54,34 @@ def visuel(name: str) -> str:
     return f"/static/img/illustrations/{name}.svg"
 
 
+CARROUSEL_DIR = STATIC_DIR / "img" / "carrousel"
+CARROUSEL_DEFAUT = ["1B", "2B", "3A", "3C", "4A", "4C"]
+
+
+def carrousel() -> list[dict]:
+    """Photos du carrousel de l'accueil.
+
+    Déposez des portraits dans static/img/carrousel/ : ils s'affichent par ordre alphabétique.
+    Un nom qui commence par un type (ex. « 3b-portrait.jpg ») ajoute la légende « Type 3B ».
+    Sans photo dans ce dossier, le carrousel montre les photos des types de cheveux.
+    """
+    fichiers = sorted(f for f in CARROUSEL_DIR.glob("*")
+                      if f.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"})
+    if fichiers:
+        slides = []
+        for f in fichiers:
+            code = f.stem[:2].upper()
+            t = HAIR_TYPES.get(code)
+            slides.append({
+                "src": f"/static/img/carrousel/{f.name}",
+                "legende": f"Type {t.code} · {t.nom}" if t else "",
+                "alt": f"Portrait, cheveux de type {t.code}" if t else "Portrait",
+            })
+        return slides
+    return [{"src": visuel(HAIR_TYPES[c].visuel), "legende": f"Type {c} · {HAIR_TYPES[c].nom}",
+             "alt": f"Cheveux de type {c}"} for c in CARROUSEL_DEFAUT]
+
+
 def logo_url() -> str | None:
     """Logo de la marque s'il a été déposé dans static/img/ (logo.svg, logo.png ou logo.webp)."""
     for ext in ("svg", "png", "webp", "jpg"):
@@ -62,9 +91,9 @@ def logo_url() -> str | None:
 
 
 templates.env.globals.update(
-    logo_url=logo_url,
+    logo_url=logo_url, carrousel=carrousel,
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
-    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL,
+    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL, lien_avis=lien_avis,
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
 )
