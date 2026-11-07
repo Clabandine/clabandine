@@ -169,12 +169,6 @@ main { padding: 28px 0 64px; min-height: 60vh; }
 
 /* Types et textures sous le titre */
 .hero-types { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 14px; }
-.hero-types .range { display: inline-flex; align-items: center; gap: 6px; }
-.hero-types .range b {
-  font-family: var(--font-ui); font-weight: 700; font-size: .8rem; letter-spacing: .04em;
-  background: var(--brand); color: var(--bg); padding: 4px 9px; border-radius: 8px;
-}
-.hero-types .range i { width: 22px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--copper), var(--gold)); }
 .hero-types .textures { display: flex; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; }
 .hero-types .textures li {
   margin: 0; font-family: var(--font-brand); font-style: italic; font-size: 1.05rem; color: var(--accent);
@@ -603,8 +597,6 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
   .home-hero { gap: 22px; padding: 22px 0 8px; }
   .hero-title { line-height: 1.15; margin-bottom: .6em; }
   .hero-types { gap: 8px 10px; margin-bottom: 10px; }
-  .hero-types .range b { font-size: .7rem; padding: 3px 7px; }
-  .hero-types .range i { width: 14px; }
   .hero-types .textures li { font-size: .92rem; }
   .hero-types .textures li + li::before { margin: 0 .3em; }
   .home-hero-text { text-align: left; }
