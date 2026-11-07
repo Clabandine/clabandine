@@ -22,6 +22,7 @@ from .clicks import counter as clics
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
 from .feedback import lien_avis
+from .partage import texte_partage
 from .hair_types import FAMILLES, HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
@@ -93,7 +94,7 @@ def logo_url() -> str | None:
 templates.env.globals.update(
     logo_url=logo_url, carrousel=carrousel,
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
-    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL, lien_avis=lien_avis,
+    FAMILLES=FAMILLES, AVIS_URL=AVIS_URL, lien_avis=lien_avis, texte_partage=texte_partage,
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
 )
@@ -235,6 +236,7 @@ def suivi(request: Request):
 async def diagnostic_submit(request: Request):
     form = await request.form()
     raw: dict = {q.id: form.getlist(q.id) if q.multiple else form.get(q.id) for q in QUESTIONS}
+    raw["prenom"] = form.get("prenom")
     raw["intensites"] = {
         pid: form.get(f"gene_{pid}") for pid in form.getlist("preoccupations")
     }

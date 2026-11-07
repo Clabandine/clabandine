@@ -77,3 +77,34 @@
 
   show(location.hash.slice(1), { scroll: false });
 })();
+
+// Fiche PDF (impression du navigateur) et partage du résumé.
+(function () {
+  "use strict";
+  const status = document.querySelector(".share-status");
+  const say = (msg) => { if (status) { status.textContent = msg; setTimeout(() => (status.textContent = ""), 4000); } };
+
+  document.querySelectorAll("[data-print]").forEach((b) =>
+    b.addEventListener("click", () => window.print())
+  );
+
+  document.querySelectorAll("[data-share]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const text = b.dataset.text;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "Ma routine TrichoSens", text });
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return; // partage annulé
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        say("Résumé copié : collez-le dans un message.");
+      } catch (e) {
+        say("Le partage n'est pas disponible sur cet appareil.");
+      }
+    })
+  );
+})();

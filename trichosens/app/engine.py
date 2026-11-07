@@ -178,6 +178,7 @@ class Diagnostic:
     suivi: dict = field(default_factory=dict)
     cout_total: float = 0.0
     jours_lavage: list[str] = field(default_factory=list)
+    prenom: str = ""
     liens_affilies: bool = False
     liens_amazon: bool = False
     preferences: list[str] = field(default_factory=list)
@@ -672,7 +673,7 @@ def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
         id=uuid.uuid4().hex, date=today, type_cheveux=a.type_cheveux,
         intensites=dict(a.intensites), besoins=d.besoins, phase=d.phase,
         prochain_point=d.prochain_point, preferences=list(a.preferences), budget=a.budget,
-        age=a.age, saisons_sensibles=list(a.saisons_sensibles),
+        age=a.age, saisons_sensibles=list(a.saisons_sensibles), prenom=a.prenom,
     ).model_dump(mode="json")
 
 
@@ -737,6 +738,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         evolution=evolution,
         cout_total=cout_routine(routine),
         jours_lavage=jours_suggeres(lavages_par_semaine(a)),
+        prenom=a.prenom,
         liens_affilies=any(o.affilie for s in routine if s.produit for o in s.produit.offres),
         liens_amazon=any(o.amazon for s in routine if s.produit for o in s.produit.offres),
         preferences=[PREFERENCES[p] for p in a.preferences],

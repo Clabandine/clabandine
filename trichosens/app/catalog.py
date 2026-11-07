@@ -93,6 +93,9 @@ class Product:
 
     @property
     def nom_complet(self) -> str:
+        """« Marque – Nom », ou le nom seul pour un article sans marque (« Divers »)."""
+        if self.marque.lower() in {"", "divers"}:
+            return self.nom
         return f"{self.marque} – {self.nom}"
 
     @property

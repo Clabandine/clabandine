@@ -39,6 +39,7 @@ class ResumeSuivi(BaseModel):
     budget: str = "indifferent"
     age: str = "nc"
     saisons_sensibles: list[str] = []
+    prenom: str = Field(default="", max_length=30)
 
 
 @dataclass
