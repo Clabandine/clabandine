@@ -136,6 +136,16 @@
       </div>
     </div>
 
+    {% if loop.first %}
+    <div class="prenom-box">
+      <label for="prenom"><span>Comment vous appelez-vous ? <small>(facultatif)</small></span>
+        <input type="text" id="prenom" name="prenom" maxlength="30" autocomplete="given-name"
+               placeholder="Votre prénom" value="{{ answers.get('prenom') or '' }}">
+      </label>
+      <p class="help">Il sert seulement à personnaliser votre résultat et n'est pas enregistré sur nos serveurs.</p>
+    </div>
+    {% endif %}
+
     {% if s.id == 'photo' %}
     <div class="photo-box">
       <ul class="photo-tips">

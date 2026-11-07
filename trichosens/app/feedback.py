@@ -28,7 +28,7 @@ def valeurs(d: Diagnostic) -> dict[str, str]:
     problemes = ", ".join(f"{p.label} ({p.intensite_label.lower()})" for p in d.douleurs) or "Aucun"
     priorites = ", ".join(NEEDS[p] for p in d.priorites)
     produits = ", ".join(dict.fromkeys(
-        f"{s.produit.marque} – {s.produit.nom}" for s in d.routine if s.produit))
+        s.produit.nom_complet for s in d.routine if s.produit))
     phase = PHASES[d.phase]
     photo = "oui" if d.photo and d.photo.exploitable else "non"
     ref = str(d.suivi.get("id", ""))[:8]

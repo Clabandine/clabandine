@@ -4,6 +4,7 @@ Les questions sont décrites sous forme de données : le formulaire web,
 l'API et la validation s'appuient tous sur cette liste.
 """
 
+import re
 from dataclasses import dataclass, field
 
 from .hair_types import HAIR_TYPES
@@ -242,6 +243,7 @@ class Answers:
     age: str = "nc"
     periodes: list[str] = field(default_factory=list)
     saisons_sensibles: list[str] = field(default_factory=list)
+    prenom: str = ""
     # Intensité de la gêne pour chaque préoccupation : un_peu, beaucoup ou enormement.
     intensites: dict[str, str] = field(default_factory=dict)
 
@@ -259,6 +261,22 @@ class InvalidAnswers(ValueError):
     def __init__(self, errors: dict[str, str]):
         super().__init__("; ".join(f"{k}: {v}" for k, v in errors.items()))
         self.errors = errors
+
+
+PRENOM_RE = re.compile(r"^[^\W\d_]+(?:[ '’-][^\W\d_]+)*$")
+
+
+def nettoyer_prenom(valeur) -> str:
+    """Prénom facultatif : lettres, espaces, tirets et apostrophes, 30 caractères au plus.
+
+    Une valeur qui ne ressemble pas à un prénom est simplement ignorée.
+    """
+    if not isinstance(valeur, str):
+        return ""
+    v = " ".join(valeur.split())[:30].strip()
+    if not v or not PRENOM_RE.match(v):
+        return ""
+    return v[0].upper() + v[1:]
 
 
 def validate(raw: dict) -> Answers:
@@ -318,6 +336,8 @@ def validate(raw: dict) -> Answers:
     for qid in ("periodes", "saisons_sensibles"):
         if len(clean.get(qid, [])) > 1 and "aucune" in clean[qid]:
             clean[qid] = [v for v in clean[qid] if v != "aucune"]
+
+    clean["prenom"] = nettoyer_prenom(raw.get("prenom"))
 
     if errors:
         raise InvalidAnswers(errors)

@@ -633,3 +633,33 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
   .site-footer { padding: 28px 0 22px; font-size: .85rem; }
   .footer-logo { height: 36px; }
 }
+
+/* --- Prénom, partage et fiche PDF -------------------------------------------------- */
+.prenom-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; margin: 0 0 18px; box-shadow: var(--shadow); }
+.prenom-box label { display: flex; flex-direction: column; gap: 6px; font-weight: 700; }
+.prenom-box input { max-width: 320px; }
+.share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.button.small { padding: 9px 16px; font-size: .85rem; }
+.share-status { min-height: 1.2em; margin: 6px 0 0; }
+.fiche { display: none; }
+@media (max-width: 479px) { .share-actions { justify-content: center; } }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff; font-size: 10.5pt; }
+  .site-header, .site-footer, main > .container > *:not(.fiche) { display: none !important; }
+  main { padding: 0; }
+  .fiche { display: block !important; color: var(--brand); }
+  .fiche-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--copper); padding-bottom: 8px; margin-bottom: 12px; }
+  .fiche-head img { height: 32px; width: auto; }
+  .fiche-head p { margin: 0; font-size: 9pt; color: var(--muted); }
+  .fiche h1 { font-size: 18pt; margin: 4px 0 4px; }
+  .fiche h2 { font-family: var(--font-ui); font-size: 9pt; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin: 12px 0 4px; }
+  .fiche-resume { color: var(--muted); margin-bottom: 8px; }
+  .fiche-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; }
+  .fiche-grid h2 { margin-top: 6px; }
+  .fiche-grid p { margin: 0; }
+  .fiche ol { margin: 0 0 4px; padding-left: 18px; }
+  .fiche li { margin-bottom: 2px; }
+  .fiche-note { margin-top: 14px; font-size: 7.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+}

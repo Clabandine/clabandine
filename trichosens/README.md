@@ -203,6 +203,16 @@ l'accord des personnes, ou des banques d'images libres comme Unsplash ou Pexels)
 - **Animations :** légères et désactivées automatiquement si le téléphone demande de réduire
   les animations (réglage d'accessibilité).
 
+### Prénom et fiche à partager
+
+- **Prénom (facultatif)** : demandé au début du diagnostic, il personnalise le résultat
+  (« Clarisse, voici votre profil capillaire ») et la fiche. Il n'est pas enregistré sur le
+  serveur, reste dans l'historique de l'appareil et n'est jamais transmis avec les avis.
+- **Ma fiche PDF** : une fiche d'une page (type, priorités, routine et produits, prochain
+  point), enregistrée en PDF grâce à l'impression du téléphone ou de l'ordinateur.
+- **Partager** : envoie un résumé texte de la routine avec le lien du site (WhatsApp, SMS,
+  e-mail…) ; sur ordinateur, le résumé est copié.
+
 ### Carrousel de l'accueil
 
 Déposez des portraits (JPG, PNG ou WebP, idéalement carrés ou 4:5, 1000 px de large) dans

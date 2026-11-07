@@ -17,11 +17,17 @@
   </div>
   <div class="result-hero-text">
     <p class="eyebrow">Votre diagnostic</p>
-    <h1>Votre profil capillaire</h1>
+    <h1>{% if d.prenom %}{{ d.prenom }}, voici votre profil capillaire{% else %}Votre profil capillaire{% endif %}</h1>
     <p class="lead">{{ d.resume }}</p>
     <div class="hero-chips">
       {% for p in d.priorites %}<span class="chip static">{{ NEEDS[p] }}</span>{% endfor %}
     </div>
+    {% set partage = texte_partage(d, request.base_url | string) %}
+    <div class="share-actions">
+      <button type="button" class="button small" data-print>📄 Ma fiche PDF</button>
+      <button type="button" class="button small secondary" data-share data-text="{{ partage }}">Partager</button>
+    </div>
+    <p class="help share-status" role="status" aria-live="polite"></p>
   </div>
 </section>
 
@@ -205,7 +211,7 @@
       {% if s.produit %}
       <button type="button" class="product-mini" data-goto="produits" data-product="{{ s.produit.id }}">
         <span class="tag">{{ CATEGORIES[s.produit.categorie] }}</span>
-        <span>{{ s.produit.marque }} – {{ s.produit.nom }}</span>
+        <span>{{ s.produit.nom_complet }}</span>
       </button>
       {% endif %}
     </li>
@@ -231,7 +237,7 @@
     {% set p = s.produit %}
     <article class="product" id="produit-{{ p.id }}">
       <span class="tag">{{ CATEGORIES[p.categorie] }}</span>
-      <span class="brand">{{ p.marque }}</span>
+      {% if p.marque | lower != 'divers' %}<span class="brand">{{ p.marque }}</span>{% endif %}
       <h3>{{ p.nom }}</h3>
       <p class="product-desc">{{ p.description }}</p>
       <small class="used-for">Pour : {{ d.routine | selectattr('produit') | selectattr('produit.id', 'equalto', p.id) | map(attribute='titre') | unique | join(', ') | lower }}</small>
@@ -336,6 +342,37 @@
   {% endif %}
 
   <p class="center"><a class="button secondary" href="/diagnostic">Refaire le diagnostic</a></p>
+</section>
+
+{# Fiche résumé : invisible à l'écran, imprimée ou enregistrée en PDF par « Ma fiche PDF ». #}
+<section class="fiche" aria-hidden="true">
+  <header class="fiche-head">
+    <img src="{{ url_for('static', path='img/logo.svg') }}" alt="TrichoSens" width="180" height="40">
+    <p>Fiche routine · {{ d.suivi.date }}</p>
+  </header>
+  <h1>{% if d.prenom %}{{ d.prenom }}, votre{% else %}Votre{% endif %} routine capillaire</h1>
+  <p class="fiche-resume">{{ d.resume }}</p>
+  <div class="fiche-grid">
+    <div><h2>Type</h2><p><strong>{{ d.type_cheveux.code }}</strong> · {{ d.type_cheveux.nom }}</p></div>
+    <div><h2>Priorités</h2><p>{% for p in d.priorites %}{{ NEEDS[p] }}{% if not loop.last %}, {% endif %}{% endfor %}</p></div>
+    <div><h2>Lavage</h2><p>{{ d.frequence_lavage }}</p></div>
+    <div><h2>Programme</h2><p>{{ PHASES[d.phase] }} · prochain point le {{ d.prochain_point.strftime('%d/%m/%Y') }}</p></div>
+  </div>
+  {% for moment, label in MOMENTS.items() %}
+  {% set steps = d.routine | selectattr('moment', 'equalto', moment) | list %}
+  {% if steps %}
+  <h2>{{ label }}</h2>
+  <ol>
+    {% for s in steps %}
+    <li><strong>{{ s.titre }}</strong>{% if s.produit %} — {{ s.produit.nom_complet }}{% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+  {% endfor %}
+  <h2>Le conseil clé</h2>
+  <p>{{ d.type_cheveux.conseil_cle }}</p>
+  <p class="fiche-note">* Une analyse du questionnaire n'est pas un diagnostic médical. Conseils adaptés à votre profil
+    par TrichoSens · {{ request.base_url }}</p>
 </section>
 
 <script type="application/json" id="suivi-data">{{ d.suivi | tojson }}</script>

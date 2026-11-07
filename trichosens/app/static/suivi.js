@@ -70,6 +70,9 @@
         prefs.forEach((i) => (i.checked = (last.preferences || []).includes(i.value)));
         budgets.forEach((i) => (i.checked = i.value === last.budget));
       }
+      // Prénom : repris du dernier diagnostic s'il n'a pas été saisi.
+      const prenom = form.querySelector('input[name="prenom"]');
+      if (prenom && !prenom.value && last.prenom) prenom.value = last.prenom;
       // Âge et réaction aux saisons : repris du dernier diagnostic (modifiables).
       const ages = form.querySelectorAll('input[name="age"]');
       const sens = form.querySelectorAll('input[name="saisons_sensibles"]');
