@@ -124,6 +124,12 @@
     update();
   });
 
+  function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = s == null ? "" : String(s);
+    return div.innerHTML;
+  }
+
   // Type de cheveux : choisir la famille (1 à 4), puis le type (A, B ou C).
   const subtypeLabel = form.querySelector(".subtype-label");
   function showFamily(famille) {
@@ -134,12 +140,140 @@
       if (!active) g.querySelectorAll("input").forEach((i) => (i.checked = false));
     });
     if (subtypeLabel) subtypeLabel.hidden = !famille;
+    updateDependants();
   }
   form.querySelectorAll('input[name="famille"]').forEach((r) =>
     r.addEventListener("change", () => showFamily(r.value))
   );
+
+  // --- Questions qui dépendent d'une autre réponse ----------------------------
+
+  const checkedValue = (name) => {
+    const el = form.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : "";
+  };
+
+  function hideAndClear(el, hide) {
+    el.hidden = hide;
+    if (hide) el.querySelectorAll("input").forEach((i) => {
+      if (i.type === "radio" && i.value === "") i.checked = true;
+      else i.checked = false;
+    });
+  }
+
+  function renumber() {
+    let n = 0;
+    form.querySelectorAll(".question").forEach((q) => {
+      if (q.hidden) return;
+      const num = q.querySelector("legend .num");
+      if (num) num.textContent = ++n;
+    });
+  }
+
+  function updateDependants() {
+    // Détails des démangeaisons : seulement si « Démangeaisons » est coché.
+    const pains = Array.from(form.querySelectorAll('input[name="preoccupations"]:checked')).map((i) => i.value);
+    form.querySelectorAll(".question[data-show-if]").forEach((q) =>
+      hideAndClear(q, !pains.includes(q.dataset.showIf))
+    );
+
+    // Second type et situations propres au type : après le choix du type.
+    const type = checkedValue("type_cheveux");
+    const famille = type ? type[0] : checkedValue("famille");
+    const second = form.querySelector(".q-type_secondaire");
+    if (second) {
+      hideAndClear(second, !type);
+      second.querySelectorAll(".chip[data-value]").forEach((c) => {
+        const same = c.dataset.value === type;
+        c.hidden = same;
+        if (same) c.querySelector("input").checked = false;
+      });
+      if (type && !checkedValue("type_secondaire")) second.querySelector('input[value=""]').checked = true;
+    }
+    const spec = form.querySelector(".q-specifiques");
+    if (spec) {
+      const sec = checkedValue("type_secondaire");
+      const familles = [famille, sec ? sec[0] : ""].filter(Boolean);
+      let visible = 0;
+      spec.querySelectorAll(".option[data-familles]").forEach((o) => {
+        const ok = familles.some((f) => o.dataset.familles.includes(f));
+        hideAndClear(o, !ok);
+        if (ok) visible++;
+      });
+      spec.hidden = visible === 0;
+    }
+    renumber();
+  }
+
+  form.addEventListener("change", (e) => {
+    if (["preoccupations", "type_cheveux", "type_secondaire"].includes(e.target.name)) updateDependants();
+  });
+
   const checkedFamily = form.querySelector('input[name="famille"]:checked');
   if (checkedFamily) showFamily(checkedFamily.value);
+  else updateDependants();
+
+  // --- Aide pour trouver son type ----------------------------------------------
+
+  const helper = form.querySelector(".type-helper");
+  if (helper) {
+    const tailleBox = helper.querySelector(".helper-taille");
+    const result = helper.querySelector(".helper-result");
+    const error = helper.querySelector(".helper-error");
+    const value = (name) => {
+      const el = helper.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : "";
+    };
+
+    helper.addEventListener("change", (e) => {
+      if (e.target.name === "aide_forme") {
+        tailleBox.hidden = false;
+        helper.querySelectorAll(".helper-tailles").forEach((g) => (g.hidden = g.dataset.forme !== e.target.value));
+      }
+      error.hidden = true;
+    });
+
+    helper.querySelector("[data-trouver]").addEventListener("click", async () => {
+      const forme = value("aide_forme");
+      const payload = {
+        forme, taille: value("aide_taille_" + forme),
+        retractation: value("aide_retractation"), textures: value("aide_textures") || "une",
+      };
+      if (!payload.forme || !payload.taille) {
+        error.textContent = "Répondez au moins aux questions 1 et 2.";
+        error.hidden = false;
+        return;
+      }
+      try {
+        const response = await fetch("/api/trouver-type", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+        });
+        const r = await response.json();
+        if (!response.ok) throw new Error(r.detail || "");
+        result.innerHTML =
+          `<p><strong>Type ${escapeHtml(r.type)}${r.secondaire ? " avec une part de " + escapeHtml(r.secondaire) : ""}</strong></p>` +
+          `<p>${escapeHtml(r.explication)}</p>` +
+          '<button type="button" class="button" data-appliquer>Choisir ce résultat</button>';
+        result.hidden = false;
+        result.querySelector("[data-appliquer]").addEventListener("click", () => {
+          const fam = form.querySelector(`input[name="famille"][value="${r.type[0]}"]`);
+          if (fam) { fam.checked = true; showFamily(r.type[0]); }
+          const radio = form.querySelector(`input[name="type_cheveux"][value="${r.type}"]`);
+          if (radio) radio.checked = true;
+          updateDependants();
+          const sec = form.querySelector(`input[name="type_secondaire"][value="${r.secondaire || ""}"]`);
+          if (sec) sec.checked = true;
+          updateDependants();
+          helper.open = false;
+          const chosen = radio && radio.closest(".option");
+          if (chosen) chosen.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      } catch (err) {
+        error.textContent = "Le calcul n'a pas abouti. Réessayez dans un instant.";
+        error.hidden = false;
+      }
+    });
+  }
 
   // Après une erreur côté serveur, ouvrir la première étape concernée.
   const firstError = panels.findIndex((p) => p.querySelector(".has-error"));
@@ -200,12 +334,6 @@
       img.onerror = () => resolve(f); // format non lu par le navigateur : on envoie tel quel
       img.src = URL.createObjectURL(f);
     });
-  }
-
-  function escapeHtml(s) {
-    const div = document.createElement("div");
-    div.textContent = s == null ? "" : String(s);
-    return div.innerHTML;
   }
 
   function suggest(question, value) {

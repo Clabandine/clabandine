@@ -24,7 +24,20 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    saison suivante (`app/profil.py`). Aucun soin anti-chute n'est proposé pendant la grossesse.
 4. **Les 12 types de cheveux (1A à 4C)**, chacun avec ses problèmes fréquents
    (`app/hair_types.py`).
-4. **Résultat centré sur les problèmes** : causes propres au profil, actions, à éviter, délai.
+   - **Deux types à la fois** : entre deux types, textures différentes selon les zones,
+     cheveux métissés. Le second type compte pour un tiers environ dans les besoins, les
+     soins et les produits.
+   - **« Je ne suis pas sûre de mon type »** : un mini-questionnaire (forme, taille des
+     boucles, rétractation, zones) propose le type le plus proche et, si besoin, un second
+     type (`trouver_type` dans `app/specifiques.py`).
+   - **Situations propres à chaque famille** (racines grasses des cheveux raides, ondulations
+     qui disparaissent, rétractation, nœuds de fée, tempes clairsemées…), avec un conseil ciblé
+     pour chacune.
+   - **Démangeaisons** : un point de gêne à part entière. Des questions précisent ce que la
+     personne observe (pellicules sèches ou grasses, rougeurs, réaction à un produit, sous les
+     tresses, entre les lavages, plaques). Le shampoing et les soins choisis en tiennent
+     compte, et des alertes renvoient vers un médecin quand c'est nécessaire.
+5. **Résultat centré sur les problèmes** : causes propres au profil, actions, à éviter, délai.
 5. **Programme de soins** : phase intensive (4 semaines), puis entretien, avec la date du
    prochain point.
 6. **Saisons** : besoins, conseils et choix des produits adaptés à la saison en cours.
@@ -230,6 +243,7 @@ trichosens/
 │   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
 │   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
+│   ├── specifiques.py     # Situations propres à chaque type, démangeaisons, aide pour trouver son type
 │   ├── photo.py           # Analyse photo par l'IA (Claude)
 │   ├── seasons.py         # Adaptation à la saison
 │   ├── evolution.py       # Comparaison avec le diagnostic précédent
@@ -256,6 +270,7 @@ en haut de `app/engine.py` (`TEXTURE_POINTS`, `PREOCCUPATION_POINTS`, etc.).
 |---------|--------------------|---------------------------------------------|
 | GET     | `/api/questions`   | Étapes, questions et réponses possibles |
 | POST    | `/api/analyse-photo` | Envoie une photo (`photo`, `consentement=oui`), renvoie l'analyse |
+| POST    | `/api/trouver-type` | Aide pour trouver son type (`forme`, `taille`, `retractation`, `textures`) |
 | POST    | `/api/diagnostic`  | Envoie les réponses (JSON), renvoie le diagnostic |
 | GET     | `/rappels.ics`     | Fichier agenda des rappels (`jours`, `heure`, `rappels`, `prochain`…) |
 

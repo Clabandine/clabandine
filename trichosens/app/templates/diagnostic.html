@@ -2,9 +2,45 @@
 {% block title %}Mon diagnostic – TrichoSens{% endblock %}
 {% block main_class %}page-diagnostic{% endblock %}
 
+{% macro choix_aide(nom, choix) %}
+<div class="options compact">
+  {% for c in choix %}
+  <label class="option">
+    <input type="radio" name="{{ nom }}" value="{{ c.value }}" form="aide-type">
+    <span class="option-text"><strong>{{ c.label }}</strong>{% if c.hint %}<small>{{ c.hint }}</small>{% endif %}</span>
+  </label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro aide_type() %}
+<details class="type-helper js-only" hidden>
+  <summary>Je ne suis pas sûre de mon type <small>(entre deux types, plusieurs textures, cheveux métissés…)</small></summary>
+  <div class="helper-body">
+    <p class="help">Observez une mèche lavée et séchée à l'air libre, sans produit, de préférence sur le dessus de la tête.</p>
+    <p class="sub-label">1. Une fois secs, vos cheveux…</p>
+    {{ choix_aide('aide_forme', TROUVER.FORMES) }}
+    <div class="helper-taille" hidden>
+      <p class="sub-label">2. Plus précisément…</p>
+      {% for forme, choix in TROUVER.TAILLES.items() %}
+      <div class="helper-tailles" data-forme="{{ forme }}" hidden>{{ choix_aide('aide_taille_' ~ forme, choix) }}</div>
+      {% endfor %}
+    </div>
+    <p class="sub-label">3. Tirez doucement une mèche mouillée : par rapport à sèche, elle est…</p>
+    {{ choix_aide('aide_retractation', TROUVER.RETRACTATIONS) }}
+    <p class="sub-label">4. Vos cheveux ont-ils des textures différentes selon les zones ?</p>
+    {{ choix_aide('aide_textures', TROUVER.TEXTURES) }}
+    <p class="error helper-error" hidden></p>
+    <button type="button" class="button secondary" data-trouver>Trouver mon type</button>
+    <div class="helper-result" role="status" aria-live="polite" hidden></div>
+  </div>
+</details>
+{% endmacro %}
+
 {% macro question_block(q, num) %}
 {% set current = answers.get(q.id) %}
-<fieldset class="question{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
+<fieldset class="question q-{{ q.id }}{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
+          {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons"{% endif %}
           data-required="{{ 'true' if q.required else 'false' }}"
           {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
   <legend><span class="num">{{ num }}</span> {{ q.label }}</legend>
@@ -54,6 +90,7 @@
     </div>
     <p class="sub-label subtype-label" hidden>2. Le type le plus proche</p>
   </div>
+  {{ aide_type() }}
   {% for f in FAMILLES.values() %}
   <div class="subtype-group" data-famille="{{ f.id }}">
     <h3 class="group-title">{{ f.titre }} : {{ f.label }}</h3>
@@ -73,6 +110,20 @@
   </div>
   {% endfor %}
 
+  {% elif q.id == 'type_secondaire' %}
+  <div class="chips-select" role="radiogroup" aria-label="{{ q.label }}">
+    <label class="chip wide">
+      <input type="radio" name="{{ q.id }}" value="" {% if not current %}checked{% endif %}>
+      <span>Non, un seul type</span>
+    </label>
+    {% for o in q.options %}
+    <label class="chip" data-value="{{ o.value }}" data-famille="{{ o.groupe }}" title="{{ o.hint }}">
+      <input type="radio" name="{{ q.id }}" value="{{ o.value }}" {% if current == o.value %}checked{% endif %}>
+      <span>{{ o.label }}</span>
+    </label>
+    {% endfor %}
+  </div>
+
   {% else %}
   <div class="options{% if q.has_visuals %} visual{% endif %}">
     {% for o in q.options %}
@@ -81,7 +132,7 @@
     {% else %}
       {% set checked = current == o.value %}
     {% endif %}
-    <label class="option" data-value="{{ o.value }}">
+    <label class="option" data-value="{{ o.value }}"{% if q.id == 'specifiques' %} data-familles="{{ o.groupe }}"{% endif %}>
       <input type="{{ 'checkbox' if q.multiple else 'radio' }}" name="{{ q.id }}" value="{{ o.value }}"
              {% if checked %}checked{% endif %}>
       {% if o.visuel %}<img src="{{ visuel(o.visuel) }}" alt="" loading="lazy" width="240" height="240">{% endif %}

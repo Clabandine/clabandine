@@ -33,13 +33,13 @@ def valeurs(d: Diagnostic) -> dict[str, str]:
     photo = "oui" if d.photo and d.photo.exploitable else "non"
     ref = str(d.suivi.get("id", ""))[:8]
     return {
-        "TS_TYPE": d.type_cheveux.code,
+        "TS_TYPE": d.type_code,
         "TS_PROBLEMES": problemes,
         "TS_PRIORITES": priorites,
         "TS_PRODUITS": produits,
         "TS_PHASE": phase,
         "TS_ID": ref,
-        "TS_RESUME": (f"Type {d.type_cheveux.code} · Gêne : {problemes} · Priorités : {priorites}"
+        "TS_RESUME": (f"Type {d.type_code} · Gêne : {problemes} · Priorités : {priorites}"
                       f" · {phase} · Photo : {photo} · Réf. {ref}"),
     }
 

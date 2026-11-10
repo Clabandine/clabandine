@@ -22,6 +22,7 @@ from .hair_types import FAMILLES, HAIR_TYPES, TYPE_POIDS, TYPE_POINTS, HairType
 from .pain_points import INTENSITE_FACTEUR, PAIN_POINTS, PainReport, explain
 from .photo import AnalysePhoto
 from .questionnaire import Answers
+from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
 # --- Besoins -----------------------------------------------------------------
 
@@ -80,7 +81,11 @@ PREOCCUPATION_POINTS = {
     "terne": {"nutrition": 3},
     "demelage": {"hydratation": 2, "nutrition": 2},
     "alourdis": {"volume": 2},
+    "demangeaisons": {"cuir_chevelu": 5},
 }
+
+# Part du second type quand les cheveux mélangent deux types.
+PART_SECONDAIRE = 0.35
 
 # Poids des signes vus sur la photo : ils complètent les réponses sans les remplacer.
 PHOTO_FACTEUR = {"leger": 0.3, "modere": 0.5, "marque": 0.8}
@@ -117,8 +122,17 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None,
         for need, value in points.items():
             raw[need] += value * factor
 
-    add(TEXTURE_POINTS[a.texture])
-    add(TYPE_POINTS[a.type_cheveux])
+    sec = HAIR_TYPES.get(a.type_secondaire)
+    part = PART_SECONDAIRE if sec else 0.0
+    add(TEXTURE_POINTS[a.texture], 1 - part)
+    add(TYPE_POINTS[a.type_cheveux], 1 - part)
+    if sec:
+        add(TEXTURE_POINTS[sec.texture], part)
+        add(TYPE_POINTS[sec.code], part)
+    for sid in a.specifiques:
+        add(SPECIFICITES[sid].points)
+    for did in a.demangeaisons_details:
+        add(DETAILS_DEMANGEAISONS[did].points)
     if saison:
         add(saison.points)
     for pts in profil.points(a, saison):
@@ -189,12 +203,23 @@ class Diagnostic:
     photo: AnalysePhoto | None = None
     notes_photo: list[str] = field(default_factory=list)
     signes_photo_en_plus: list[dict] = field(default_factory=list)
+    type_secondaire: HairType | None = None
+    specifiques: list[dict] = field(default_factory=list)
+
+    @property
+    def type_code(self) -> str:
+        """Code du type, avec le second type s'il y en a un (ex. « 3B/3C »)."""
+        if self.type_secondaire:
+            return f"{self.type_cheveux.code}/{self.type_secondaire.code}"
+        return self.type_cheveux.code
 
     def to_dict(self) -> dict:
         return {
             "resume": self.resume,
             "texture": self.texture,
             "type_cheveux": self.type_cheveux.code,
+            "type_secondaire": self.type_secondaire.code if self.type_secondaire else None,
+            "specifiques": self.specifiques,
             "problemes_type": self.problemes_type,
             "douleurs": [d.to_dict() for d in self.douleurs],
             "saison": self.saison.id if self.saison else None,
@@ -256,11 +281,15 @@ def _resume(a: Answers) -> str:
     t = HAIR_TYPES[a.type_cheveux]
     epaisseur = {"fin": "cheveu fin", "moyen": "cheveu d'épaisseur moyenne",
                  "epais": "cheveu épais"}[a.epaisseur]
-    parts = [f"{FAMILLES[t.famille].label}, type {t.code} ({t.nom.lower()})",
-             epaisseur, f"densité {a.densite}"]
+    type_txt = f"{FAMILLES[t.famille].label}, type {t.code} ({t.nom.lower()})"
+    if a.type_secondaire:
+        type_txt += f" avec une part de {a.type_secondaire}"
+    parts = [type_txt, epaisseur, f"densité {a.densite}"]
     if a.porosite != "inconnue":
         parts.append(f"porosité {a.porosite}")
     parts.append(f"cuir chevelu {CUIR_LABELS[a.cuir_chevelu]}")
+    if "demangeaisons" in a.preoccupations:
+        parts[-1] += " qui démange"
     return ", ".join(parts) + "."
 
 
@@ -293,7 +322,11 @@ def lavages_par_semaine(a: Answers) -> float:
 
 def _poids_produits(a: Answers, saison: seasons.Saison | None = None) -> str:
     """Texture des soins à privilégier : légère, moyenne ou riche."""
-    score = {"lisse": -2, "ondule": -1, "boucle": 0, "frise": 1, "crepu": 2}[a.texture]
+    echelle = {"lisse": -2, "ondule": -1, "boucle": 0, "frise": 1, "crepu": 2}
+    score: float = echelle[a.texture]
+    sec = HAIR_TYPES.get(a.type_secondaire)
+    if sec:
+        score += PART_SECONDAIRE * (echelle[sec.texture] - echelle[a.texture])
     score += {"fin": -2, "moyen": 0, "epais": 1}[a.epaisseur]
     score += {"faible": -1, "moyenne": 0, "forte": 1, "inconnue": 0}[a.porosite]
     if "alourdis" in a.preoccupations:
@@ -305,6 +338,21 @@ def _poids_produits(a: Answers, saison: seasons.Saison | None = None) -> str:
     if score >= 2:
         return "riche"
     return "moyen"
+
+
+def cuir_effectif(a: Answers) -> str:
+    """Nature du cuir chevelu à traiter en priorité pour choisir les soins.
+
+    Les détails des démangeaisons peuvent révéler des pellicules ou une sensibilité
+    que la personne n'a pas cochées dans « cuir chevelu ».
+    """
+    cuirs = {DETAILS_DEMANGEAISONS[d].cuir for d in a.demangeaisons_details}
+    if "pellicules" in cuirs and a.cuir_chevelu in {"normal", "gras", "sec"}:
+        if a.cuir_chevelu != "sec" or "pellicules_grasses" in a.demangeaisons_details:
+            return "pellicules"
+    if "sensible" in cuirs and a.cuir_chevelu in {"normal", "sec"}:
+        return "sensible"
+    return a.cuir_chevelu
 
 
 def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step]:
@@ -320,7 +368,11 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "pour protéger la fibre.",
             "huile",
         ))
-    if a.cuir_chevelu in {"sensible", "pellicules", "sec"}:
+    cuir = cuir_effectif(a)
+    if "pellicules_grasses" in a.demangeaisons_details:
+        conseil = ("Faites mousser sur le cuir chevelu et laissez poser 3 à 5 minutes avant de "
+                   "rincer : c'est ce temps de pose qui agit sur les pellicules.")
+    elif cuir in {"sensible", "pellicules", "sec"}:
         conseil = "Massez doucement le cuir chevelu avec la pulpe des doigts, sans frotter les longueurs."
     elif a.cuir_chevelu == "gras":
         conseil = "Concentrez le shampoing sur le cuir chevelu ; la mousse qui coule suffit pour les longueurs."
@@ -402,6 +454,12 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "quotidien", "Cuir chevelu",
             "Évitez de toucher vos racines et n'appliquez pas d'huile près du cuir chevelu.",
         ))
+    if "demangeaisons" in a.preoccupations:
+        steps.append(Step(
+            "quotidien", "Apaiser sans gratter",
+            "Quand ça gratte, appuyez ou massez avec la pulpe des doigts au lieu de gratter avec "
+            "les ongles. N'appliquez pas d'huile épaisse sur le cuir chevelu.",
+        ))
     if "pointes" in a.preoccupations or "casse" in a.preoccupations:
         steps.append(Step(
             "quotidien", "Protéger les pointes",
@@ -410,14 +468,21 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
         ))
 
     # Hebdomadaire / mensuel
-    if besoins["cuir_chevelu"] >= 40:
+    if ("sous_coiffure" in a.demangeaisons_details
+            or "lavage_sous_tresses" in a.specifiques):
+        steps.append(Step(
+            "hebdomadaire", "Laver sous les tresses",
+            "Toutes les 1 à 2 semaines, appliquez un shampoing dilué entre les tresses avec un "
+            "flacon applicateur, massez, rincez longtemps et séchez bien.",
+        ))
+    if besoins["cuir_chevelu"] >= 40 or "demangeaisons" in a.preoccupations:
         steps.append(Step(
             "hebdomadaire", "Soin du cuir chevelu",
             "1 fois par semaine, appliquez un soin adapté et massez 3 à 5 minutes pour stimuler la circulation.",
             "soin_cuir",
         ))
     if (a.porosite == "faible" or a.cuir_chevelu == "gras" or texture_bouclee
-            or "alourdis" in a.preoccupations):
+            or "alourdis" in a.preoccupations or "entre_lavages" in a.demangeaisons_details):
         steps.append(Step(
             "hebdomadaire", "Shampoing clarifiant",
             "1 fois par mois, pour enlever les résidus de produits qui alourdissent les cheveux.",
@@ -477,6 +542,13 @@ def _conseils(a: Answers, besoins: dict[str, int], poids: str) -> list[str]:
             "Les cheveux poussent d'environ 1 cm par mois. Pour gagner en longueur, l'essentiel "
             "est de limiter la casse des pointes."
         )
+    if a.type_secondaire:
+        conseils.append(
+            f"Vos cheveux mélangent les types {a.type_cheveux} et {a.type_secondaire}. Coiffez "
+            "zone par zone : un peu plus de crème sur les zones les plus serrées (souvent la "
+            "nuque), des textures plus légères sur les zones plus souples. Vos soins ont été "
+            "choisis pour convenir aux deux."
+        )
     if a.texture in {"frise", "crepu"}:
         conseils.append(
             "Les coiffures protectrices (tresses, vanilles, chignons) limitent les manipulations ; "
@@ -486,13 +558,16 @@ def _conseils(a: Answers, besoins: dict[str, int], poids: str) -> list[str]:
 
 
 def _alertes(a: Answers) -> list[str]:
-    alertes = []
+    alertes = [DETAILS_DEMANGEAISONS[d].alerte for d in a.demangeaisons_details
+               if DETAILS_DEMANGEAISONS[d].alerte]
     if "chute" in a.preoccupations:
         alertes.append(
             "Une chute importante, soudaine ou qui dure plus de 3 mois mérite l'avis d'un médecin "
             "ou d'un dermatologue : elle peut avoir des causes hormonales, nutritionnelles ou médicales."
         )
-    if a.cuir_chevelu in {"sensible", "pellicules"}:
+    if "plaques" in a.demangeaisons_details:
+        pass  # l'alerte « plaques » est déjà plus précise
+    elif a.cuir_chevelu in {"sensible", "pellicules"} or "demangeaisons" in a.preoccupations:
         alertes.append(
             "Si les démangeaisons, rougeurs ou pellicules persistent malgré des soins doux, "
             "consultez un dermatologue."
@@ -508,10 +583,11 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
     """Score d'adéquation d'un produit au profil, ou None s'il ne convient pas."""
     if p.types and a.type_cheveux not in p.types:
         return None
-    if p.cuir_chevelu and a.cuir_chevelu not in p.cuir_chevelu:
+    cuir = cuir_effectif(a)
+    if p.cuir_chevelu and cuir not in p.cuir_chevelu:
         return None
     # Cuir chevelu sensible : seulement des produits prévus pour lui.
-    if (a.cuir_chevelu == "sensible" and p.categorie in {"shampoing", "soin_cuir"}
+    if (cuir == "sensible" and p.categorie in {"shampoing", "soin_cuir"}
             and "sensible" not in p.cuir_chevelu):
         return None
 
@@ -529,6 +605,11 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
         score += 8
     if p.types and len(p.types) <= 6:
         score += 4  # produit pensé pour peu de types : plus ciblé
+    if a.type_secondaire and p.types:
+        score += 3 if a.type_secondaire in p.types else -3
+    if ("demangeaisons" in a.preoccupations and p.sans_parfum is True
+            and p.categorie in {"shampoing", "soin_cuir", "leave_in"}):
+        score += 6
     return score
 
 
@@ -674,6 +755,7 @@ def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
         intensites=dict(a.intensites), besoins=d.besoins, phase=d.phase,
         prochain_point=d.prochain_point, preferences=list(a.preferences), budget=a.budget,
         age=a.age, saisons_sensibles=list(a.saisons_sensibles), prenom=a.prenom,
+        type_secondaire=a.type_secondaire,
     ).model_dump(mode="json")
 
 
@@ -702,9 +784,19 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
     vus = {s.signe for s in photo.signes} if photo and photo.exploitable else set()
     problemes_type = [
         {"id": pid, "label": PAIN_POINTS[pid].label, "pourquoi": why,
-         "signale": pid in a.preoccupations, "vu_photo": pid in vus}
+         "signale": pid in a.preoccupations, "vu_photo": pid in vus, "type": typ.code}
         for pid, why in typ.problemes
     ]
+    sec = HAIR_TYPES.get(a.type_secondaire)
+    if sec:
+        deja = {p["id"] for p in problemes_type}
+        problemes_type += [
+            {"id": pid, "label": PAIN_POINTS[pid].label, "pourquoi": why,
+             "signale": pid in a.preoccupations, "vu_photo": pid in vus, "type": sec.code}
+            for pid, why in sec.problemes if pid not in deja
+        ]
+    specifiques = [{"id": sid, "label": SPECIFICITES[sid].label,
+                    "conseil": SPECIFICITES[sid].conseil} for sid in a.specifiques]
     alertes = _alertes(a)
     notes_photo, en_plus = _apply_photo(a, photo, douleurs, alertes) if photo else ([], [])
 
@@ -743,6 +835,8 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         liens_amazon=any(o.amazon for s in routine if s.produit for o in s.produit.offres),
         preferences=[PREFERENCES[p] for p in a.preferences],
         budget=a.budget,
+        type_secondaire=sec,
+        specifiques=specifiques,
     )
     d.suivi = resume_suivi(d, a, today)
     return d

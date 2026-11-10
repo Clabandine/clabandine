@@ -145,6 +145,7 @@ main { padding: 28px 0 64px; min-height: 60vh; }
 .badge { font-size: .72rem; font-weight: 700; border-radius: 999px; padding: 2px 9px; margin-left: 6px; white-space: nowrap; }
 .badge.signale { background: var(--brand); color: #fff; }
 .badge.surveiller { background: var(--brand-soft); color: var(--brand); }
+.badge.type { background: var(--accent-soft); color: var(--accent); }
 .badge.photo { background: var(--success); color: #fff; }
 .table-wrap { overflow-x: auto; }
 .timeline { border-collapse: collapse; width: 100%; font-size: .92rem; }
@@ -686,3 +687,30 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
   .fiche li { margin-bottom: 2px; }
   .fiche-note { margin-top: 14px; font-size: 7.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
 }
+
+/* --- Second type, situations propres au type, aide pour trouver son type --------- */
+.chips-select { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips-select .chip span { min-width: 48px; text-align: center; font-family: var(--font-ui); font-weight: 600; }
+.options.compact { gap: 8px; margin-bottom: 14px; }
+.options.compact .option { padding: 10px 12px; }
+.q-specifiques .options { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.type-helper {
+  margin: 16px 0; border: 1.5px dashed var(--copper); border-radius: var(--radius-sm);
+  background: var(--accent-soft); padding: 0;
+}
+.type-helper summary {
+  cursor: pointer; padding: 12px 16px; font-weight: 700; color: var(--accent); list-style: none;
+}
+.type-helper summary::-webkit-details-marker { display: none; }
+.type-helper summary::before { content: "＋"; display: inline-block; width: 1.4em; color: var(--copper); }
+.type-helper[open] summary::before { content: "－"; }
+.type-helper summary small { display: block; font-weight: 500; color: var(--muted); margin-left: 1.4em; }
+.helper-body { padding: 0 16px 16px; animation: fade-up .3s var(--ease); }
+.helper-result {
+  margin-top: 14px; padding: 14px 16px; background: var(--surface); border-radius: var(--radius-sm);
+  border-left: 4px solid var(--accent); box-shadow: var(--shadow);
+}
+.helper-result p { margin: 0 0 8px; }
+.specifiques-list li { margin-bottom: 12px; }
+.specifiques-list strong { display: block; color: var(--brand); }
+.type-secondaire-note { margin-top: 10px; }
