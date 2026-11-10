@@ -40,6 +40,7 @@
   {% if d.douleurs or d.photo or d.specifiques %}<button role="tab" id="tab-problemes" aria-controls="panel-problemes" data-tab="problemes">Problèmes{% if d.douleurs %} <span class="count">{{ d.douleurs | length }}</span>{% endif %}</button>{% endif %}
   <button role="tab" id="tab-routine" aria-controls="panel-routine" data-tab="routine">Routine</button>
   <button role="tab" id="tab-produits" aria-controls="panel-produits" data-tab="produits">Produits <span class="count">{{ ns.produits | length }}</span></button>
+  <button role="tab" id="tab-naturel" aria-controls="panel-naturel" data-tab="naturel">🌿 Naturel</button>
   <button role="tab" id="tab-conseils" aria-controls="panel-conseils" data-tab="conseils">Conseils</button>
   <button role="tab" id="tab-suivi" aria-controls="panel-suivi" data-tab="suivi">Suivi &amp; rappels</button>
 </nav>
@@ -228,6 +229,11 @@
         <span>{{ s.produit.nom_complet }}</span>
       </button>
       {% endif %}
+      {% if s.alternative %}
+      <button type="button" class="natural-mini" data-goto="naturel" data-product="recette-{{ s.alternative.id }}">
+        🌿 Version maison : {{ s.alternative.titre | lower }}
+      </button>
+      {% endif %}
     </li>
     {% endfor %}
   </ol>
@@ -281,6 +287,67 @@
     {% if d.liens_amazon %}En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
     remplissant les conditions requises.{% endif %}
     {% else %}TrichoSens n'est lié à aucune de ces marques.{% endif %}</p>
+  <div class="panel-next"><button type="button" class="button" data-goto="naturel">Les alternatives naturelles →</button></div>
+</section>
+
+{# ----------------------------------------------------------------- Naturel #}
+{% macro achat(p) %}
+{% if p and p.offres %}{% set o = p.offres[0] %}
+<a class="buy small" href="/acheter/{{ o.id }}" target="_blank" rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">{{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}</a>
+{% endif %}
+{% endmacro %}
+<section class="tab-panel" id="panel-naturel" role="tabpanel" aria-labelledby="tab-naturel">
+  <h2 class="panel-title">Les alternatives naturelles</h2>
+  <p class="lead small-lead">Pour celles qui préfèrent le fait maison, les ingrédients bruts ou un coup de pouce de l'intérieur.</p>
+
+  {% if d.recettes %}
+  <h3 class="moment">Vos recettes maison</h3>
+  <div class="recipe-grid">
+    {% for r in d.recettes %}{% set rec = r.recette %}
+    <article class="recipe" id="produit-recette-{{ rec.id }}">
+      <span class="tag">Remplace : {{ CATEGORIES[rec.categorie] | lower }}</span>
+      <h4>{{ rec.titre }}</h4>
+      <p class="sub-label">Ingrédients</p>
+      <ul class="ingredients-list">
+        {% for texte, p in r.ingredients %}
+        <li><span>{{ texte }}</span>
+          {% if p %}<span class="ing-buy"><small>{{ p.nom_complet }}{% if p.prix %} · ≈ {{ '%.2f' | format(p.prix) | replace('.', ',') }} €{% endif %}</small>{{ achat(p) }}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="sub-label">Préparation</p>
+      <ol class="recipe-steps">{% for e in rec.etapes %}<li>{{ e }}</li>{% endfor %}</ol>
+      <p class="recipe-meta">🗓 {{ rec.frequence }}{% if rec.conservation %}<br>🧊 {{ rec.conservation }}{% endif %}</p>
+      {% if rec.precaution %}<p class="pref-warning">⚠ {{ rec.precaution }}</p>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if d.cures or d.cures_message %}
+  <h3 class="moment">Cures et compléments</h3>
+  {% for c in d.cures %}
+  <div class="card cure">
+    <h4>{{ c.cure.titre }}</h4>
+    <p>{{ c.cure.pourquoi }}</p>
+    <p class="recipe-meta">⏱ Durée conseillée : {{ c.cure.duree }}</p>
+    <ul class="cure-products">
+      {% for p in c.produits %}
+      <li><div><strong>{{ p.nom_complet }}</strong><small>{{ p.description }}{% if p.prix %} · ≈ {{ '%.2f' | format(p.prix) | replace('.', ',') }} €{% endif %}</small></div>{{ achat(p) }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  {% if d.cures_message %}<p class="note">{{ d.cures_message }}</p>{% endif %}
+  {% endif %}
+
+  <h3 class="moment">Au naturel, chaque jour</h3>
+  <ul class="tip-cards">{% for c in d.conseils_naturels %}<li>{{ c }}</li>{% endfor %}</ul>
+
+  <p class="help legal">Recettes à base d'ingrédients courants : faites un test sur une petite zone avant la
+    première utilisation. Certains liens sont des liens affiliés : TrichoSens peut toucher une commission,
+    sans surcoût pour vous. En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
+    remplissant les conditions requises.</p>
   <div class="panel-next"><button type="button" class="button" data-goto="conseils">Voir nos conseils →</button></div>
 </section>
 

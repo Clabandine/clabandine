@@ -51,7 +51,17 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    produit (petit : 12 € environ, moyen : 25 € environ). Les produits qui respectent le
    plus de préférences passent en premier ; sinon, le résultat le signale. Le budget de
    départ de la routine est affiché, et les préférences sont reprises au diagnostic suivant.
-10. **Rappels dans l'agenda** : la personne choisit ses jours de lavage et une heure, puis
+10. **Alternatives naturelles** (onglet « 🌿 Naturel », `app/naturel.py`) :
+    - **Recettes maison** choisies selon le profil (gel de lin, spray à l'aloe vera, masques,
+      bain d'huile, rhassoul, vinaigre de cidre, romarin, eau de riz…). Chacune peut remplacer
+      une étape de la routine, qui affiche « Version maison ». Les ingrédients à acheter
+      (Aroma-Zone…) ont leur lien d'achat.
+    - **Cures de compléments** (3 mois) si la personne signale chute, casse, pousse lente,
+      pointes ou cheveux ternes, ou après une grossesse, en période de stress ou à la
+      ménopause. Rien n'est proposé pendant la grossesse ni avant 18 ans, et un message de
+      prudence accompagne chaque cure.
+    - **Gestes naturels** du quotidien (alimentation, massage, sommeil).
+11. **Rappels dans l'agenda** : la personne choisit ses jours de lavage et une heure, puis
     télécharge un fichier agenda (.ics) avec ses rappels : jours de lavage, shampoing
     clarifiant et mesure de la mèche témoin (une fois par mois), coupe des pointes (tous
     les 3 mois) et prochain diagnostic. Aucun compte ni serveur de notifications.
@@ -64,7 +74,7 @@ Google Sheets ou Excel. **Les prix sont indicatifs et toutes les fiches sont à 
 
 | Colonne | Contenu |
 |---|---|
-| `categorie` | shampoing, apres_shampoing, masque, leave_in, coiffant, huile, protecteur_thermique, soin_cuir, shampoing_clarifiant, accessoire |
+| `categorie` | shampoing, apres_shampoing, masque, leave_in, coiffant, huile, protecteur_thermique, soin_cuir, shampoing_clarifiant, accessoire ; hors routine : ingredient (recettes maison), complement (cures) |
 | `besoins` | hydratation, nutrition, proteines, reparation, cuir_chevelu, protection, definition, volume (+ `anti_chute`, réservé aux personnes qui ont de la chute) |
 | `poids` | leger, moyen ou riche |
 | `types` | types de cheveux, avec des plages : `3A-4C`, `1A\|2B`. Vide = tous |
@@ -243,6 +253,7 @@ trichosens/
 │   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
 │   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
+│   ├── naturel.py         # Recettes maison, cures de compléments, gestes naturels
 │   ├── specifiques.py     # Situations propres à chaque type, démangeaisons, aide pour trouver son type
 │   ├── photo.py           # Analyse photo par l'IA (Claude)
 │   ├── seasons.py         # Adaptation à la saison

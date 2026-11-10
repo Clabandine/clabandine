@@ -14,7 +14,7 @@ import datetime as dt
 import uuid
 from dataclasses import dataclass, field
 
-from . import profil, seasons
+from . import naturel, profil, seasons
 from .reminders import jours_suggeres
 from .catalog import Product, load_catalog
 from .evolution import Evolution, ResumeSuivi, compare
@@ -167,6 +167,8 @@ class Step:
     categorie: str | None = None
     produit: Product | None = None
     hors_preferences: list[str] = field(default_factory=list)
+    # Recette maison qui peut remplacer le produit de cette étape.
+    alternative: naturel.Recette | None = None
 
 
 @dataclass
@@ -205,6 +207,11 @@ class Diagnostic:
     signes_photo_en_plus: list[dict] = field(default_factory=list)
     type_secondaire: HairType | None = None
     specifiques: list[dict] = field(default_factory=list)
+    # Alternatives naturelles : recettes maison, cures et gestes du quotidien.
+    recettes: list[dict] = field(default_factory=list)
+    cures: list[dict] = field(default_factory=list)
+    cures_message: str = ""
+    conseils_naturels: list[str] = field(default_factory=list)
 
     @property
     def type_code(self) -> str:
@@ -220,6 +227,21 @@ class Diagnostic:
             "type_cheveux": self.type_cheveux.code,
             "type_secondaire": self.type_secondaire.code if self.type_secondaire else None,
             "specifiques": self.specifiques,
+            "recettes": [
+                {"id": r["recette"].id, "titre": r["recette"].titre,
+                 "remplace": r["recette"].categorie,
+                 "ingredients": [{"texte": t, "produit": p.to_dict() if p else None}
+                                 for t, p in r["ingredients"]],
+                 "etapes": list(r["recette"].etapes), "frequence": r["recette"].frequence,
+                 "conservation": r["recette"].conservation,
+                 "precaution": r["recette"].precaution}
+                for r in self.recettes
+            ],
+            "cures": [{"titre": c["cure"].titre, "pourquoi": c["cure"].pourquoi,
+                       "duree": c["cure"].duree,
+                       "produits": [p.to_dict() for p in c["produits"]]} for c in self.cures],
+            "cures_message": self.cures_message,
+            "conseils_naturels": self.conseils_naturels,
             "problemes_type": self.problemes_type,
             "douleurs": [d.to_dict() for d in self.douleurs],
             "saison": self.saison.id if self.saison else None,
@@ -795,6 +817,13 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
              "signale": pid in a.preoccupations, "vu_photo": pid in vus, "type": sec.code}
             for pid, why in sec.problemes if pid not in deja
         ]
+    par_id = {p.id: p for p in catalog}
+    recettes = naturel.recettes_pour(a, besoins, {s.categorie for s in routine if s.categorie})
+    for r in recettes:
+        step = next((s for s in routine if s.categorie == r.categorie and not s.alternative), None)
+        if step:
+            step.alternative = r
+    cures, cures_message = naturel.cures_pour(a, saison.id)
     specifiques = [{"id": sid, "label": SPECIFICITES[sid].label,
                     "conseil": SPECIFICITES[sid].conseil} for sid in a.specifiques]
     alertes = _alertes(a)
@@ -837,6 +866,12 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         budget=a.budget,
         type_secondaire=sec,
         specifiques=specifiques,
+        recettes=[{"recette": r, "ingredients": naturel.produits_recette(r, catalog)}
+                  for r in recettes],
+        cures=[{"cure": c, "produits": [par_id[i] for i in c.produits if i in par_id]}
+               for c in cures],
+        cures_message=cures_message,
+        conseils_naturels=naturel.conseils_naturels(a),
     )
     d.suivi = resume_suivi(d, a, today)
     return d
