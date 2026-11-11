@@ -40,7 +40,7 @@
 {% macro question_block(q, num) %}
 {% set current = answers.get(q.id) %}
 <fieldset class="question q-{{ q.id }}{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
-          {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons"{% endif %}
+          {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons pellicules"{% endif %}
           data-required="{{ 'true' if q.required else 'false' }}"
           {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
   <legend><span class="num">{{ num }}</span> {{ q.label }}</legend>

@@ -32,7 +32,8 @@ def is_enabled() -> bool:
 # --- Format de la réponse de l'IA --------------------------------------------
 
 SigneId = Literal[
-    "secheresse", "frisottis", "pointes", "casse", "terne", "definition", "volume", "alourdis"
+    "secheresse", "frisottis", "pointes", "casse", "terne", "definition", "volume", "alourdis",
+    "pellicules",
 ]
 
 
@@ -88,6 +89,8 @@ Soyez prudent et honnête : ne signalez que ce qui est visible. Si la photo est 
 sombre, prise de trop loin, ou ne montre pas de cheveux, indiquez qu'elle n'est pas \
 exploitable et expliquez comment en prendre une meilleure. Les cheveux coiffés, mouillés \
 ou attachés rendent le type plus difficile à juger : baissez alors votre niveau de confiance.
+
+Si le cuir chevelu ou les cheveux montrent de petites peaux blanches ou jaunâtres, signalez-les avec le signe « pellicules ».
 
 Vous ne posez pas de diagnostic médical. Si vous voyez des zones sans cheveux, des rougeurs \
 ou des squames importantes, conseillez seulement un avis médical, sans nommer de maladie.

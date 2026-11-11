@@ -82,6 +82,7 @@ PREOCCUPATION_POINTS = {
     "demelage": {"hydratation": 2, "nutrition": 2},
     "alourdis": {"volume": 2},
     "demangeaisons": {"cuir_chevelu": 5},
+    "pellicules": {"cuir_chevelu": 5},
 }
 
 # Part du second type quand les cheveux mélangent deux types.
@@ -369,6 +370,8 @@ def cuir_effectif(a: Answers) -> str:
     que la personne n'a pas cochées dans « cuir chevelu ».
     """
     cuirs = {DETAILS_DEMANGEAISONS[d].cuir for d in a.demangeaisons_details}
+    if "pellicules" in a.preoccupations and a.cuir_chevelu in {"normal", "gras", "sec"}:
+        return "pellicules"
     if "pellicules" in cuirs and a.cuir_chevelu in {"normal", "gras", "sec"}:
         if a.cuir_chevelu != "sec" or "pellicules_grasses" in a.demangeaisons_details:
             return "pellicules"
@@ -391,7 +394,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "huile",
         ))
     cuir = cuir_effectif(a)
-    if "pellicules_grasses" in a.demangeaisons_details:
+    if cuir == "pellicules" or "pellicules_grasses" in a.demangeaisons_details:
         conseil = ("Faites mousser sur le cuir chevelu et laissez poser 3 à 5 minutes avant de "
                    "rincer : c'est ce temps de pose qui agit sur les pellicules.")
     elif cuir in {"sensible", "pellicules", "sec"}:
@@ -476,7 +479,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "quotidien", "Cuir chevelu",
             "Évitez de toucher vos racines et n'appliquez pas d'huile près du cuir chevelu.",
         ))
-    if "demangeaisons" in a.preoccupations:
+    if {"demangeaisons", "pellicules"} & set(a.preoccupations):
         steps.append(Step(
             "quotidien", "Apaiser sans gratter",
             "Quand ça gratte, appuyez ou massez avec la pulpe des doigts au lieu de gratter avec "
@@ -497,7 +500,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "Toutes les 1 à 2 semaines, appliquez un shampoing dilué entre les tresses avec un "
             "flacon applicateur, massez, rincez longtemps et séchez bien.",
         ))
-    if besoins["cuir_chevelu"] >= 40 or "demangeaisons" in a.preoccupations:
+    if besoins["cuir_chevelu"] >= 40 or {"demangeaisons", "pellicules"} & set(a.preoccupations):
         steps.append(Step(
             "hebdomadaire", "Soin du cuir chevelu",
             "1 fois par semaine, appliquez un soin adapté et massez 3 à 5 minutes pour stimuler la circulation.",
@@ -589,7 +592,8 @@ def _alertes(a: Answers) -> list[str]:
         )
     if "plaques" in a.demangeaisons_details:
         pass  # l'alerte « plaques » est déjà plus précise
-    elif a.cuir_chevelu in {"sensible", "pellicules"} or "demangeaisons" in a.preoccupations:
+    elif (a.cuir_chevelu in {"sensible", "pellicules"}
+          or {"demangeaisons", "pellicules"} & set(a.preoccupations)):
         alertes.append(
             "Si les démangeaisons, rougeurs ou pellicules persistent malgré des soins doux, "
             "consultez un dermatologue."
@@ -627,6 +631,10 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
         score += 8
     if p.types and len(p.types) <= 6:
         score += 4  # produit pensé pour peu de types : plus ciblé
+    if "pellicules" in a.preoccupations and "pellicules" in p.cuir_chevelu:
+        score += 10  # soin antipelliculaire, y compris pour un cuir chevelu sensible
+    if cuir != a.cuir_chevelu and a.cuir_chevelu in p.cuir_chevelu:
+        score += 5  # convient aussi à la nature habituelle du cuir chevelu
     if a.type_secondaire and p.types:
         score += 3 if a.type_secondaire in p.types else -3
     if ("demangeaisons" in a.preoccupations and p.sans_parfum is True

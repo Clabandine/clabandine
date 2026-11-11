@@ -73,8 +73,9 @@ QUESTIONS: tuple[Question, ...] = (
     Question(
         id="demangeaisons_details",
         step="douleurs",
-        label="Vos démangeaisons : qu'observez-vous ?",
-        help="Facultatif, plusieurs réponses possibles. Cela nous aide à en trouver la cause.",
+        label="Votre cuir chevelu : qu'observez-vous ?",
+        help="Facultatif, plusieurs réponses possibles. Cela nous aide à trouver la cause de "
+             "vos démangeaisons ou de vos pellicules.",
         multiple=True,
         required=False,
         options=tuple(Option(d.id, d.label, d.hint) for d in DETAILS_DEMANGEAISONS.values()),
@@ -383,7 +384,7 @@ def validate(raw: dict) -> Answers:
             familles.add(HAIR_TYPES[clean["type_secondaire"]].famille)
         clean["specifiques"] = [v for v in clean.get("specifiques", [])
                                 if familles & set(SPECIFICITES[v].familles)]
-    if "demangeaisons" not in clean.get("preoccupations", []):
+    if not {"demangeaisons", "pellicules"} & set(clean.get("preoccupations", [])):
         clean["demangeaisons_details"] = []
 
     if errors:

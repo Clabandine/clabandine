@@ -174,7 +174,7 @@
     // Détails des démangeaisons : seulement si « Démangeaisons » est coché.
     const pains = Array.from(form.querySelectorAll('input[name="preoccupations"]:checked')).map((i) => i.value);
     form.querySelectorAll(".question[data-show-if]").forEach((q) =>
-      hideAndClear(q, !pains.includes(q.dataset.showIf))
+      hideAndClear(q, !q.dataset.showIf.split(" ").some((v) => pains.includes(v)))
     );
 
     // Second type et situations propres au type : après le choix du type.
@@ -298,7 +298,7 @@
     signe: {
       secheresse: "Sécheresse", frisottis: "Frisottis", pointes: "Pointes abîmées", casse: "Casse",
       terne: "Manque d'éclat", definition: "Boucles peu définies", volume: "Manque de volume",
-      alourdis: "Cheveux alourdis",
+      alourdis: "Cheveux alourdis", pellicules: "Pellicules",
     },
     intensite: { leger: "léger", modere: "modéré", marque: "marqué" },
   };

@@ -33,7 +33,8 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    - **Situations propres à chaque famille** (racines grasses des cheveux raides, ondulations
      qui disparaissent, rétractation, nœuds de fée, tempes clairsemées…), avec un conseil ciblé
      pour chacune.
-   - **Démangeaisons** : un point de gêne à part entière. Des questions précisent ce que la
+   - **Démangeaisons et pellicules** : deux points de gêne à part entière (les pellicules
+     peuvent aussi être repérées sur la photo). Des questions précisent ce que la
      personne observe (pellicules sèches ou grasses, rougeurs, réaction à un produit, sous les
      tresses, entre les lavages, plaques). Le shampoing et les soins choisis en tiennent
      compte, et des alertes renvoient vers un médecin quand c'est nécessaire.

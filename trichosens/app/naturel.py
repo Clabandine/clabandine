@@ -134,7 +134,7 @@ RECETTES: dict[str, Recette] = {r.id: r for r in (
         "1 lavage sur 2, en alternance avec votre shampoing.",
         conservation="Poudre : se garde au sec. Pâte : à préparer à chaque fois.",
         pour=lambda a: a.cuir_chevelu in {"normal", "gras", "pellicules"},
-        douleurs=("alourdis", "demangeaisons"),
+        douleurs=("alourdis", "demangeaisons", "pellicules"),
     ),
     Recette(
         "rincage_cidre", "Rinçage au vinaigre de cidre", "shampoing_clarifiant",
@@ -146,7 +146,7 @@ RECETTES: dict[str, Recette] = {r.id: r for r in (
         "1 fois par semaine ou après un lavage au rhassoul.",
         precaution="À éviter sur un cuir chevelu irrité ou avec des plaies.",
         pour=_cuir_calme,
-        douleurs=("terne", "alourdis", "demelage"),
+        douleurs=("terne", "alourdis", "demelage", "pellicules"),
     ),
     Recette(
         "lotion_romarin", "Massage du cuir chevelu au romarin", "soin_cuir", ("cuir_chevelu",),
@@ -172,7 +172,7 @@ RECETTES: dict[str, Recette] = {r.id: r for r in (
         "1 à 2 fois par semaine, tant que le cuir chevelu démange.",
         conservation="Au réfrigérateur après ouverture : effet fraîcheur garanti.",
         pour=lambda a: "plaques" not in a.demangeaisons_details,
-        douleurs=("demangeaisons",),
+        douleurs=("demangeaisons", "pellicules"),
     ),
     Recette(
         "eau_riz", "Eau de riz", "apres_shampoing", ("proteines",),
