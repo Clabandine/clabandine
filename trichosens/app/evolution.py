@@ -40,6 +40,7 @@ class ResumeSuivi(BaseModel):
     age: str = "nc"
     saisons_sensibles: list[str] = []
     prenom: str = Field(default="", max_length=30)
+    type_secondaire: str = ""
 
 
 @dataclass

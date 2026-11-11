@@ -40,6 +40,9 @@ CATEGORIES = {
     "soin_cuir": "Soin du cuir chevelu",
     "shampoing_clarifiant": "Shampoing clarifiant",
     "accessoire": "Accessoire",
+    # Hors routine : ingrédients des recettes maison et cures (voir app/naturel.py).
+    "ingredient": "Ingrédient naturel",
+    "complement": "Complément alimentaire",
 }
 POIDS = {"leger", "moyen", "riche"}
 SAISONS = {"hiver", "printemps", "ete", "automne"}

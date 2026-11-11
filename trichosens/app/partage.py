@@ -8,7 +8,8 @@ def texte_partage(d: Diagnostic, site_url: str) -> str:
     titre = f"Ma routine TrichoSens{' – ' + d.prenom if d.prenom else ''}"
     lignes = [
         titre,
-        f"Type de cheveux : {d.type_cheveux.code} ({d.type_cheveux.nom.lower()})",
+        f"Type de cheveux : {d.type_cheveux.code} ({d.type_cheveux.nom.lower()})"
+        + (f", avec une part de {d.type_secondaire.code}" if d.type_secondaire else ""),
         f"Priorités : {', '.join(NEEDS[p] for p in d.priorites)}",
         f"Lavage conseillé : {d.frequence_lavage}",
     ]

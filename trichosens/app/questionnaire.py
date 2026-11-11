@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from .hair_types import HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .profil import AGES, PERIODES, SENSIBILITES
+from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,15 @@ QUESTIONS: tuple[Question, ...] = (
         options=tuple(Option(p.id, p.label, p.description) for p in PAIN_POINTS.values()),
     ),
     Question(
+        id="demangeaisons_details",
+        step="douleurs",
+        label="Vos démangeaisons : qu'observez-vous ?",
+        help="Facultatif, plusieurs réponses possibles. Cela nous aide à en trouver la cause.",
+        multiple=True,
+        required=False,
+        options=tuple(Option(d.id, d.label, d.hint) for d in DETAILS_DEMANGEAISONS.values()),
+    ),
+    Question(
         id="type_cheveux",
         step="cheveux",
         label="Quel est votre type de cheveux ?",
@@ -79,6 +89,25 @@ QUESTIONS: tuple[Question, ...] = (
             Option(t.code, f"{t.code} · {t.nom}", t.description, t.visuel, t.famille)
             for t in HAIR_TYPES.values()
         ),
+    ),
+    Question(
+        id="type_secondaire",
+        step="cheveux",
+        label="Vos cheveux mélangent-ils deux types ?",
+        help="Facultatif. Fréquent quand on est entre deux types, avec des textures différentes "
+             "selon les zones, ou pour les cheveux métissés.",
+        required=False,
+        options=tuple(Option(t.code, t.code, t.nom, "", t.famille) for t in HAIR_TYPES.values()),
+    ),
+    Question(
+        id="specifiques",
+        step="cheveux",
+        label="Avec vos cheveux, qu'est-ce qui vous arrive souvent ?",
+        help="Facultatif, plusieurs réponses possibles. Nous vous proposons les situations "
+             "propres à votre type.",
+        multiple=True,
+        required=False,
+        options=tuple(Option(x.id, x.label, x.hint, "", x.familles) for x in SPECIFICITES.values()),
     ),
     Question(
         id="epaisseur",
@@ -244,6 +273,10 @@ class Answers:
     periodes: list[str] = field(default_factory=list)
     saisons_sensibles: list[str] = field(default_factory=list)
     prenom: str = ""
+    # Second type (cheveux entre deux types, plusieurs textures, cheveux métissés).
+    type_secondaire: str = ""
+    specifiques: list[str] = field(default_factory=list)
+    demangeaisons_details: list[str] = field(default_factory=list)
     # Intensité de la gêne pour chaque préoccupation : un_peu, beaucoup ou enormement.
     intensites: dict[str, str] = field(default_factory=dict)
 
@@ -338,6 +371,20 @@ def validate(raw: dict) -> Answers:
             clean[qid] = [v for v in clean[qid] if v != "aucune"]
 
     clean["prenom"] = nettoyer_prenom(raw.get("prenom"))
+
+    # Questions qui dépendent d'une autre réponse : on ignore ce qui ne s'applique plus.
+    principal = HAIR_TYPES.get(clean.get("type_cheveux", ""))
+    if clean.get("type_secondaire") and (not principal
+                                         or clean["type_secondaire"] == principal.code):
+        clean.pop("type_secondaire")
+    if principal:
+        familles = {principal.famille}
+        if clean.get("type_secondaire"):
+            familles.add(HAIR_TYPES[clean["type_secondaire"]].famille)
+        clean["specifiques"] = [v for v in clean.get("specifiques", [])
+                                if familles & set(SPECIFICITES[v].familles)]
+    if "demangeaisons" not in clean.get("preoccupations", []):
+        clean["demangeaisons_details"] = []
 
     if errors:
         raise InvalidAnswers(errors)

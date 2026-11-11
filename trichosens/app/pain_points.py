@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from .hair_types import HAIR_TYPES
+from .specifiques import DETAILS_DEMANGEAISONS
 
 if TYPE_CHECKING:
     from .questionnaire import Answers
@@ -152,6 +153,50 @@ _add(PainPoint(
         "Les régimes très restrictifs.",
     ),
     delai="Un cycle de pousse dure environ 3 mois : comptez 3 mois avant de juger un soin anti-chute.",
+))
+
+def _details(*ids: str) -> Condition:
+    return lambda a: bool(set(ids) & set(a.demangeaisons_details))
+
+
+_add(PainPoint(
+    id="demangeaisons",
+    label="Démangeaisons",
+    description="Le cuir chevelu gratte, picote ou tiraille.",
+    causes=(
+        "Les démangeaisons viennent presque toujours du cuir chevelu : peau sèche, sébum ou "
+        "résidus qui s'accumulent, levure naturelle qui se développe trop (pellicules), "
+        "irritation par un produit, ou coiffure trop serrée.",
+    ),
+    causes_profil=(
+        (lambda a: a.cuir_chevelu == "sec" and not a.demangeaisons_details,
+         "Votre cuir chevelu sec tiraille et démange quand il manque d'eau."),
+        (lambda a: a.cuir_chevelu == "gras" and not _details("pellicules_grasses")(a),
+         "Un cuir chevelu gras favorise la levure responsable des pellicules et des démangeaisons."),
+        (lambda a: a.cuir_chevelu == "sensible" and not _details("rougeurs")(a),
+         "Votre cuir chevelu sensible réagit vite au parfum, aux sulfates et à l'eau trop chaude."),
+        (lambda a: a.texture in {"frise", "crepu"} and not _details("entre_lavages")(a),
+         "Les cheveux frisés et crépus se lavent moins souvent : sébum et produits restent plus "
+         "longtemps sur le cuir chevelu."),
+        (lambda a: a.porosite == "faible",
+         "Avec une porosité faible, les produits riches restent en surface et peuvent "
+         "s'accumuler jusqu'au cuir chevelu."),
+        (lambda a: "coloration" in a.traitements or "decoloration" in a.traitements
+         or "lissage" in a.traitements,
+         "Les colorations, décolorations et défrisages peuvent irriter le cuir chevelu."),
+    ),
+    actions=(
+        "Laver le cuir chevelu avec un shampoing doux adapté à sa nature, en massant avec la "
+        "pulpe des doigts.",
+        "Appliquer un soin apaisant sur le cuir chevelu une à deux fois par semaine.",
+        "Rincer longtemps, à l'eau tiède, pour ne laisser aucun résidu.",
+    ),
+    a_eviter=(
+        "Gratter avec les ongles ou un peigne pointu : cela entretient l'irritation.",
+        "Les huiles épaisses et les beurres appliqués sur le cuir chevelu.",
+        "L'eau très chaude et les produits parfumés si le cuir chevelu réagit.",
+    ),
+    delai="Un cuir chevelu plus calme en 1 à 2 semaines ; 4 semaines pour les pellicules.",
 ))
 
 _add(PainPoint(
@@ -341,10 +386,15 @@ def explain(a: "Answers") -> list[PainReport]:
         causes += [f"Fréquent chez le type {typ.code} : {why[0].lower()}{why[1:]}"
                    for prob, why in typ.problemes if prob == pid]
         causes += [text for cond, text in p.causes_profil if cond(a)]
+        actions = list(p.actions)
+        if pid == "demangeaisons":
+            details = [DETAILS_DEMANGEAISONS[k] for k in a.demangeaisons_details]
+            causes += [d.cause for d in details]
+            actions = [d.conseil for d in details] + actions
         reports.append(PainReport(
             id=p.id, label=p.label, description=p.description,
             intensite=intensite, intensite_label=INTENSITES[intensite],
-            causes=causes, actions=list(p.actions), a_eviter=list(p.a_eviter), delai=p.delai,
+            causes=causes, actions=actions, a_eviter=list(p.a_eviter), delai=p.delai,
         ))
     reports.sort(key=lambda r: INTENSITE_ORDRE[r.intensite])
     return reports

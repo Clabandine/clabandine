@@ -27,6 +27,7 @@ from .hair_types import FAMILLES, HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
 from .reminders import JOURS, RAPPELS, build_ics
+from . import specifiques as trouver
 
 logging.basicConfig(level=logging.INFO)
 
@@ -97,6 +98,7 @@ templates.env.globals.update(
     FAMILLES=FAMILLES, AVIS_URL=AVIS_URL, lien_avis=lien_avis, texte_partage=texte_partage,
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
+    TROUVER=trouver,
 )
 
 
@@ -311,6 +313,17 @@ def api_questions():
             for q in QUESTIONS
         ],
     }
+
+
+@app.post("/api/trouver-type")
+def api_trouver_type(payload: dict):
+    """Mini-questionnaire pour aider à trouver son type (et un éventuel second type)."""
+    try:
+        return trouver.trouver_type(
+            str(payload.get("forme") or ""), str(payload.get("taille") or ""),
+            str(payload.get("retractation") or ""), str(payload.get("textures") or "une"))
+    except trouver.ReponseInvalide as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @app.post("/api/diagnostic")
