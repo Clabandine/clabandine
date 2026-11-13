@@ -15,7 +15,7 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
    (sécheresse, casse, frisottis, chute, démêlage…) et leur intensité.
 2. **Description libre (facultative)** : en tête du diagnostic, la personne raconte ses
-   cheveux avec ses mots. Le diagnostic est pré-rempli (gênes et intensité, type, cuir
+   cheveux avec ses mots. Le diagnostic se pré-remplit automatiquement pendant la saisie (gênes et intensité, type, cuir
    chevelu, traitements, habitudes, période de vie, objectif), chaque réponse est marquée
    « D'après votre texte » et la personne vérifie étape par étape (`app/texte.py`). Sans clé
    d'API, l'analyse se fait par mots-clés (négations et intensité comprises) ; avec la clé et

@@ -76,9 +76,15 @@
     return ok;
   }
 
+  // Avant de passer à l'étape suivante (ex. : lire le texte libre s'il vient d'être écrit).
+  let avantSuite = () => Promise.resolve();
+
   form.addEventListener("click", (e) => {
     if (e.target.matches("[data-next]")) {
-      if (validatePanel(panels[current])) show(current + 1);
+      const panel = panels[current];
+      avantSuite(panel).then(() => {
+        if (panels[current] === panel && validatePanel(panel)) show(current + 1);
+      });
     } else if (e.target.matches("[data-prev]")) {
       show(current - 1);
     }
@@ -275,7 +281,9 @@
     });
   }
 
-  // --- Pré-remplissage à partir d'un texte libre ----------------------------------
+  // --- Pré-remplissage automatique à partir d'un texte libre ----------------------
+  // Les réponses suggérées sont cochées et marquées ; la personne les confirme, les
+  // modifie ou en coche d'autres. Une suggestion décochée n'est jamais recochée.
 
   const texteBox = form.querySelector(".texte-box");
   if (texteBox) {
@@ -283,13 +291,17 @@
     const compteur = texteBox.querySelector(".texte-compteur");
     const statut = texteBox.querySelector(".texte-status");
     const resumeBox = texteBox.querySelector(".texte-resume");
-    const bouton = texteBox.querySelector("#texte-analyse");
     const iaBox = texteBox.querySelector("#texte-ia");
+    const suggerees = new Map(); // "nom=valeur" -> input coché d'après le texte
+    const refusees = new Set();  // suggestions décochées ou changées par la personne
+    let dernierTexte = "";
+    let minuteur = null;
+    let enCours = null;
 
-    area.addEventListener("input", () => (compteur.textContent = area.value.length + " / 1500"));
+    const cle = (input) => input.name + "=" + input.value;
 
     function marquer(input) {
-      const el = input && input.closest(".pain, .option");
+      const el = input.closest(".pain, .option");
       if (!el || el.querySelector(".text-badge")) return;
       const badge = document.createElement("em");
       badge.className = "text-badge";
@@ -297,34 +309,83 @@
       (el.querySelector(".option-text") || el.querySelector(".pain-head > span") || el).appendChild(badge);
     }
 
+    function demarquer(input) {
+      const el = input.closest(".pain, .option");
+      const badge = el && el.querySelector(".text-badge");
+      if (badge) badge.remove();
+    }
+
     function cocher(name, value, { siVide = false } = {}) {
       const input = form.querySelector(`input[name="${name}"][value="${value}"]`);
-      if (!input || input.closest(".question[hidden], .option[hidden], .chip[hidden]")) return false;
+      if (!input || refusees.has(cle(input))) return false;
+      if (input.closest(".question[hidden], .option[hidden], .chip[hidden]") || input.disabled) return false;
       const deja = form.querySelector(`input[name="${name}"]:checked`);
-      if (siVide && deja && deja !== input && deja.value !== "") return false; // réponse déjà donnée
-      if (input.disabled) return false;
-      input.checked = true;
-      input.dispatchEvent(new Event("change", { bubbles: true }));
+      if (siVide && deja && deja !== input && deja.value !== "" && !suggerees.has(cle(deja))) return false;
+      if (!input.checked) {
+        input.checked = true;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      suggerees.set(cle(input), input);
       marquer(input);
       return true;
     }
 
+    // Ce que la personne change elle-même devient sa réponse.
+    form.addEventListener("change", (e) => {
+      if (!e.isTrusted || !e.target.name) return;
+      suggerees.forEach((input, k) => {
+        if (input.name === e.target.name && !input.checked) {
+          refusees.add(k);
+          suggerees.delete(k);
+          demarquer(input);
+        }
+      });
+      if (suggerees.has(cle(e.target))) { suggerees.delete(cle(e.target)); demarquer(e.target); }
+    });
+
     function appliquer(res) {
-      form.querySelectorAll(".text-badge").forEach((b) => b.remove());
       const r = res.reponses;
+      const voulues = new Set();
+      const noter = (name, values) => (values || []).forEach((v) => voulues.add(name + "=" + v));
+      noter("preoccupations", r.preoccupations);
+      (r.preoccupations || []).forEach((p) => voulues.add(`gene_${p}=${res.intensites[p] || "beaucoup"}`));
+      ["demangeaisons_details", "specifiques", "traitements", "periodes"].forEach((q) => noter(q, r[q]));
+      ["type_cheveux", "type_secondaire", "epaisseur", "densite", "porosite", "cuir_chevelu",
+        "chaleur", "objectif", "age"].forEach((q) => r[q] && voulues.add(q + "=" + r[q]));
+      const famille = r.type_cheveux ? r.type_cheveux[0] : r.famille;
+      if (famille) voulues.add("famille=" + famille);
+
+      // Les anciennes suggestions qui ne correspondent plus au texte sont retirées.
+      suggerees.forEach((input, k) => {
+        if (voulues.has(k)) return;
+        if (input.type === "radio" && input.name === "type_secondaire") {
+          const non = form.querySelector('input[name="type_secondaire"][value=""]');
+          if (non) non.checked = true;
+        } else {
+          input.checked = false;
+        }
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        demarquer(input);
+        suggerees.delete(k);
+      });
+
       (r.preoccupations || []).forEach((p) => {
         if (cocher("preoccupations", p)) {
           const niveau = form.querySelector(`input[name="gene_${p}"]:checked`);
-          if (!niveau) cocher("gene_" + p, res.intensites[p] || "beaucoup");
+          if (!niveau || suggerees.has(cle(niveau))) cocher("gene_" + p, res.intensites[p] || "beaucoup");
         }
       });
       updateDependants();
       (r.demangeaisons_details || []).forEach((v) => cocher("demangeaisons_details", v));
-      const typeDeja = checkedValue("type_cheveux");
-      const famille = r.type_cheveux ? r.type_cheveux[0] : r.famille;
-      if (famille && !typeDeja) {
+      const typeChoisi = form.querySelector('input[name="type_cheveux"]:checked');
+      if (famille && (!typeChoisi || suggerees.has(cle(typeChoisi)))) {
         const fam = form.querySelector(`input[name="famille"][value="${famille}"]`);
-        if (fam) { fam.checked = true; showFamily(famille); marquer(fam); }
+        if (fam && !refusees.has(cle(fam))) {
+          fam.checked = true;
+          showFamily(famille);
+          suggerees.set(cle(fam), fam);
+          marquer(fam);
+        }
         if (r.type_cheveux) cocher("type_cheveux", r.type_cheveux);
       }
       updateDependants();
@@ -337,42 +398,69 @@
       ["traitements", "periodes"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
       updateDependants();
 
-      if (!res.resume.length) {
-        resumeBox.innerHTML = "<p>Nous n'avons rien repéré de précis. Répondez simplement aux questions ci-dessous.</p>";
-      } else {
-        resumeBox.innerHTML =
-          "<p><strong>Nous avons repéré :</strong></p>" +
-          '<div class="chips">' + res.resume.map((x) => `<span class="chip static">${escapeHtml(x)}</span>`).join("") + "</div>" +
-          "<p>Ces réponses sont cochées et marquées « D'après votre texte ». <strong>Vérifiez et complétez chaque étape</strong> : tout reste modifiable.</p>" +
-          (res.metisse ? "<p>Pour des cheveux métissés, l'aide « Je ne suis pas sûre de mon type » de l'étape « Vos cheveux » vous aidera à préciser vos deux types.</p>" : "");
-      }
+      afficherResume(res);
       if (res.note) resumeBox.innerHTML += `<p class="help">${escapeHtml(res.note)}</p>`;
       resumeBox.hidden = false;
     }
 
-    bouton.addEventListener("click", async () => {
+    // Résumé construit à partir des cases réellement pré-cochées (et non refusées).
+    function etiquette(input) {
+      const el = input.closest(".pain, .option, .chip");
+      const nom = el && (el.querySelector("strong") || el.querySelector("span"));
+      return nom ? nom.textContent.trim() : input.value;
+    }
+
+    function afficherResume(res) {
+      const items = [];
+      suggerees.forEach((input) => {
+        if (!input.checked || input.name.startsWith("gene_")) return;
+        if (input.name === "famille" && form.querySelector('input[name="type_cheveux"]:checked')) return;
+        let texte = etiquette(input);
+        if (input.name === "preoccupations") {
+          const niveau = form.querySelector(`input[name="gene_${input.value}"]:checked`);
+          if (niveau) texte += " (" + etiquette(niveau).toLowerCase() + ")";
+        }
+        items.push(texte);
+      });
+      resumeBox.innerHTML = !items.length
+        ? "<p>Nous n'avons rien repéré de précis pour l'instant : répondez simplement aux questions.</p>"
+        : '<p class="texte-disclaimer">✍️ <strong>D’après votre texte, nous avons pré-coché quelques réponses.</strong> ' +
+          "Confirmez-les, modifiez-les ou cochez-en d'autres à chaque étape.</p>" +
+          '<div class="chips">' + items.map((x) => `<span class="chip static">${escapeHtml(x)}</span>`).join("") + "</div>" +
+          (res.metisse ? "<p>Cheveux métissés : l'aide « Je ne suis pas sûre de mon type » de l'étape « Vos cheveux » vous aidera à préciser vos deux types.</p>" : "");
+    }
+
+    function analyser() {
+      clearTimeout(minuteur);
       const texte = area.value.trim();
-      if (texte.length < 5) {
-        statut.textContent = "Écrivez quelques mots sur vos cheveux.";
-        return;
-      }
-      bouton.disabled = true;
+      if (texte.length < 15 || texte === dernierTexte) return enCours || Promise.resolve();
+      dernierTexte = texte;
       statut.textContent = "Lecture de votre texte…";
-      try {
-        const response = await fetch("/api/analyse-texte", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texte, ia: Boolean(iaBox && iaBox.checked) }),
-        });
-        const res = await response.json();
-        if (!response.ok) throw new Error(res.detail || "");
-        statut.textContent = "";
-        appliquer(res);
-      } catch (err) {
-        statut.textContent = (err.message || "L'analyse n'a pas abouti.") + " Vous pouvez répondre directement aux questions.";
-      } finally {
-        bouton.disabled = false;
-      }
+      enCours = fetch("/api/analyse-texte", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texte, ia: Boolean(iaBox && iaBox.checked) }),
+      })
+        .then((response) => response.json().then((res) => {
+          if (!response.ok) throw new Error(res.detail || "");
+          statut.textContent = "";
+          if (area.value.trim() === texte) appliquer(res);
+        }))
+        .catch(() => {
+          statut.textContent = "Nous n'avons pas pu lire votre texte : répondez directement aux questions.";
+        })
+        .finally(() => { enCours = null; });
+      return enCours;
+    }
+
+    area.addEventListener("input", () => {
+      compteur.textContent = area.value.length + " / 1500";
+      clearTimeout(minuteur);
+      // Avec l'IA, on attend la fin de la saisie pour limiter les appels.
+      if (!(iaBox && iaBox.checked)) minuteur = setTimeout(analyser, 1200);
     });
+    area.addEventListener("blur", analyser);
+    if (iaBox) iaBox.addEventListener("change", () => { dernierTexte = ""; analyser(); });
+    avantSuite = (panel) => (panel.contains(texteBox) ? analyser() : Promise.resolve());
   }
 
   // Après une erreur côté serveur, ouvrir la première étape concernée.

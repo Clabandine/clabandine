@@ -198,8 +198,8 @@
 
     <div class="texte-box js-only" hidden>
       <label for="description"><span>Racontez-nous vos cheveux avec vos mots <small>(facultatif)</small></span></label>
-      <p class="help">Type de cheveux, ce qui vous gêne et depuis quand, vos habitudes… Nous pré-remplissons
-        le diagnostic, puis vous vérifiez chaque réponse.</p>
+      <p class="help">Type de cheveux, ce qui vous gêne et depuis quand, vos habitudes… Le diagnostic se
+        pré-remplit automatiquement pendant que vous écrivez ; vous vérifiez ensuite chaque réponse.</p>
       <textarea id="description" maxlength="1500" rows="4"
         placeholder="Ex. : J'ai des cheveux bouclés, très secs, qui cassent beaucoup aux pointes. Mon cuir chevelu gratte depuis que je porte des tresses. J'aimerais garder ma longueur."></textarea>
       <div class="texte-actions">
@@ -210,7 +210,6 @@
           <span>Utiliser l'IA pour mieux comprendre mon texte (envoyé à notre prestataire Anthropic, non conservé)</span>
         </label>
         {% endif %}
-        <button type="button" class="button secondary" id="texte-analyse">Pré-remplir mon diagnostic</button>
       </div>
       <p class="texte-status" role="status" aria-live="polite"></p>
       <div class="texte-resume" hidden></div>

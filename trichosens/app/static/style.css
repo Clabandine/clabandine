@@ -773,3 +773,4 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .text-badge { font-style: normal; font-size: .72rem; font-weight: 700; color: #fff; background: var(--accent);
   border-radius: 999px; padding: 2px 9px; margin-top: 6px; align-self: flex-start; display: inline-block; }
 .pain-head > span .text-badge { margin-left: 0; }
+.texte-disclaimer { font-size: .92rem; }

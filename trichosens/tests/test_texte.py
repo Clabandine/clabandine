@@ -187,7 +187,8 @@ def test_api_analyse_texte():
 def test_zone_de_texte_dans_le_questionnaire():
     r = client.get("/diagnostic")
     assert 'id="description"' in r.text
-    assert "Pré-remplir mon diagnostic" in r.text
+    assert "pré-remplit automatiquement" in r.text
+    assert 'id="texte-analyse"' not in r.text  # pas de bouton : c'est automatique
     # Le texte n'est pas envoyé avec le formulaire (aucun attribut name).
     assert '<textarea id="description" name=' not in r.text
     assert 'textarea name="description"' not in r.text
