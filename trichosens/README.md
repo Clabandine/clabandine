@@ -14,7 +14,14 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
    (sécheresse, casse, frisottis, chute, démêlage…) et leur intensité.
-2. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
+2. **Description libre (facultative)** : en tête du diagnostic, la personne raconte ses
+   cheveux avec ses mots. Le diagnostic est pré-rempli (gênes et intensité, type, cuir
+   chevelu, traitements, habitudes, période de vie, objectif), chaque réponse est marquée
+   « D'après votre texte » et la personne vérifie étape par étape (`app/texte.py`). Sans clé
+   d'API, l'analyse se fait par mots-clés (négations et intensité comprises) ; avec la clé et
+   l'accord de la personne, l'IA prend le relais (limites : `TEXTE_MAX_PAR_HEURE`,
+   `TEXTE_MAX_PAR_JOUR`). Le texte n'est jamais enregistré.
+3. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
    de cheveux et les signes visibles, et pré-remplit les réponses. La photo n'est jamais
    enregistrée.
 3. **Vos cheveux au fil du temps (facultatif)** : âge, période de vie (cycle, grossesse,
@@ -254,6 +261,7 @@ trichosens/
 │   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
 │   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
+│   ├── texte.py           # Pré-remplissage à partir d'une description libre
 │   ├── naturel.py         # Recettes maison, cures de compléments, gestes naturels
 │   ├── specifiques.py     # Situations propres à chaque type, démangeaisons, aide pour trouver son type
 │   ├── photo.py           # Analyse photo par l'IA (Claude)
@@ -282,6 +290,7 @@ en haut de `app/engine.py` (`TEXTURE_POINTS`, `PREOCCUPATION_POINTS`, etc.).
 |---------|--------------------|---------------------------------------------|
 | GET     | `/api/questions`   | Étapes, questions et réponses possibles |
 | POST    | `/api/analyse-photo` | Envoie une photo (`photo`, `consentement=oui`), renvoie l'analyse |
+| POST    | `/api/analyse-texte` | Pré-remplissage à partir d'un texte (`texte`, `ia`) |
 | POST    | `/api/trouver-type` | Aide pour trouver son type (`forme`, `taille`, `retractation`, `textures`) |
 | POST    | `/api/diagnostic`  | Envoie les réponses (JSON), renvoie le diagnostic |
 | GET     | `/rappels.ics`     | Fichier agenda des rappels (`jours`, `heure`, `rappels`, `prochain`…) |

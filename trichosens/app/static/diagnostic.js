@@ -275,6 +275,106 @@
     });
   }
 
+  // --- Pré-remplissage à partir d'un texte libre ----------------------------------
+
+  const texteBox = form.querySelector(".texte-box");
+  if (texteBox) {
+    const area = texteBox.querySelector("#description");
+    const compteur = texteBox.querySelector(".texte-compteur");
+    const statut = texteBox.querySelector(".texte-status");
+    const resumeBox = texteBox.querySelector(".texte-resume");
+    const bouton = texteBox.querySelector("#texte-analyse");
+    const iaBox = texteBox.querySelector("#texte-ia");
+
+    area.addEventListener("input", () => (compteur.textContent = area.value.length + " / 1500"));
+
+    function marquer(input) {
+      const el = input && input.closest(".pain, .option");
+      if (!el || el.querySelector(".text-badge")) return;
+      const badge = document.createElement("em");
+      badge.className = "text-badge";
+      badge.textContent = "D'après votre texte";
+      (el.querySelector(".option-text") || el.querySelector(".pain-head > span") || el).appendChild(badge);
+    }
+
+    function cocher(name, value, { siVide = false } = {}) {
+      const input = form.querySelector(`input[name="${name}"][value="${value}"]`);
+      if (!input || input.closest(".question[hidden], .option[hidden], .chip[hidden]")) return false;
+      const deja = form.querySelector(`input[name="${name}"]:checked`);
+      if (siVide && deja && deja !== input && deja.value !== "") return false; // réponse déjà donnée
+      if (input.disabled) return false;
+      input.checked = true;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      marquer(input);
+      return true;
+    }
+
+    function appliquer(res) {
+      form.querySelectorAll(".text-badge").forEach((b) => b.remove());
+      const r = res.reponses;
+      (r.preoccupations || []).forEach((p) => {
+        if (cocher("preoccupations", p)) {
+          const niveau = form.querySelector(`input[name="gene_${p}"]:checked`);
+          if (!niveau) cocher("gene_" + p, res.intensites[p] || "beaucoup");
+        }
+      });
+      updateDependants();
+      (r.demangeaisons_details || []).forEach((v) => cocher("demangeaisons_details", v));
+      const typeDeja = checkedValue("type_cheveux");
+      const famille = r.type_cheveux ? r.type_cheveux[0] : r.famille;
+      if (famille && !typeDeja) {
+        const fam = form.querySelector(`input[name="famille"][value="${famille}"]`);
+        if (fam) { fam.checked = true; showFamily(famille); marquer(fam); }
+        if (r.type_cheveux) cocher("type_cheveux", r.type_cheveux);
+      }
+      updateDependants();
+      if (r.type_secondaire) cocher("type_secondaire", r.type_secondaire, { siVide: true });
+      updateDependants();
+      (r.specifiques || []).forEach((v) => cocher("specifiques", v));
+      ["epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif", "age"].forEach((q) => {
+        if (r[q]) cocher(q, r[q], { siVide: true });
+      });
+      ["traitements", "periodes"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
+      updateDependants();
+
+      if (!res.resume.length) {
+        resumeBox.innerHTML = "<p>Nous n'avons rien repéré de précis. Répondez simplement aux questions ci-dessous.</p>";
+      } else {
+        resumeBox.innerHTML =
+          "<p><strong>Nous avons repéré :</strong></p>" +
+          '<div class="chips">' + res.resume.map((x) => `<span class="chip static">${escapeHtml(x)}</span>`).join("") + "</div>" +
+          "<p>Ces réponses sont cochées et marquées « D'après votre texte ». <strong>Vérifiez et complétez chaque étape</strong> : tout reste modifiable.</p>" +
+          (res.metisse ? "<p>Pour des cheveux métissés, l'aide « Je ne suis pas sûre de mon type » de l'étape « Vos cheveux » vous aidera à préciser vos deux types.</p>" : "");
+      }
+      if (res.note) resumeBox.innerHTML += `<p class="help">${escapeHtml(res.note)}</p>`;
+      resumeBox.hidden = false;
+    }
+
+    bouton.addEventListener("click", async () => {
+      const texte = area.value.trim();
+      if (texte.length < 5) {
+        statut.textContent = "Écrivez quelques mots sur vos cheveux.";
+        return;
+      }
+      bouton.disabled = true;
+      statut.textContent = "Lecture de votre texte…";
+      try {
+        const response = await fetch("/api/analyse-texte", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texte, ia: Boolean(iaBox && iaBox.checked) }),
+        });
+        const res = await response.json();
+        if (!response.ok) throw new Error(res.detail || "");
+        statut.textContent = "";
+        appliquer(res);
+      } catch (err) {
+        statut.textContent = (err.message || "L'analyse n'a pas abouti.") + " Vous pouvez répondre directement aux questions.";
+      } finally {
+        bouton.disabled = false;
+      }
+    });
+  }
+
   // Après une erreur côté serveur, ouvrir la première étape concernée.
   const firstError = panels.findIndex((p) => p.querySelector(".has-error"));
   show(firstError === -1 ? 0 : firstError);
