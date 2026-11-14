@@ -23,6 +23,18 @@ class Option:
 
 
 @dataclass(frozen=True)
+class TestMaison:
+    """Petit test à faire chez soi pour répondre plus justement."""
+
+    titre: str
+    duree: str
+    etapes: tuple[str, ...]
+    # (résultat observé, valeur de la réponse correspondante)
+    resultats: tuple[tuple[str, str], ...]
+    astuce: str = ""
+
+
+@dataclass(frozen=True)
 class Question:
     id: str
     step: str
@@ -32,6 +44,7 @@ class Question:
     help: str = ""
     required: bool = True
     max_choices: int | None = None
+    test: TestMaison | None = None
 
     def values(self) -> set[str]:
         return {o.value for o in self.options}
@@ -73,8 +86,9 @@ QUESTIONS: tuple[Question, ...] = (
     Question(
         id="demangeaisons_details",
         step="douleurs",
-        label="Vos démangeaisons : qu'observez-vous ?",
-        help="Facultatif, plusieurs réponses possibles. Cela nous aide à en trouver la cause.",
+        label="Votre cuir chevelu : qu'observez-vous ?",
+        help="Facultatif, plusieurs réponses possibles. Cela nous aide à trouver la cause de "
+             "vos démangeaisons ou de vos pellicules.",
         multiple=True,
         required=False,
         options=tuple(Option(d.id, d.label, d.hint) for d in DETAILS_DEMANGEAISONS.values()),
@@ -119,6 +133,13 @@ QUESTIONS: tuple[Question, ...] = (
             Option("moyen", "Moyen", "On le sent sous les doigts.", "epaisseur-moyen"),
             Option("epais", "Épais", "On le sent nettement, comme un fil.", "epaisseur-epais"),
         ),
+        test=TestMaison(
+            "Le test du fil", "1 minute",
+            ("Prenez un cheveu tombé, propre et sec, et un fil à coudre.",
+             "Posez-les côte à côte sur une feuille blanche et comparez."),
+            (("Plus fin que le fil", "fin"), ("À peu près pareil", "moyen"),
+             ("Plus épais que le fil", "epais")),
+        ),
     ),
     Question(
         id="densite",
@@ -129,6 +150,12 @@ QUESTIONS: tuple[Question, ...] = (
             Option("faible", "Faible", "Le cuir chevelu se voit facilement.", "densite-faible"),
             Option("moyenne", "Moyenne", "Le cuir chevelu se voit un peu.", "densite-moyenne"),
             Option("forte", "Forte", "Le cuir chevelu se voit à peine.", "densite-forte"),
+        ),
+        test=TestMaison(
+            "Le test de la queue de cheval", "1 minute",
+            ("Rassemblez vos cheveux secs en queue de cheval, sans les tirer.",
+             "Mesurez le tour de la queue avec un mètre ruban (ou une ficelle, puis une règle)."),
+            (("Moins de 5 cm", "faible"), ("De 5 à 10 cm", "moyenne"), ("Plus de 10 cm", "forte")),
         ),
     ),
     Question(
@@ -145,7 +172,42 @@ QUESTIONS: tuple[Question, ...] = (
             Option("forte", "Ils absorbent l'eau vite mais sèchent très vite",
                    "Porosité forte : les écailles sont ouvertes, l'hydratation s'échappe.",
                    "porosite-forte"),
-            Option("inconnue", "Je ne sais pas", "Nous vous expliquerons comment la tester."),
+            Option("inconnue", "Je ne sais pas", "Faites le test ci-dessous : 5 minutes suffisent."),
+        ),
+        test=TestMaison(
+            "Le test du verre d'eau", "5 minutes",
+            ("Prenez 2 ou 3 cheveux tombés après un shampoing, sans soin ni produit (ils "
+             "fausseraient le test).",
+             "Déposez-les dans un verre d'eau à température ambiante.",
+             "Attendez 3 à 4 minutes, puis regardez où ils sont."),
+            (("Ils flottent en surface", "faible"), ("Ils restent au milieu", "moyenne"),
+             ("Ils ont coulé au fond", "forte")),
+            astuce="Autre test : vaporisez de l'eau sur une mèche sèche. Si les gouttes perlent, "
+                   "la porosité est faible ; si elles sont absorbées tout de suite, elle est forte.",
+        ),
+    ),
+    Question(
+        id="elasticite",
+        step="cheveux",
+        label="Votre cheveu est-il élastique ?",
+        help="Ce test dit si vos cheveux manquent plutôt d'hydratation ou de protéines.",
+        required=False,
+        options=(
+            Option("equilibre", "Il s'étire un peu puis reprend sa forme",
+                   "Bon équilibre entre hydratation et protéines."),
+            Option("manque_proteines", "Il s'étire beaucoup, comme un chewing-gum, sans revenir",
+                   "Il manque plutôt de protéines."),
+            Option("manque_hydratation", "Il casse presque tout de suite, sans s'étirer",
+                   "Il manque plutôt d'hydratation."),
+            Option("non_teste", "Je n'ai pas fait le test"),
+        ),
+        test=TestMaison(
+            "Le test d'élasticité", "1 minute",
+            ("Prenez un cheveu tombé et mouillez-le.",
+             "Tenez-le entre le pouce et l'index de chaque côté, et étirez-le doucement."),
+            (("Il s'étire un peu puis revient", "equilibre"),
+             ("Il s'étire beaucoup et ne revient pas", "manque_proteines"),
+             ("Il casse presque tout de suite", "manque_hydratation")),
         ),
     ),
     Question(
@@ -270,6 +332,7 @@ class Answers:
     preferences: list[str] = field(default_factory=list)
     budget: str = "indifferent"
     age: str = "nc"
+    elasticite: str = "non_teste"
     periodes: list[str] = field(default_factory=list)
     saisons_sensibles: list[str] = field(default_factory=list)
     prenom: str = ""
@@ -383,7 +446,7 @@ def validate(raw: dict) -> Answers:
             familles.add(HAIR_TYPES[clean["type_secondaire"]].famille)
         clean["specifiques"] = [v for v in clean.get("specifiques", [])
                                 if familles & set(SPECIFICITES[v].familles)]
-    if "demangeaisons" not in clean.get("preoccupations", []):
+    if not {"demangeaisons", "pellicules"} & set(clean.get("preoccupations", [])):
         clean["demangeaisons_details"] = []
 
     if errors:

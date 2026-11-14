@@ -205,5 +205,69 @@ def test_page_resultat_avec_les_nouveautes():
 def test_page_questionnaire_propose_l_aide():
     r = client.get("/diagnostic")
     assert "Je ne suis pas sûre de mon type" in r.text
-    assert "Vos démangeaisons" in r.text
+    assert "Votre cuir chevelu : qu&#39;observez-vous" in r.text or "Votre cuir chevelu : qu'observez-vous" in r.text
     assert "mélangent-ils deux types" in r.text
+
+
+# --- Pellicules ---------------------------------------------------------------
+
+
+def pellicules(**overrides):
+    return answers(preoccupations=["pellicules"], **overrides)
+
+
+def test_pellicules_proposees_des_la_premiere_page():
+    r = client.get("/diagnostic")
+    assert 'value="pellicules"' in r.text
+    assert 'data-show-if="demangeaisons pellicules"' in r.text
+
+
+def test_pellicules_rapport_et_shampoing_antipelliculaire():
+    d = run_diagnostic(pellicules())
+    assert d.douleurs[0].id == "pellicules"
+    assert any("Malassezia" in c for c in d.douleurs[0].causes)
+    shampoing = next(s for s in d.routine if s.categorie == "shampoing")
+    assert "pellicules" in shampoing.produit.cuir_chevelu
+    assert "3 à 5 minutes" in shampoing.conseil
+    assert "Soin du cuir chevelu" in [s.titre for s in d.routine]
+    assert any("dermatologue" in x for x in d.alertes)
+
+
+def test_pellicules_cuir_sec_shampoing_pour_cuir_sec():
+    shampoing = next(s for s in run_diagnostic(pellicules(cuir_chevelu="sec")).routine
+                     if s.categorie == "shampoing")
+    assert {"pellicules", "sec"} <= set(shampoing.produit.cuir_chevelu)
+
+
+def test_pellicules_cuir_sensible_shampoing_doux_et_antipelliculaire():
+    shampoing = next(s for s in run_diagnostic(pellicules(cuir_chevelu="sensible")).routine
+                     if s.categorie == "shampoing")
+    assert {"pellicules", "sensible"} <= set(shampoing.produit.cuir_chevelu)
+
+
+def test_precisions_cuir_chevelu_gardees_avec_les_pellicules():
+    a = pellicules(demangeaisons_details=["pellicules_grasses"])
+    assert a.demangeaisons_details == ["pellicules_grasses"]
+    d = run_diagnostic(a)
+    assert d.douleurs[0].actions[0] == DETAILS_DEMANGEAISONS["pellicules_grasses"].conseil
+
+
+def test_precisions_affichees_une_seule_fois_avec_pellicules_et_demangeaisons():
+    a = answers(preoccupations=["pellicules", "demangeaisons"],
+                demangeaisons_details=["pellicules_grasses"])
+    d = run_diagnostic(a)
+    conseil = DETAILS_DEMANGEAISONS["pellicules_grasses"].conseil
+    assert sum(conseil in r.actions for r in d.douleurs) == 1
+
+
+def test_photo_peut_signaler_des_pellicules():
+    from app.photo import AnalysePhoto
+    photo = AnalysePhoto.model_validate({
+        "exploitable": True, "conseil_photo": None, "type_cheveux": "3C",
+        "confiance_type": "moyenne", "epaisseur": "moyen", "densite": "forte",
+        "signes": [{"signe": "pellicules", "intensite": "modere",
+                    "explication": "Petites peaux blanches visibles à la racine."}],
+        "observations": ["Cuir chevelu visible à la raie."], "alerte_medicale": None,
+    })
+    d = run_diagnostic(answers(), photo=photo)
+    assert any(s["id"] == "pellicules" for s in d.signes_photo_en_plus)

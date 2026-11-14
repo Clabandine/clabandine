@@ -76,9 +76,15 @@
     return ok;
   }
 
+  // Avant de passer à l'étape suivante (ex. : lire le texte libre s'il vient d'être écrit).
+  let avantSuite = () => Promise.resolve();
+
   form.addEventListener("click", (e) => {
     if (e.target.matches("[data-next]")) {
-      if (validatePanel(panels[current])) show(current + 1);
+      const panel = panels[current];
+      avantSuite(panel).then(() => {
+        if (panels[current] === panel && validatePanel(panel)) show(current + 1);
+      });
     } else if (e.target.matches("[data-prev]")) {
       show(current - 1);
     }
@@ -174,7 +180,7 @@
     // Détails des démangeaisons : seulement si « Démangeaisons » est coché.
     const pains = Array.from(form.querySelectorAll('input[name="preoccupations"]:checked')).map((i) => i.value);
     form.querySelectorAll(".question[data-show-if]").forEach((q) =>
-      hideAndClear(q, !pains.includes(q.dataset.showIf))
+      hideAndClear(q, !q.dataset.showIf.split(" ").some((v) => pains.includes(v)))
     );
 
     // Second type et situations propres au type : après le choix du type.
@@ -212,6 +218,31 @@
   const checkedFamily = form.querySelector('input[name="famille"]:checked');
   if (checkedFamily) showFamily(checkedFamily.value);
   else updateDependants();
+
+  // --- Petits tests à faire chez soi -------------------------------------------------
+
+  form.addEventListener("click", (e) => {
+    const bouton = e.target.closest("[data-test-q]");
+    if (!bouton) return;
+    const input = form.querySelector(`input[name="${bouton.dataset.testQ}"][value="${bouton.dataset.testV}"]`);
+    if (!input) return;
+    input.checked = true;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    const details = bouton.closest("details");
+    details.querySelectorAll(".test-result").forEach((b) => b.classList.toggle("chosen", b === bouton));
+    const option = input.closest(".option");
+    if (option) {
+      option.querySelectorAll(".test-badge").forEach((b) => b.remove());
+      const badge = document.createElement("em");
+      badge.className = "test-badge";
+      badge.textContent = "Résultat de votre test";
+      option.querySelector(".option-text").appendChild(badge);
+      form.querySelectorAll(`input[name="${input.name}"]`).forEach((i) => {
+        if (i !== input) i.closest(".option").querySelectorAll(".test-badge").forEach((b) => b.remove());
+      });
+      setTimeout(() => { details.open = false; option.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350);
+    }
+  });
 
   // --- Aide pour trouver son type ----------------------------------------------
 
@@ -275,6 +306,188 @@
     });
   }
 
+  // --- Pré-remplissage automatique à partir d'un texte libre ----------------------
+  // Les réponses suggérées sont cochées et marquées ; la personne les confirme, les
+  // modifie ou en coche d'autres. Une suggestion décochée n'est jamais recochée.
+
+  const texteBox = form.querySelector(".texte-box");
+  if (texteBox) {
+    const area = texteBox.querySelector("#description");
+    const compteur = texteBox.querySelector(".texte-compteur");
+    const statut = texteBox.querySelector(".texte-status");
+    const resumeBox = texteBox.querySelector(".texte-resume");
+    const iaBox = texteBox.querySelector("#texte-ia");
+    const suggerees = new Map(); // "nom=valeur" -> input coché d'après le texte
+    const refusees = new Set();  // suggestions décochées ou changées par la personne
+    let dernierTexte = "";
+    let minuteur = null;
+    let enCours = null;
+
+    const cle = (input) => input.name + "=" + input.value;
+
+    function marquer(input) {
+      const el = input.closest(".pain, .option");
+      if (!el || el.querySelector(".text-badge")) return;
+      const badge = document.createElement("em");
+      badge.className = "text-badge";
+      badge.textContent = "D'après votre texte";
+      (el.querySelector(".option-text") || el.querySelector(".pain-head > span") || el).appendChild(badge);
+    }
+
+    function demarquer(input) {
+      const el = input.closest(".pain, .option");
+      const badge = el && el.querySelector(".text-badge");
+      if (badge) badge.remove();
+    }
+
+    function cocher(name, value, { siVide = false } = {}) {
+      const input = form.querySelector(`input[name="${name}"][value="${value}"]`);
+      if (!input || refusees.has(cle(input))) return false;
+      if (input.closest(".question[hidden], .option[hidden], .chip[hidden]") || input.disabled) return false;
+      const deja = form.querySelector(`input[name="${name}"]:checked`);
+      if (siVide && deja && deja !== input && deja.value !== "" && !suggerees.has(cle(deja))) return false;
+      if (!input.checked) {
+        input.checked = true;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      suggerees.set(cle(input), input);
+      marquer(input);
+      return true;
+    }
+
+    // Ce que la personne change elle-même devient sa réponse.
+    form.addEventListener("change", (e) => {
+      if (!e.isTrusted || !e.target.name) return;
+      suggerees.forEach((input, k) => {
+        if (input.name === e.target.name && !input.checked) {
+          refusees.add(k);
+          suggerees.delete(k);
+          demarquer(input);
+        }
+      });
+      if (suggerees.has(cle(e.target))) { suggerees.delete(cle(e.target)); demarquer(e.target); }
+    });
+
+    function appliquer(res) {
+      const r = res.reponses;
+      const voulues = new Set();
+      const noter = (name, values) => (values || []).forEach((v) => voulues.add(name + "=" + v));
+      noter("preoccupations", r.preoccupations);
+      (r.preoccupations || []).forEach((p) => voulues.add(`gene_${p}=${res.intensites[p] || "beaucoup"}`));
+      ["demangeaisons_details", "specifiques", "traitements", "periodes"].forEach((q) => noter(q, r[q]));
+      ["type_cheveux", "type_secondaire", "epaisseur", "densite", "porosite", "cuir_chevelu",
+        "chaleur", "objectif", "age"].forEach((q) => r[q] && voulues.add(q + "=" + r[q]));
+      const famille = r.type_cheveux ? r.type_cheveux[0] : r.famille;
+      if (famille) voulues.add("famille=" + famille);
+
+      // Les anciennes suggestions qui ne correspondent plus au texte sont retirées.
+      suggerees.forEach((input, k) => {
+        if (voulues.has(k)) return;
+        if (input.type === "radio" && input.name === "type_secondaire") {
+          const non = form.querySelector('input[name="type_secondaire"][value=""]');
+          if (non) non.checked = true;
+        } else {
+          input.checked = false;
+        }
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        demarquer(input);
+        suggerees.delete(k);
+      });
+
+      (r.preoccupations || []).forEach((p) => {
+        if (cocher("preoccupations", p)) {
+          const niveau = form.querySelector(`input[name="gene_${p}"]:checked`);
+          if (!niveau || suggerees.has(cle(niveau))) cocher("gene_" + p, res.intensites[p] || "beaucoup");
+        }
+      });
+      updateDependants();
+      (r.demangeaisons_details || []).forEach((v) => cocher("demangeaisons_details", v));
+      const typeChoisi = form.querySelector('input[name="type_cheveux"]:checked');
+      if (famille && (!typeChoisi || suggerees.has(cle(typeChoisi)))) {
+        const fam = form.querySelector(`input[name="famille"][value="${famille}"]`);
+        if (fam && !refusees.has(cle(fam))) {
+          fam.checked = true;
+          showFamily(famille);
+          suggerees.set(cle(fam), fam);
+          marquer(fam);
+        }
+        if (r.type_cheveux) cocher("type_cheveux", r.type_cheveux);
+      }
+      updateDependants();
+      if (r.type_secondaire) cocher("type_secondaire", r.type_secondaire, { siVide: true });
+      updateDependants();
+      (r.specifiques || []).forEach((v) => cocher("specifiques", v));
+      ["epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif", "age"].forEach((q) => {
+        if (r[q]) cocher(q, r[q], { siVide: true });
+      });
+      ["traitements", "periodes"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
+      updateDependants();
+
+      afficherResume(res);
+      if (res.note) resumeBox.innerHTML += `<p class="help">${escapeHtml(res.note)}</p>`;
+      resumeBox.hidden = false;
+    }
+
+    // Résumé construit à partir des cases réellement pré-cochées (et non refusées).
+    function etiquette(input) {
+      const el = input.closest(".pain, .option, .chip");
+      const nom = el && (el.querySelector("strong") || el.querySelector("span"));
+      return nom ? nom.textContent.trim() : input.value;
+    }
+
+    function afficherResume(res) {
+      const items = [];
+      suggerees.forEach((input) => {
+        if (!input.checked || input.name.startsWith("gene_")) return;
+        if (input.name === "famille" && form.querySelector('input[name="type_cheveux"]:checked')) return;
+        let texte = etiquette(input);
+        if (input.name === "preoccupations") {
+          const niveau = form.querySelector(`input[name="gene_${input.value}"]:checked`);
+          if (niveau) texte += " (" + etiquette(niveau).toLowerCase() + ")";
+        }
+        items.push(texte);
+      });
+      resumeBox.innerHTML = !items.length
+        ? "<p>Nous n'avons rien repéré de précis pour l'instant : répondez simplement aux questions.</p>"
+        : '<p class="texte-disclaimer">✍️ <strong>D’après votre texte, nous avons pré-coché quelques réponses.</strong> ' +
+          "Confirmez-les, modifiez-les ou cochez-en d'autres à chaque étape.</p>" +
+          '<div class="chips">' + items.map((x) => `<span class="chip static">${escapeHtml(x)}</span>`).join("") + "</div>" +
+          (res.metisse ? "<p>Cheveux métissés : l'aide « Je ne suis pas sûre de mon type » de l'étape « Vos cheveux » vous aidera à préciser vos deux types.</p>" : "");
+    }
+
+    function analyser() {
+      clearTimeout(minuteur);
+      const texte = area.value.trim();
+      if (texte.length < 15 || texte === dernierTexte) return enCours || Promise.resolve();
+      dernierTexte = texte;
+      statut.textContent = "Lecture de votre texte…";
+      enCours = fetch("/api/analyse-texte", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texte, ia: Boolean(iaBox && iaBox.checked) }),
+      })
+        .then((response) => response.json().then((res) => {
+          if (!response.ok) throw new Error(res.detail || "");
+          statut.textContent = "";
+          if (area.value.trim() === texte) appliquer(res);
+        }))
+        .catch(() => {
+          statut.textContent = "Nous n'avons pas pu lire votre texte : répondez directement aux questions.";
+        })
+        .finally(() => { enCours = null; });
+      return enCours;
+    }
+
+    area.addEventListener("input", () => {
+      compteur.textContent = area.value.length + " / 1500";
+      clearTimeout(minuteur);
+      // Avec l'IA, on attend la fin de la saisie pour limiter les appels.
+      if (!(iaBox && iaBox.checked)) minuteur = setTimeout(analyser, 1200);
+    });
+    area.addEventListener("blur", analyser);
+    if (iaBox) iaBox.addEventListener("change", () => { dernierTexte = ""; analyser(); });
+    avantSuite = (panel) => (panel.contains(texteBox) ? analyser() : Promise.resolve());
+  }
+
   // Après une erreur côté serveur, ouvrir la première étape concernée.
   const firstError = panels.findIndex((p) => p.querySelector(".has-error"));
   show(firstError === -1 ? 0 : firstError);
@@ -298,7 +511,7 @@
     signe: {
       secheresse: "Sécheresse", frisottis: "Frisottis", pointes: "Pointes abîmées", casse: "Casse",
       terne: "Manque d'éclat", definition: "Boucles peu définies", volume: "Manque de volume",
-      alourdis: "Cheveux alourdis",
+      alourdis: "Cheveux alourdis", pellicules: "Pellicules",
     },
     intensite: { leger: "léger", modere: "modéré", marque: "marqué" },
   };

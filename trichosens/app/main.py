@@ -28,6 +28,7 @@ from .pain_points import INTENSITES, PAIN_POINTS
 from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
 from .reminders import JOURS, RAPPELS, build_ics
 from . import specifiques as trouver
+from . import texte as texte_libre
 
 logging.basicConfig(level=logging.INFO)
 
@@ -313,6 +314,19 @@ def api_questions():
             for q in QUESTIONS
         ],
     }
+
+
+@app.post("/api/analyse-texte")
+async def api_analyse_texte(request: Request, payload: dict):
+    """Pré-remplit le diagnostic à partir d'une description libre (jamais enregistrée)."""
+    texte = payload.get("texte")
+    if not isinstance(texte, str):
+        raise HTTPException(status_code=422, detail="Écrivez quelques mots sur vos cheveux.")
+    ia = payload.get("ia") is True
+    try:
+        return await run_in_threadpool(texte_libre.analyser, texte, ia, _client_ip(request))
+    except texte_libre.TexteErreur as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @app.post("/api/trouver-type")

@@ -200,6 +200,46 @@ _add(PainPoint(
 ))
 
 _add(PainPoint(
+    id="pellicules",
+    label="Pellicules",
+    description="Des petites peaux blanches ou jaunâtres sur le cuir chevelu, les épaules ou les vêtements.",
+    causes=(
+        "Les pellicules sont des cellules du cuir chevelu qui se renouvellent trop vite. Le plus "
+        "souvent, une levure naturelle de la peau (Malassezia) se développe trop et irrite le "
+        "cuir chevelu ; parfois, c'est simplement un cuir chevelu trop sec.",
+    ),
+    causes_profil=(
+        (lambda a: a.cuir_chevelu == "gras",
+         "Votre cuir chevelu gras nourrit la levure responsable des pellicules : elles sont "
+         "souvent plus grasses et collées."),
+        (lambda a: a.cuir_chevelu == "sec",
+         "Sur un cuir chevelu sec, les pellicules sont souvent fines et sèches : il faut "
+         "surtout l'hydrater et le laver plus doucement."),
+        (lambda a: a.texture in {"frise", "crepu"},
+         "Les cheveux frisés et crépus se lavent moins souvent : sébum et peaux mortes "
+         "restent plus longtemps sur le cuir chevelu."),
+        (lambda a: "stress" in a.periodes,
+         "Le stress et la fatigue font souvent revenir les pellicules."),
+        (lambda a: "sec_hiver" in a.saisons_sensibles,
+         "L'hiver (froid, chauffage) assèche le cuir chevelu et favorise les pellicules."),
+    ),
+    actions=(
+        "Utiliser un shampoing antipelliculaire 2 fois par semaine pendant 4 semaines, en le "
+        "laissant poser 3 à 5 minutes, puis une fois par semaine pour éviter qu'elles reviennent.",
+        "Les autres jours de lavage, prendre un shampoing doux pour ne pas irriter.",
+        "Laver souvent brosses, peignes, bonnets et taies d'oreiller.",
+    ),
+    a_eviter=(
+        "Les huiles et les beurres appliqués sur le cuir chevelu : ils nourrissent la levure "
+        "des pellicules (gardez-les pour les longueurs).",
+        "Gratter ou décoller les pellicules avec les ongles.",
+        "Le shampoing sec plusieurs jours de suite et l'eau très chaude.",
+    ),
+    delai="Nettement moins de pellicules en 2 à 4 semaines ; elles peuvent revenir si on arrête "
+          "tout entretien.",
+))
+
+_add(PainPoint(
     id="pointes",
     label="Pointes abîmées",
     description="Pointes sèches, fourchues, plus fines ou plus claires que le reste.",
@@ -375,6 +415,11 @@ class PainReport:
 INTENSITE_ORDRE = {"enormement": 0, "beaucoup": 1, "un_peu": 2}
 
 
+def _porteur_details(a: "Answers") -> str:
+    """Point de gêne qui affiche les précisions sur le cuir chevelu (le premier choisi)."""
+    return next((p for p in a.preoccupations if p in {"demangeaisons", "pellicules"}), "")
+
+
 def explain(a: "Answers") -> list[PainReport]:
     """Explique chaque point de douleur choisi, du plus gênant au moins gênant."""
     reports = []
@@ -387,7 +432,7 @@ def explain(a: "Answers") -> list[PainReport]:
                    for prob, why in typ.problemes if prob == pid]
         causes += [text for cond, text in p.causes_profil if cond(a)]
         actions = list(p.actions)
-        if pid == "demangeaisons":
+        if pid == _porteur_details(a):
             details = [DETAILS_DEMANGEAISONS[k] for k in a.demangeaisons_details]
             causes += [d.cause for d in details]
             actions = [d.conseil for d in details] + actions

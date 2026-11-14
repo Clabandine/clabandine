@@ -37,10 +37,26 @@
 </details>
 {% endmacro %}
 
+{% macro test_maison(q) %}
+<details class="home-test">
+  <summary>🧪 {{ q.test.titre }} <small>({{ q.test.duree }})</small></summary>
+  <div class="home-test-body">
+    <ol>{% for e in q.test.etapes %}<li>{{ e }}</li>{% endfor %}</ol>
+    {% if q.test.astuce %}<p class="help">{{ q.test.astuce }}</p>{% endif %}
+    <p class="sub-label">Votre résultat :</p>
+    <div class="test-results">
+      {% for label, valeur in q.test.resultats %}
+      <button type="button" class="test-result" data-test-q="{{ q.id }}" data-test-v="{{ valeur }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+</details>
+{% endmacro %}
+
 {% macro question_block(q, num) %}
 {% set current = answers.get(q.id) %}
 <fieldset class="question q-{{ q.id }}{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
-          {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons"{% endif %}
+          {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons pellicules"{% endif %}
           data-required="{{ 'true' if q.required else 'false' }}"
           {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
   <legend><span class="num">{{ num }}</span> {{ q.label }}</legend>
@@ -144,6 +160,7 @@
     </label>
     {% endfor %}
   </div>
+  {% if q.test %}{{ test_maison(q) }}{% endif %}
   {% endif %}
 </fieldset>
 {% endmacro %}
@@ -194,6 +211,25 @@
                placeholder="Votre prénom" value="{{ answers.get('prenom') or '' }}">
       </label>
       <p class="help">Il sert seulement à personnaliser votre résultat et n'est pas enregistré sur nos serveurs.</p>
+    </div>
+
+    <div class="texte-box js-only" hidden>
+      <label for="description"><span>Racontez-nous vos cheveux avec vos mots <small>(facultatif)</small></span></label>
+      <p class="help">Type de cheveux, ce qui vous gêne et depuis quand, vos habitudes… Le diagnostic se
+        pré-remplit automatiquement pendant que vous écrivez ; vous vérifiez ensuite chaque réponse.</p>
+      <textarea id="description" maxlength="1500" rows="4"
+        placeholder="Ex. : J'ai des cheveux bouclés, très secs, qui cassent beaucoup aux pointes. Mon cuir chevelu gratte depuis que je porte des tresses. J'aimerais garder ma longueur."></textarea>
+      <div class="texte-actions">
+        <small class="texte-compteur" aria-live="polite">0 / 1500</small>
+        {% if photo_active %}
+        <label class="consent small-consent">
+          <input type="checkbox" id="texte-ia">
+          <span>Utiliser l'IA pour mieux comprendre mon texte (envoyé à notre prestataire Anthropic, non conservé)</span>
+        </label>
+        {% endif %}
+      </div>
+      <p class="texte-status" role="status" aria-live="polite"></p>
+      <div class="texte-resume" hidden></div>
     </div>
     {% endif %}
 

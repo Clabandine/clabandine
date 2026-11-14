@@ -21,6 +21,7 @@ from .evolution import Evolution, ResumeSuivi, compare
 from .hair_types import FAMILLES, HAIR_TYPES, TYPE_POIDS, TYPE_POINTS, HairType
 from .pain_points import INTENSITE_FACTEUR, PAIN_POINTS, PainReport, explain
 from .photo import AnalysePhoto
+from .photo import is_enabled as photo_disponible
 from .questionnaire import Answers
 from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
@@ -61,6 +62,13 @@ POROSITE_POINTS = {
     "inconnue": {},
 }
 
+ELASTICITE_POINTS = {
+    "equilibre": {},
+    "manque_proteines": {"proteines": 4, "reparation": 1},
+    "manque_hydratation": {"hydratation": 4, "nutrition": 1},
+    "non_teste": {},
+}
+
 CUIR_POINTS = {
     "normal": {},
     "sec": {"cuir_chevelu": 2, "hydratation": 1},
@@ -82,6 +90,7 @@ PREOCCUPATION_POINTS = {
     "demelage": {"hydratation": 2, "nutrition": 2},
     "alourdis": {"volume": 2},
     "demangeaisons": {"cuir_chevelu": 5},
+    "pellicules": {"cuir_chevelu": 5},
 }
 
 # Part du second type quand les cheveux mélangent deux types.
@@ -139,6 +148,7 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None,
         add(pts)
     add(EPAISSEUR_POINTS[a.epaisseur])
     add(POROSITE_POINTS[a.porosite])
+    add(ELASTICITE_POINTS[a.elasticite])
     add(CUIR_POINTS[a.cuir_chevelu])
     add(CHALEUR_POINTS[a.chaleur])
     add(OBJECTIF_POINTS[a.objectif])
@@ -207,6 +217,8 @@ class Diagnostic:
     signes_photo_en_plus: list[dict] = field(default_factory=list)
     type_secondaire: HairType | None = None
     specifiques: list[dict] = field(default_factory=list)
+    # Fiabilité : score sur 100, niveau, ce qui l'améliorerait, réponses à vérifier.
+    fiabilite: dict = field(default_factory=dict)
     # Alternatives naturelles : recettes maison, cures et gestes du quotidien.
     recettes: list[dict] = field(default_factory=list)
     cures: list[dict] = field(default_factory=list)
@@ -227,6 +239,7 @@ class Diagnostic:
             "type_cheveux": self.type_cheveux.code,
             "type_secondaire": self.type_secondaire.code if self.type_secondaire else None,
             "specifiques": self.specifiques,
+            "fiabilite": self.fiabilite,
             "recettes": [
                 {"id": r["recette"].id, "titre": r["recette"].titre,
                  "remplace": r["recette"].categorie,
@@ -369,6 +382,8 @@ def cuir_effectif(a: Answers) -> str:
     que la personne n'a pas cochées dans « cuir chevelu ».
     """
     cuirs = {DETAILS_DEMANGEAISONS[d].cuir for d in a.demangeaisons_details}
+    if "pellicules" in a.preoccupations and a.cuir_chevelu in {"normal", "gras", "sec"}:
+        return "pellicules"
     if "pellicules" in cuirs and a.cuir_chevelu in {"normal", "gras", "sec"}:
         if a.cuir_chevelu != "sec" or "pellicules_grasses" in a.demangeaisons_details:
             return "pellicules"
@@ -391,7 +406,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "huile",
         ))
     cuir = cuir_effectif(a)
-    if "pellicules_grasses" in a.demangeaisons_details:
+    if cuir == "pellicules" or "pellicules_grasses" in a.demangeaisons_details:
         conseil = ("Faites mousser sur le cuir chevelu et laissez poser 3 à 5 minutes avant de "
                    "rincer : c'est ce temps de pose qui agit sur les pellicules.")
     elif cuir in {"sensible", "pellicules", "sec"}:
@@ -476,7 +491,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "quotidien", "Cuir chevelu",
             "Évitez de toucher vos racines et n'appliquez pas d'huile près du cuir chevelu.",
         ))
-    if "demangeaisons" in a.preoccupations:
+    if {"demangeaisons", "pellicules"} & set(a.preoccupations):
         steps.append(Step(
             "quotidien", "Apaiser sans gratter",
             "Quand ça gratte, appuyez ou massez avec la pulpe des doigts au lieu de gratter avec "
@@ -497,7 +512,7 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
             "Toutes les 1 à 2 semaines, appliquez un shampoing dilué entre les tresses avec un "
             "flacon applicateur, massez, rincez longtemps et séchez bien.",
         ))
-    if besoins["cuir_chevelu"] >= 40 or "demangeaisons" in a.preoccupations:
+    if besoins["cuir_chevelu"] >= 40 or {"demangeaisons", "pellicules"} & set(a.preoccupations):
         steps.append(Step(
             "hebdomadaire", "Soin du cuir chevelu",
             "1 fois par semaine, appliquez un soin adapté et massez 3 à 5 minutes pour stimuler la circulation.",
@@ -545,6 +560,18 @@ def _conseils(a: Answers, besoins: dict[str, int], poids: str) -> list[str]:
             "Avec une porosité forte, superposez les soins : d'abord l'eau ou le soin sans rinçage, "
             "puis une crème, puis une huile pour sceller."
         )
+    if a.elasticite == "manque_proteines":
+        conseils.append(
+            "Votre test d'élasticité montre un cheveu trop souple, qui ne revient pas : il "
+            "manque de protéines. Intégrez un soin protéiné (kératine, protéines de riz ou de "
+            "soie) une semaine sur deux, puis refaites le test dans un mois."
+        )
+    elif a.elasticite == "manque_hydratation":
+        conseils.append(
+            "Votre test d'élasticité montre un cheveu qui casse sans s'étirer : il manque "
+            "d'hydratation. Mettez de côté les soins protéinés quelques semaines et misez sur "
+            "les masques hydratants, puis refaites le test dans un mois."
+        )
     if besoins["proteines"] >= 50 and besoins["hydratation"] >= 50:
         conseils.append(
             "Alternez soins hydratants et soins protéinés : trop de protéines rend le cheveu rigide "
@@ -589,7 +616,8 @@ def _alertes(a: Answers) -> list[str]:
         )
     if "plaques" in a.demangeaisons_details:
         pass  # l'alerte « plaques » est déjà plus précise
-    elif a.cuir_chevelu in {"sensible", "pellicules"} or "demangeaisons" in a.preoccupations:
+    elif (a.cuir_chevelu in {"sensible", "pellicules"}
+          or {"demangeaisons", "pellicules"} & set(a.preoccupations)):
         alertes.append(
             "Si les démangeaisons, rougeurs ou pellicules persistent malgré des soins doux, "
             "consultez un dermatologue."
@@ -627,6 +655,10 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
         score += 8
     if p.types and len(p.types) <= 6:
         score += 4  # produit pensé pour peu de types : plus ciblé
+    if "pellicules" in a.preoccupations and "pellicules" in p.cuir_chevelu:
+        score += 10  # soin antipelliculaire, y compris pour un cuir chevelu sensible
+    if cuir != a.cuir_chevelu and a.cuir_chevelu in p.cuir_chevelu:
+        score += 5  # convient aussi à la nature habituelle du cuir chevelu
     if a.type_secondaire and p.types:
         score += 3 if a.type_secondaire in p.types else -3
     if ("demangeaisons" in a.preoccupations and p.sans_parfum is True
@@ -729,6 +761,73 @@ def _apply_photo(a: Answers, photo: AnalysePhoto, douleurs: list[PainReport],
     if photo.alerte_medicale:
         alertes.append(photo.alerte_medicale)
     return notes, en_plus
+
+
+# --- Fiabilité du diagnostic ------------------------------------------------------
+
+NIVEAUX_FIABILITE = (
+    (85, "elevee", "Élevée"),
+    (65, "bonne", "Bonne"),
+    (0, "a_preciser", "À préciser"),
+)
+
+
+def fiabilite(a: Answers, photo: AnalysePhoto | None = None,
+              photo_dispo: bool | None = None) -> dict:
+    """Indice de fiabilité : il baisse quand une réponse manque ou semble contradictoire."""
+    photo_dispo = photo_disponible() if photo_dispo is None else photo_dispo
+    score = 100
+    a_ameliorer: list[str] = []
+    a_verifier: list[str] = []
+
+    if a.porosite == "inconnue":
+        score -= 15
+        a_ameliorer.append("Faites le test du verre d'eau pour connaître votre porosité "
+                           "(5 minutes) : elle change le choix des soins.")
+    if a.elasticite == "non_teste":
+        score -= 10
+        a_ameliorer.append("Faites le test d'élasticité (1 minute) : il dit si vos cheveux "
+                           "manquent plutôt d'hydratation ou de protéines.")
+    photo_ok = bool(photo and photo.exploitable)
+    if photo_dispo and not photo_ok:
+        score -= 5
+        a_ameliorer.append("Ajoutez une photo de vos cheveux : l'IA vérifie votre type et les "
+                           "signes visibles.")
+
+    if a.famille == "1" and ("definition" in a.preoccupations or a.objectif == "definition"):
+        score -= 10
+        a_verifier.append("Vous avez choisi des cheveux raides mais parlez de boucles : vos "
+                          "cheveux sont peut-être ondulés (type 2). L'aide « Je ne suis pas sûre "
+                          "de mon type » peut vous aider.")
+    if (a.porosite == "forte" and a.famille == "1" and not a.traitements
+            and a.chaleur == "jamais"):
+        score -= 10
+        a_verifier.append("Une porosité forte est rare sur des cheveux raides jamais colorés ni "
+                          "chauffés : vérifiez-la avec le test du verre d'eau.")
+    if a.porosite == "faible" and a.elasticite == "manque_proteines" and not a.traitements:
+        score -= 5
+        a_verifier.append("Un cheveu de porosité faible manque rarement de protéines sans "
+                          "traitement chimique : refaites le test d'élasticité sur un cheveu "
+                          "bien mouillé.")
+    if photo_ok and photo.type_cheveux and photo.confiance_type != "faible":
+        vu = HAIR_TYPES.get(photo.type_cheveux)
+        if vu and vu.famille != a.famille and vu.famille != HAIR_TYPES.get(
+                a.type_secondaire, typ_vide).famille:
+            score -= 15
+            a_verifier.append(f"Votre photo ressemble plutôt au type {vu.code} : vérifiez votre "
+                              "type sur des cheveux lavés, séchés sans produit.")
+
+    score = max(30, min(100, score))
+    niveau, label = next((n, l) for seuil, n, l in NIVEAUX_FIABILITE if score >= seuil)
+    return {"score": score, "niveau": niveau, "label": label,
+            "a_ameliorer": a_ameliorer, "a_verifier": a_verifier}
+
+
+class _TypeVide:
+    famille = ""
+
+
+typ_vide = _TypeVide()
 
 
 PHASES = {
@@ -872,6 +971,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
                for c in cures],
         cures_message=cures_message,
         conseils_naturels=naturel.conseils_naturels(a),
+        fiabilite=fiabilite(a, photo),
     )
     d.suivi = resume_suivi(d, a, today)
     return d
