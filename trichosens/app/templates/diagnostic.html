@@ -59,7 +59,7 @@
           {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons pellicules"{% endif %}
           data-required="{{ 'true' if q.required else 'false' }}"
           {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
-  <legend><span class="num">{{ num }}</span> {{ q.label }}</legend>
+  <legend>{{ q.label }}</legend>
   {% if q.help %}<p class="help">{{ q.help }}</p>{% endif %}
   <p class="error" {% if not errors.get(q.id) %}hidden{% endif %}>{{ errors.get(q.id, '') }}</p>
 
@@ -140,6 +140,16 @@
   </div>
   {% endfor %}
 
+  {% elif q.id == 'age' %}
+  <div class="chips-select" role="radiogroup" aria-label="{{ q.label }}">
+    {% for o in q.options %}
+    <label class="chip{% if o.value == 'nc' %} wide{% endif %}">
+      <input type="radio" name="{{ q.id }}" value="{{ o.value }}" {% if current == o.value %}checked{% endif %}>
+      <span>{{ o.label }}</span>
+    </label>
+    {% endfor %}
+  </div>
+
   {% elif q.id == 'type_secondaire' %}
   <div class="chips-select" role="radiogroup" aria-label="{{ q.label }}">
     <label class="chip wide">
@@ -181,6 +191,9 @@
 
 {% block content %}
 {% set icones = {
+  'bienvenue': '<circle cx="24" cy="18" r="8"/><path d="M10 40c2-8 8-12 14-12s12 4 14 12"/>',
+  'description': '<path d="M10 12h28v18H22l-8 7v-7h-4z"/><path d="M16 19h16M16 24h10"/>',
+  'texture': '<path d="M24 8c6 9 11 15 11 21a11 11 0 0 1-22 0c0-6 5-12 11-21z"/>',
   'douleurs': '<path d="M24 40s-14-8-14-19a8 8 0 0 1 14-5 8 8 0 0 1 14 5c0 11-14 19-14 19z"/>',
   'photo': '<rect x="8" y="14" width="32" height="24" rx="5"/><circle cx="24" cy="26" r="6"/><path d="M18 14l3-4h6l3 4"/>',
   'cheveux': '<path d="M16 8c6 5-6 11 0 16s-6 11 0 16M24 8c6 5-6 11 0 16s-6 11 0 16M32 8c6 5-6 11 0 16s-6 11 0 16"/>',
@@ -198,18 +211,21 @@
 {% endif %}
 
 <div class="progress js-only" hidden>
-  <div class="progress-text">Étape <span id="step-num">1</span> sur <span id="step-total">{{ steps | length }}</span> · <span id="step-name"></span></div>
-  <div class="progress-bar"><span id="progress-fill"></span></div>
-  <ol class="stepper" aria-hidden="true">
-    {% for s in steps if s.id != 'photo' or photo_active %}<li data-for="{{ s.id }}"><span>{{ loop.index }}</span></li>{% endfor %}
+  <ol class="phases-bar" aria-hidden="true">
+    {% for pid, plabel in PHASES_PARCOURS.items() %}
+    <li data-phase="{{ pid }}"><span class="phase-fill"></span><small>{{ plabel }}</small></li>
+    {% endfor %}
   </ol>
+  <div class="progress-text"><span id="step-name"></span><span class="temps-restant" id="temps-restant"></span></div>
+  {# Compatibilité avec les anciens scripts #}
+  <span id="step-num" hidden>1</span><span id="step-total" hidden>{{ steps | length }}</span><span id="progress-fill" hidden></span>
 </div>
 
 <form method="post" action="/diagnostic" class="questionnaire" id="diagnostic-form" novalidate>
   {% set ns = namespace(num=0) %}
   {% for s in steps %}
   {% if s.id != 'photo' or photo_active %}
-  <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}">
+  <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}" data-phase="{{ s.phase }}" data-duree="{{ s.duree }}">
     <div class="step-head">
       <svg class="step-icon" viewBox="0 0 48 48" aria-hidden="true">{{ icones[s.id] | safe }}</svg>
       <div>
@@ -218,8 +234,8 @@
       </div>
     </div>
 
-    {% if loop.first %}
-    <div class="prenom-box">
+    {% if s.id == 'bienvenue' %}
+    <div class="prenom-box intro-card">
       <label for="prenom"><span>Comment vous appelez-vous ? <small>(facultatif)</small></span>
         <input type="text" id="prenom" name="prenom" maxlength="30" autocomplete="given-name"
                placeholder="Votre prénom" value="{{ answers.get('prenom') or '' }}">
@@ -227,11 +243,14 @@
       <p class="help">Il sert seulement à personnaliser votre résultat et n'est pas enregistré sur nos serveurs.</p>
     </div>
 
+    {% endif %}
+
+    {% if s.id == 'description' %}
     <div class="texte-box js-only" hidden>
-      <label for="description"><span>Racontez-nous vos cheveux avec vos mots <small>(facultatif)</small></span></label>
-      <p class="help">Type de cheveux, ce qui vous gêne et depuis quand, vos habitudes… Le diagnostic se
-        pré-remplit automatiquement pendant que vous écrivez ; vous vérifiez ensuite chaque réponse.</p>
-      <textarea id="description" maxlength="1500" rows="4"
+      <label for="description"><span>Décrivez vos cheveux <small>(facultatif)</small></span></label>
+      <p class="help">Leur type, ce qui vous gêne et depuis quand, vos habitudes, votre santé… Le diagnostic
+        se pré-remplit pendant que vous écrivez ; vous vérifierez chaque réponse.</p>
+      <textarea id="description" maxlength="1500" rows="6"
         placeholder="Ex. : J'ai des cheveux bouclés, très secs, qui cassent beaucoup aux pointes. Mon cuir chevelu gratte depuis que je porte des tresses. J'aimerais garder ma longueur."></textarea>
       <div class="texte-actions">
         <small class="texte-compteur" aria-live="polite">0 / 1500</small>
@@ -245,6 +264,7 @@
       <p class="texte-status" role="status" aria-live="polite"></p>
       <div class="texte-resume" hidden></div>
     </div>
+    <noscript><p class="help">Cette étape nécessite JavaScript : passez directement aux questions.</p></noscript>
     {% endif %}
 
     {% if s.id == 'photo' %}
@@ -278,10 +298,24 @@
     {{ question_block(q, ns.num) }}
     {% endfor %}
 
+    {% if s.id == 'bienvenue' %}
+    <ul class="reassurance">
+      <li><span aria-hidden="true">⏱</span> 3 minutes environ</li>
+      <li><span aria-hidden="true">✏️</span> Vous pourrez tout modifier</li>
+      <li><span aria-hidden="true">🔒</span> Rien n'est enregistré sur nos serveurs</li>
+    </ul>
+    {% endif %}
+
     <div class="step-nav js-only" hidden>
-      {% if not loop.first %}<button type="button" class="button secondary" data-prev>Retour</button>{% endif %}
-      {% if not loop.last %}
-      <button type="button" class="button" data-next>{{ 'Passer cette étape' if s.id == 'photo' else 'Continuer' }}</button>
+      {% if not loop.first %}<button type="button" class="button secondary" data-prev>← Retour</button>{% endif %}
+      {% if loop.last %}
+      <button type="submit" class="button submit-wizard">Voir mon diagnostic ✨</button>
+      {% elif s.id == 'bienvenue' %}
+      <button type="button" class="button" data-next>Commencer →</button>
+      {% elif s.id in ('photo', 'description') %}
+      <button type="button" class="button" data-next data-passer>Passer cette étape →</button>
+      {% else %}
+      <button type="button" class="button" data-next>Suivant →</button>
       {% endif %}
     </div>
   </section>

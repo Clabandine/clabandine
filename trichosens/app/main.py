@@ -25,7 +25,7 @@ from .feedback import lien_avis
 from .partage import texte_partage
 from .hair_types import FAMILLES, HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
-from .questionnaire import QUESTIONS, STEPS, InvalidAnswers, validate
+from .questionnaire import PHASES_PARCOURS, QUESTIONS, STEPS, InvalidAnswers, validate
 from .reminders import JOURS, RAPPELS, build_ics
 from . import specifiques as trouver
 from . import texte as texte_libre
@@ -99,7 +99,7 @@ templates.env.globals.update(
     FAMILLES=FAMILLES, AVIS_URL=AVIS_URL, lien_avis=lien_avis, texte_partage=texte_partage,
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
-    TROUVER=trouver,
+    TROUVER=trouver, PHASES_PARCOURS=PHASES_PARCOURS,
 )
 
 

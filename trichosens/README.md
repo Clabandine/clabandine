@@ -10,6 +10,15 @@ texture : lisse, ondulée, bouclée, frisée ou crépue.
 personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, un
 écosystème de marques et de professionnels.
 
+## Le parcours du diagnostic
+
+Trois parties (Vous, Vos cheveux, Vos habitudes) et des écrans courts : accueil (prénom et
+âge), description libre (facultative), gênes, photo, type, texture, période de vie et santé,
+habitudes, objectif. Une barre par partie et le temps restant estimé remplacent le
+« étape 4 sur 9 » qui fait paraître le questionnaire long. Les boutons Retour et Suivant
+restent à portée de pouce en bas de l'écran ; après une réponse, la page descend vers la
+question suivante ; le prénom personnalise le titre de l'étape suivante.
+
 ## Ce que fait la version actuelle (v0.5)
 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
