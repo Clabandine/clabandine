@@ -366,6 +366,10 @@
         }
       });
       if (suggerees.has(cle(e.target))) { suggerees.delete(cle(e.target)); demarquer(e.target); }
+      form.querySelectorAll(`input[name="${e.target.name}"]`).forEach((i) => {
+        const badge = !i.checked && i.closest(".pain, .option") && i.closest(".pain, .option").querySelector(".text-badge.valide");
+        if (badge) badge.remove();
+      });
     });
 
     function appliquer(res) {
@@ -452,8 +456,36 @@
         : '<p class="texte-disclaimer">✍️ <strong>D’après votre texte, nous avons pré-coché quelques réponses.</strong> ' +
           "Confirmez-les, modifiez-les ou cochez-en d'autres à chaque étape.</p>" +
           '<div class="chips">' + items.map((x) => `<span class="chip static">${escapeHtml(x)}</span>`).join("") + "</div>" +
+          '<div class="texte-boutons">' +
+          '<button type="button" class="button small" data-texte-valider>✓ Valider</button>' +
+          '<button type="button" class="button small secondary" data-texte-modifier>✎ Modifier</button>' +
+          "</div>" +
           (res.metisse ? "<p>Cheveux métissés : l'aide « Je ne suis pas sûre de mon type » de l'étape « Vos cheveux » vous aidera à préciser vos deux types.</p>" : "");
     }
+
+    // « Valider » : les réponses pré-cochées deviennent celles de la personne, puis on
+    // passe à l'étape suivante. « Modifier » : on l'emmène aux questions.
+    resumeBox.addEventListener("click", (e) => {
+      if (e.target.closest("[data-texte-valider]")) {
+        suggerees.forEach((input) => {
+          const badge = input.closest(".pain, .option") && input.closest(".pain, .option").querySelector(".text-badge");
+          if (badge) { badge.textContent = "Validé"; badge.classList.add("valide"); }
+        });
+        suggerees.clear();
+        const suite = panels[current].querySelector("[data-next]");
+        if (suite) suite.click();
+      } else if (e.target.closest("[data-texte-modifier]")) {
+        const question = panels[current].querySelector(".question:not([hidden])");
+        let aide = resumeBox.querySelector(".texte-aide");
+        if (!aide) {
+          aide = document.createElement("p");
+          aide.className = "help texte-aide";
+          resumeBox.appendChild(aide);
+        }
+        aide.textContent = "Cochez ou décochez ce que vous voulez à chaque étape, puis cliquez sur « Continuer ».";
+        if (question) question.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
 
     function analyser() {
       clearTimeout(minuteur);

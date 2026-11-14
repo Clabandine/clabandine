@@ -800,3 +800,6 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .fiabilite-score small { font-size: .8rem; color: var(--muted); }
 .fiabilite > .bar { display: block; margin: 10px 0 4px; }
 .fiabilite .button { margin-top: 6px; }
+.texte-boutons { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 4px; }
+.texte-boutons .button { flex: 1 1 130px; }
+.text-badge.valide { background: var(--success); }
