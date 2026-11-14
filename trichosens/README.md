@@ -21,7 +21,13 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
    d'API, l'analyse se fait par mots-clés (négations et intensité comprises) ; avec la clé et
    l'accord de la personne, l'IA prend le relais (limites : `TEXTE_MAX_PAR_HEURE`,
    `TEXTE_MAX_PAR_JOUR`). Le texte n'est jamais enregistré.
-3. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
+3. **Petits tests à faire chez soi** pour répondre juste : test du fil (épaisseur), de la
+   queue de cheval (densité), du verre d'eau (porosité) et d'élasticité (manque d'eau ou de
+   protéines). Un bouton coche la réponse correspondant au résultat observé.
+4. **Indice de fiabilité** sur le résultat (élevée, bonne, à préciser) : il baisse quand un
+   test n'est pas fait ou quand des réponses semblent se contredire, et dit quoi vérifier
+   (`fiabilite` dans `app/engine.py`). Il est aussi transmis avec les avis des testeuses.
+5. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
    de cheveux et les signes visibles, et pré-remplit les réponses. La photo n'est jamais
    enregistrée.
 3. **Vos cheveux au fil du temps (facultatif)** : âge, période de vie (cycle, grossesse,

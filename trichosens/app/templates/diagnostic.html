@@ -37,6 +37,22 @@
 </details>
 {% endmacro %}
 
+{% macro test_maison(q) %}
+<details class="home-test">
+  <summary>🧪 {{ q.test.titre }} <small>({{ q.test.duree }})</small></summary>
+  <div class="home-test-body">
+    <ol>{% for e in q.test.etapes %}<li>{{ e }}</li>{% endfor %}</ol>
+    {% if q.test.astuce %}<p class="help">{{ q.test.astuce }}</p>{% endif %}
+    <p class="sub-label">Votre résultat :</p>
+    <div class="test-results">
+      {% for label, valeur in q.test.resultats %}
+      <button type="button" class="test-result" data-test-q="{{ q.id }}" data-test-v="{{ valeur }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+</details>
+{% endmacro %}
+
 {% macro question_block(q, num) %}
 {% set current = answers.get(q.id) %}
 <fieldset class="question q-{{ q.id }}{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
@@ -144,6 +160,7 @@
     </label>
     {% endfor %}
   </div>
+  {% if q.test %}{{ test_maison(q) }}{% endif %}
   {% endif %}
 </fieldset>
 {% endmacro %}

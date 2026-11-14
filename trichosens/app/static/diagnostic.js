@@ -219,6 +219,31 @@
   if (checkedFamily) showFamily(checkedFamily.value);
   else updateDependants();
 
+  // --- Petits tests à faire chez soi -------------------------------------------------
+
+  form.addEventListener("click", (e) => {
+    const bouton = e.target.closest("[data-test-q]");
+    if (!bouton) return;
+    const input = form.querySelector(`input[name="${bouton.dataset.testQ}"][value="${bouton.dataset.testV}"]`);
+    if (!input) return;
+    input.checked = true;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    const details = bouton.closest("details");
+    details.querySelectorAll(".test-result").forEach((b) => b.classList.toggle("chosen", b === bouton));
+    const option = input.closest(".option");
+    if (option) {
+      option.querySelectorAll(".test-badge").forEach((b) => b.remove());
+      const badge = document.createElement("em");
+      badge.className = "test-badge";
+      badge.textContent = "Résultat de votre test";
+      option.querySelector(".option-text").appendChild(badge);
+      form.querySelectorAll(`input[name="${input.name}"]`).forEach((i) => {
+        if (i !== input) i.closest(".option").querySelectorAll(".test-badge").forEach((b) => b.remove());
+      });
+      setTimeout(() => { details.open = false; option.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350);
+    }
+  });
+
   // --- Aide pour trouver son type ----------------------------------------------
 
   const helper = form.querySelector(".type-helper");
