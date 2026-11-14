@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from .hair_types import HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .profil import AGES, PERIODES, SENSIBILITES
+from .sante import FACTEURS
 from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
 
@@ -228,6 +229,17 @@ QUESTIONS: tuple[Question, ...] = (
         options=tuple(Option(k, label, hint) for k, (label, hint) in PERIODES.items()),
     ),
     Question(
+        id="sante",
+        step="vous",
+        label="Votre santé : l'un de ces points vous concerne-t-il ?",
+        help="Facultatif, plusieurs réponses possibles. Certains problèmes de santé et "
+             "carences jouent beaucoup sur les cheveux. Ces informations restent sur votre "
+             "appareil et ne sont jamais enregistrées.",
+        multiple=True,
+        required=False,
+        options=tuple(Option(f.id, f.label, f.hint, "", f.groupe) for f in FACTEURS.values()),
+    ),
+    Question(
         id="saisons_sensibles",
         step="vous",
         label="Vos cheveux changent-ils selon les saisons ?",
@@ -333,6 +345,7 @@ class Answers:
     budget: str = "indifferent"
     age: str = "nc"
     elasticite: str = "non_teste"
+    sante: list[str] = field(default_factory=list)
     periodes: list[str] = field(default_factory=list)
     saisons_sensibles: list[str] = field(default_factory=list)
     prenom: str = ""
@@ -429,9 +442,9 @@ def validate(raw: dict) -> Answers:
     clean["intensites"] = intensites
 
     # « Rien de particulier » / « Pas de différence » n'ont de sens que seuls.
-    for qid in ("periodes", "saisons_sensibles"):
-        if len(clean.get(qid, [])) > 1 and "aucune" in clean[qid]:
-            clean[qid] = [v for v in clean[qid] if v != "aucune"]
+    for qid, rien in (("periodes", "aucune"), ("saisons_sensibles", "aucune"), ("sante", "aucun")):
+        if len(clean.get(qid, [])) > 1 and rien in clean[qid]:
+            clean[qid] = [v for v in clean[qid] if v != rien]
 
     clean["prenom"] = nettoyer_prenom(raw.get("prenom"))
 

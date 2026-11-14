@@ -126,6 +126,20 @@
   </div>
   {% endfor %}
 
+  {% elif q.id == 'sante' %}
+  {% for groupe, titre in [('connu', 'Un problème connu'), ('signe', 'Ce que vous remarquez')] %}
+  <p class="sub-label">{{ titre }}</p>
+  <div class="options">
+    {% for o in q.options if o.groupe == groupe %}
+    {% set checked = current and o.value in current %}
+    <label class="option" data-value="{{ o.value }}">
+      <input type="checkbox" name="{{ q.id }}" value="{{ o.value }}" {% if checked %}checked{% endif %}>
+      <span class="option-text"><strong>{{ o.label }}</strong>{% if o.hint %}<small>{{ o.hint }}</small>{% endif %}</span>
+    </label>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
   {% elif q.id == 'type_secondaire' %}
   <div class="chips-select" role="radiogroup" aria-label="{{ q.label }}">
     <label class="chip wide">

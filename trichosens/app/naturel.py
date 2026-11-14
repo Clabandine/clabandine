@@ -229,6 +229,7 @@ AVERTISSEMENT_CURE = (
 )
 
 DECLENCHEURS = {"chute", "casse", "pousse", "terne", "pointes"}
+CARENCES = {"carence_fer", "carence_vitd", "carence_autre", "regime"}
 PERIODES_CURE = {"post_partum", "stress", "menopause"}
 
 
@@ -240,10 +241,18 @@ def cures_pour(a: "Answers", saison: str | None = None) -> tuple[list[Cure], str
     if a.age == "moins_18":
         return [], ("Avant 18 ans, une alimentation variée suffit en général. Parlez-en à votre "
                     "médecin avant de prendre un complément.")
+    from .sante import FACTEURS
+    facteurs = [FACTEURS[f] for f in a.sante if f != "aucun"]
+    bloquants = [f for f in facteurs if f.sans_cure]
+    if bloquants:
+        return [], (bloquants[0].note_cure or
+                    "Parlez-en au médecin qui suit votre maladie avant de prendre un "
+                    "complément alimentaire : certains interagissent avec les traitements.")
     raisons = set(a.preoccupations) & DECLENCHEURS
     periodes = set(a.periodes) & PERIODES_CURE
+    carences = set(a.sante) & CARENCES
     automne = saison == "automne" and "chute_automne" in a.saisons_sensibles
-    if not (raisons or periodes or automne):
+    if not (raisons or periodes or automne or carences):
         return [], ""
 
     pourquoi = ("La biotine, le zinc et le sélénium contribuent au maintien de cheveux "
@@ -258,7 +267,33 @@ def cures_pour(a: "Answers", saison: str | None = None) -> tuple[list[Cure], str
              "Riche en vitamines du groupe B, la levure de bière est la cure la plus simple "
              "et la plus économique.", "3 mois.", ["divers-levure-biere"]),
     ]
+    if "carence_fer" in a.sante:
+        cures.insert(0, Cure(
+            "Fer, sur avis médical",
+            "Le fer contribue à la formation normale des globules rouges et à réduire la "
+            "fatigue ; corriger un manque est souvent la clé d'une chute chez les femmes. Le "
+            "fer bisglycinate est en général mieux toléré.",
+            "La durée fixée par votre médecin (souvent 3 mois), avec un nouveau dosage ensuite.",
+            ["divers-fer-bisglycinate"]))
+    if "carence_vitd" in a.sante:
+        cures.insert(0, Cure(
+            "Vitamine D, après dosage",
+            "La vitamine D contribue au fonctionnement normal du système immunitaire. Un "
+            "manque est fréquent en hiver.",
+            "La dose et la durée indiquées par votre médecin.", ["divers-vitamine-d3"]))
+    if {"carence_autre", "regime"} & set(a.sante):
+        cures.append(Cure(
+            "Zinc",
+            "Le zinc contribue au maintien de cheveux et d'ongles normaux. Ne le cumulez pas "
+            "avec une cure fortifiante qui en contient déjà.",
+            "2 à 3 mois.", ["divers-zinc"]))
     message = AVERTISSEMENT_CURE
+    notes = [f.note_cure for f in facteurs if f.note_cure]
+    if {"fatigue", "regles_abondantes"} & set(a.sante) and "carence_fer" not in a.sante:
+        notes.append("Fatigue ou règles abondantes : faites doser votre ferritine avant de "
+                     "prendre du fer.")
+    if notes:
+        message = " ".join(notes) + " " + message
     if "post_partum" in a.periodes:
         message = ("Si vous allaitez, demandez l'avis de votre médecin ou de votre sage-femme "
                    "avant toute cure. " + message)

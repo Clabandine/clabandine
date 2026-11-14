@@ -378,7 +378,7 @@
       const noter = (name, values) => (values || []).forEach((v) => voulues.add(name + "=" + v));
       noter("preoccupations", r.preoccupations);
       (r.preoccupations || []).forEach((p) => voulues.add(`gene_${p}=${res.intensites[p] || "beaucoup"}`));
-      ["demangeaisons_details", "specifiques", "traitements", "periodes"].forEach((q) => noter(q, r[q]));
+      ["demangeaisons_details", "specifiques", "traitements", "periodes", "sante"].forEach((q) => noter(q, r[q]));
       ["type_cheveux", "type_secondaire", "epaisseur", "densite", "porosite", "cuir_chevelu",
         "chaleur", "objectif", "age"].forEach((q) => r[q] && voulues.add(q + "=" + r[q]));
       const famille = r.type_cheveux ? r.type_cheveux[0] : r.famille;
@@ -424,7 +424,7 @@
       ["epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif", "age"].forEach((q) => {
         if (r[q]) cocher(q, r[q], { siVide: true });
       });
-      ["traitements", "periodes"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
+      ["traitements", "periodes", "sante"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
       updateDependants();
 
       afficherResume(res);

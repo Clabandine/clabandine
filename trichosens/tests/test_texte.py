@@ -131,7 +131,7 @@ def extraction(**kw):
     base = dict(preoccupations=[], demangeaisons_details=[], type_cheveux=None, famille=None,
                 type_secondaire=None, epaisseur=None, densite=None, porosite=None,
                 cuir_chevelu=None, traitements=[], chaleur=None, objectif=None, periodes=[],
-                age=None, specifiques=[], metisse=False)
+                age=None, specifiques=[], sante=[], metisse=False)
     return ExtractionIA(**{**base, **kw})
 
 

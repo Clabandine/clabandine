@@ -14,7 +14,7 @@ import datetime as dt
 import uuid
 from dataclasses import dataclass, field
 
-from . import naturel, profil, seasons
+from . import naturel, profil, sante, seasons
 from .reminders import jours_suggeres
 from .catalog import Product, load_catalog
 from .evolution import Evolution, ResumeSuivi, compare
@@ -140,6 +140,8 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None,
         add(TYPE_POINTS[sec.code], part)
     for sid in a.specifiques:
         add(SPECIFICITES[sid].points)
+    for pts in sante.points(a):
+        add(pts)
     for did in a.demangeaisons_details:
         add(DETAILS_DEMANGEAISONS[did].points)
     if saison:
@@ -219,6 +221,8 @@ class Diagnostic:
     specifiques: list[dict] = field(default_factory=list)
     # Fiabilité : score sur 100, niveau, ce qui l'améliorerait, réponses à vérifier.
     fiabilite: dict = field(default_factory=dict)
+    # Santé : facteurs, professionnels à consulter, examens à demander.
+    orientation: dict = field(default_factory=dict)
     # Alternatives naturelles : recettes maison, cures et gestes du quotidien.
     recettes: list[dict] = field(default_factory=list)
     cures: list[dict] = field(default_factory=list)
@@ -240,6 +244,7 @@ class Diagnostic:
             "type_secondaire": self.type_secondaire.code if self.type_secondaire else None,
             "specifiques": self.specifiques,
             "fiabilite": self.fiabilite,
+            "orientation": self.orientation,
             "recettes": [
                 {"id": r["recette"].id, "titre": r["recette"].titre,
                  "remplace": r["recette"].categorie,
@@ -972,6 +977,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         cures_message=cures_message,
         conseils_naturels=naturel.conseils_naturels(a),
         fiabilite=fiabilite(a, photo),
+        orientation=sante.orientation(a),
     )
     d.suivi = resume_suivi(d, a, today)
     return d

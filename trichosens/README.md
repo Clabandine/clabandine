@@ -27,7 +27,18 @@ personnalisé, qui réunit diagnostic, accompagnement, e-commerce et, à terme, 
 4. **Indice de fiabilité** sur le résultat (élevée, bonne, à préciser) : il baisse quand un
    test n'est pas fait ou quand des réponses semblent se contredire, et dit quoi vérifier
    (`fiabilite` dans `app/engine.py`). Il est aussi transmis avec les avis des testeuses.
-5. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
+5. **Santé et cheveux** (facultatif, `app/sante.py`) : problèmes connus (manque de fer,
+   de vitamine D ou autre carence, thyroïde, SOPK, pelade, autre maladie auto-immune,
+   psoriasis ou eczéma du cuir chevelu, régime strict, fièvre ou opération récente,
+   chimiothérapie) et signes remarqués (fatigue, règles abondantes, chute par plaques ou
+   brutale, signes hormonaux ou thyroïdiens). Le résultat explique leur effet sur les
+   cheveux, dit **qui consulter** (généraliste, dermatologue, gynécologue, endocrinologue)
+   et quels examens évoquer. Ces réponses restent sur l'appareil et ne partent jamais avec
+   les avis.
+6. **Onglet « 💊 Compléments »** : cures adaptées (fortifiante, levure de bière, zinc, et
+   fer ou vitamine D seulement sur avis médical), avec liens affiliés, et messages de
+   prudence (grossesse, allaitement, traitement, chimiothérapie, biotine et thyroïde).
+7. **Analyse photo par IA (facultative)** : l'IA (Claude, d'Anthropic) reconnaît le type
    de cheveux et les signes visibles, et pré-remplit les réponses. La photo n'est jamais
    enregistrée.
 3. **Vos cheveux au fil du temps (facultatif)** : âge, période de vie (cycle, grossesse,
@@ -268,6 +279,7 @@ trichosens/
 │   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
 │   ├── texte.py           # Pré-remplissage à partir d'une description libre
+│   ├── sante.py           # Santé et cheveux : carences, maladies, signes, orientation
 │   ├── naturel.py         # Recettes maison, cures de compléments, gestes naturels
 │   ├── specifiques.py     # Situations propres à chaque type, démangeaisons, aide pour trouver son type
 │   ├── photo.py           # Analyse photo par l'IA (Claude)

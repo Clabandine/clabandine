@@ -803,3 +803,7 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .texte-boutons { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 4px; }
 .texte-boutons .button { flex: 1 1 130px; }
 .text-badge.valide { background: var(--success); }
+.orientation { border-left: 5px solid var(--accent); background: linear-gradient(0deg, var(--surface), var(--surface)), var(--surface); }
+.orientation .specialistes { padding-left: 18px; margin: 0 0 10px; }
+.orientation .specialistes li { margin-bottom: 6px; }
+.q-sante .sub-label { margin-top: 14px; }

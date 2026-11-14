@@ -23,6 +23,7 @@ from . import photo as photo_ai
 from .pain_points import INTENSITES, PAIN_POINTS
 from .profil import AGES, PERIODES
 from .questionnaire import QUESTIONS_BY_ID
+from .sante import FACTEURS
 from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
 log = logging.getLogger(__name__)
@@ -183,6 +184,24 @@ DETAILS = {
                      r"avant (le|mon) (lavage|shampo)",
     "plaques": r"croute|plaques? (epaisses?|rouges?)|saign|zones? sans cheveux",
 }
+SANTE = {
+    "carence_fer": r"anemi|carence (en|de) fer|manque de fer|ferritine",
+    "carence_vitd": r"(carence|manque) (en |de )?vitamine d|vitamine d (basse|faible)",
+    "carence_autre": r"(carence|manque) (en |de )?(b12|zinc|proteine)",
+    "thyroide": r"thyro|hashimoto|basedow",
+    "sopk": r"\bsopk\b|ovaires? polykystique",
+    "pelade": r"pelade|alopecie areata",
+    "auto_immune": r"\blupus\b|maladie c(o|oe)liaque|auto.?immune",
+    "dermato": r"psoriasis|eczema|dermite|dermatite",
+    "regime": r"\bregime\b|perdu (beaucoup de |\d+ ?k)|perte de poids|anorex|boulimi",
+    "maladie_recente": r"\bcovid|forte fievre|operation|opere|hospitalis",
+    "chimio": r"chimio|radiotherap",
+    "regles_abondantes": r"regles (tres )?abondantes|regles hemorrag",
+    "chute_plaques": r"(chute|perte|trous?) (de cheveux )?par plaques|plaques? sans cheveux",
+    "chute_brutale": r"par poignees|chute (brutale|soudaine|massive)|perds (mes cheveux )?par poignees",
+    "signes_hormonaux": r"poils? (au|sur le) (visage|menton)|regles irregulieres",
+}
+
 SPECIFIQUES = {
     "racines_grasses": r"racines? grasses? (des |au )?(le )?lendemain|regraiss",
     "plats_racine": r"plats? (a|aux) racines?|pas de volume (a|aux) racines?|colles? au crane",
@@ -272,6 +291,7 @@ def extraire_regles(texte: str) -> dict:
     plusieurs(TRAITEMENTS, "traitements")
     plusieurs(PERIODES_MOTS, "periodes")
     plusieurs(SPECIFIQUES, "specifiques")
+    plusieurs(SANTE, "sante")
     if {"pellicules", "demangeaisons"} & set(reponses.get("preoccupations", [])):
         plusieurs(DETAILS, "demangeaisons_details")
 
@@ -337,6 +357,8 @@ class ExtractionIA(BaseModel):
     periodes: list[Literal[tuple(k for k in PERIODES if k != "aucune")]]
     age: Literal[tuple(k for k in AGES if k != "nc")] | None
     specifiques: list[Literal[tuple(SPECIFICITES)]]
+    sante: list[Literal[tuple(k for k in FACTEURS if k != "aucun")]] = Field(
+        description="Problèmes de santé, carences ou signes cités (fer, thyroïde, SOPK…).")
     metisse: bool = Field(description="La personne dit avoir des cheveux métissés.")
 
 
@@ -352,6 +374,7 @@ def _guide() -> str:
         q = QUESTIONS_BY_ID[qid]
         lignes.append(f"{q.label} " + "; ".join(f"{o.value} = {o.label}" for o in q.options))
     lignes.append("Périodes : " + "; ".join(f"{k} = {v[0]}" for k, v in PERIODES.items()))
+    lignes.append("Santé : " + "; ".join(f"{f.id} = {f.label}" for f in FACTEURS.values()))
     return "\n".join(lignes)
 
 
@@ -400,7 +423,7 @@ def extraire_ia(texte: str, client: anthropic.Anthropic | None = None) -> dict:
     reponses: dict = {}
     if genes:
         reponses["preoccupations"] = genes
-    for champ in ("demangeaisons_details", "traitements", "periodes", "specifiques"):
+    for champ in ("demangeaisons_details", "traitements", "periodes", "specifiques", "sante"):
         if getattr(r, champ):
             reponses[champ] = list(dict.fromkeys(getattr(r, champ)))
     for champ in ("type_cheveux", "famille", "type_secondaire", "epaisseur", "densite",
@@ -453,6 +476,7 @@ def resume(resultat: dict) -> list[str]:
     items += [_label("demangeaisons_details", v) for v in r.get("demangeaisons_details", [])]
     items += [SPECIFICITES[v].label for v in r.get("specifiques", [])]
     items += [PERIODES[v][0] for v in r.get("periodes", [])]
+    items += [FACTEURS[v].label for v in r.get("sante", [])]
     if r.get("objectif"):
         items.append(f"objectif : {_label('objectif', r['objectif']).lower()}")
     return items
