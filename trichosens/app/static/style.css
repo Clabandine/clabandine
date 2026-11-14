@@ -844,3 +844,67 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .progress-text #step-name { display: none; }
 .progress-text { justify-content: center; }
 .wizard .question, .wizard .home-test { scroll-margin-top: 150px; }
+
+/* --- Diagnostic compact : voir plus de réponses sans faire défiler ------------------- */
+.page-diagnostic .progress { padding: 6px 0 8px; margin-bottom: 4px; }
+.page-diagnostic .step-head { margin: 4px 0 10px; gap: 10px; align-items: center; }
+.page-diagnostic .step-head .step-icon { width: 38px; height: 38px; padding: 7px; }
+.page-diagnostic .step-head h2 { font-size: 1.15rem; margin-bottom: 2px; }
+.page-diagnostic .step-intro { font-size: .84rem; margin: 0; line-height: 1.4; }
+.page-diagnostic .question { padding: 14px; margin-bottom: 12px; }
+.page-diagnostic .question legend { font-size: .98rem; margin-bottom: 4px; }
+.page-diagnostic .question .help { font-size: .8rem; margin: 0 0 8px; line-height: 1.4; }
+.page-diagnostic .options { gap: 6px; }
+.page-diagnostic .option { padding: 8px 10px; gap: 10px; font-size: .9rem; line-height: 1.3; }
+.page-diagnostic .option input { margin-top: 2px; }
+.page-diagnostic .option-text small { font-size: .76rem; line-height: 1.3; margin-top: 1px; }
+.page-diagnostic .pains { gap: 6px; }
+.page-diagnostic .pain-head { padding: 8px 10px; gap: 10px; font-size: .9rem; line-height: 1.3; }
+.page-diagnostic .pain-head input { margin-top: 1px; }
+.page-diagnostic .pain-head small { font-size: .76rem; line-height: 1.3; }
+.page-diagnostic .intensity { padding: 0 10px 10px 38px; gap: 5px; }
+.page-diagnostic .intensity-label { font-size: .78rem; }
+.page-diagnostic .chip span { padding: 4px 11px; font-size: .84rem; }
+.page-diagnostic .sub-label { margin: 4px 0 6px; font-size: .88rem; }
+.page-diagnostic .home-test { margin-top: 8px; }
+.page-diagnostic .home-test summary { padding: 8px 12px; font-size: .86rem; }
+.page-diagnostic .type-helper summary { padding: 9px 12px; font-size: .9rem; }
+.page-diagnostic .type-helper { margin: 10px 0; }
+.page-diagnostic .prenom-box, .page-diagnostic .texte-box { padding: 14px; margin-bottom: 12px; }
+.page-diagnostic .group-title { margin: 10px 0 6px; }
+
+/* Photos : 3 par ligne sur téléphone, avec un texte plus petit. */
+@media (max-width: 640px) {
+  .page-diagnostic .options.visual { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .page-diagnostic .families .options.visual { grid-template-columns: repeat(4, 1fr); }
+  .page-diagnostic .q-porosite .options.visual { grid-template-columns: repeat(2, 1fr); }
+  .page-diagnostic .options.visual .option { padding: 4px; gap: 4px; border-radius: 12px; }
+  .page-diagnostic .options.visual .option img { border-radius: 8px; }
+  .page-diagnostic .options.visual .option input { top: 8px; left: 8px; width: 16px; height: 16px; }
+  .page-diagnostic .options.visual .option-text { padding: 0 2px 3px; }
+  .page-diagnostic .options.visual .option-text strong { font-size: .8rem; line-height: 1.2; }
+  .page-diagnostic .options.visual .option-text small { font-size: .68rem; line-height: 1.25; }
+  .page-diagnostic .families .options.visual .option-text small { display: none; }
+  .page-diagnostic .options.visual .ai-badge, .page-diagnostic .options.visual .text-badge,
+  .page-diagnostic .options.visual .test-badge { font-size: .62rem; padding: 1px 6px; }
+  .page-diagnostic .wizard .step-nav { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); margin-top: 8px; }
+  .page-diagnostic .wizard .step-nav .button { padding: 11px 16px; font-size: .92rem; }
+  .page-diagnostic .q-specifiques .options { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  /* Gênes : 2 par ligne, le nom suffit (l'explication détaillée vient dans le résultat). */
+  .page-diagnostic .pains { grid-template-columns: repeat(2, 1fr); }
+  .page-diagnostic .pain-head small { display: none; }
+  .page-diagnostic .pain-head { align-items: center; min-height: 44px; }
+  .page-diagnostic .pain:has(input[type="checkbox"]:checked) { grid-column: 1 / -1; }
+  .page-diagnostic .intensity { padding-left: 10px; }
+  /* Réponses courtes : 2 par ligne. */
+  .page-diagnostic .question:not(.q-specifiques):not(.q-demangeaisons_details) .options:not(.visual):not(.compact) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .page-diagnostic .options:not(.visual) .option { align-items: center; min-height: 44px; }
+}
+@media (max-width: 640px) {
+  .page-diagnostic .options.visual .option img { aspect-ratio: 4 / 3; }
+  .page-diagnostic .families .options.visual .option img { aspect-ratio: 1; }
+}
