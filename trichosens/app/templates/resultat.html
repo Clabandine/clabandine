@@ -41,6 +41,7 @@
   <button role="tab" id="tab-routine" aria-controls="panel-routine" data-tab="routine">Routine</button>
   <button role="tab" id="tab-produits" aria-controls="panel-produits" data-tab="produits">Produits <span class="count">{{ ns.produits | length }}</span></button>
   <button role="tab" id="tab-naturel" aria-controls="panel-naturel" data-tab="naturel">🌿 Naturel</button>
+  <button role="tab" id="tab-complements" aria-controls="panel-complements" data-tab="complements">💊 Compléments</button>
   <button role="tab" id="tab-conseils" aria-controls="panel-conseils" data-tab="conseils">Conseils</button>
   <button role="tab" id="tab-suivi" aria-controls="panel-suivi" data-tab="suivi">Suivi &amp; rappels</button>
 </nav>
@@ -75,6 +76,27 @@
     {% elif not f.a_verifier %}
     <p class="help">Vos réponses sont complètes et cohérentes.</p>
     {% endif %}
+  </div>
+  {% endif %}
+
+  {% set o = d.orientation %}
+  {% if o and (o.specialistes or o.facteurs) %}
+  <div class="card orientation">
+    <h3>🩺 Parlez-en à un professionnel de santé</h3>
+    {% if o.facteurs %}
+    <ul class="tips">{% for f in o.facteurs %}<li><strong>{{ f.label }} :</strong> {{ f.explication }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if o.specialistes %}
+    <h4>Qui consulter</h4>
+    <ul class="specialistes">
+      {% for sp in o.specialistes %}<li><strong>{{ sp.nom }}</strong> : pour {{ sp.raisons | join(', ') }}.</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if o.bilan %}
+    <p class="key-tip">🧾 Examens que vous pouvez évoquer avec votre médecin : {{ o.bilan | join(', ') }}.</p>
+    {% endif %}
+    <p class="help">TrichoSens ne pose pas de diagnostic médical : seul un professionnel de santé peut confirmer
+      une carence ou une maladie et vous proposer un traitement.</p>
   </div>
   {% endif %}
 
@@ -320,7 +342,7 @@
 {% endmacro %}
 <section class="tab-panel" id="panel-naturel" role="tabpanel" aria-labelledby="tab-naturel">
   <h2 class="panel-title">Les alternatives naturelles</h2>
-  <p class="lead small-lead">Pour celles qui préfèrent le fait maison, les ingrédients bruts ou un coup de pouce de l'intérieur.</p>
+  <p class="lead small-lead">Pour celles qui préfèrent le fait maison et les ingrédients bruts.</p>
 
   {% if d.recettes %}
   <h3 class="moment">Vos recettes maison</h3>
@@ -346,8 +368,23 @@
   </div>
   {% endif %}
 
-  {% if d.cures or d.cures_message %}
-  <h3 class="moment">Cures et compléments</h3>
+  <h3 class="moment">Au naturel, chaque jour</h3>
+  <ul class="tip-cards">{% for c in d.conseils_naturels %}<li>{{ c }}</li>{% endfor %}</ul>
+
+  <p class="help legal">Recettes à base d'ingrédients courants : faites un test sur une petite zone avant la
+    première utilisation. Certains liens sont des liens affiliés : TrichoSens peut toucher une commission,
+    sans surcoût pour vous. En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
+    remplissant les conditions requises.</p>
+  <div class="panel-next"><button type="button" class="button" data-goto="complements">Compléments alimentaires →</button></div>
+</section>
+
+{# ------------------------------------------------------------- Compléments #}
+<section class="tab-panel" id="panel-complements" role="tabpanel" aria-labelledby="tab-complements">
+  <h2 class="panel-title">Compléments alimentaires</h2>
+  {% if d.orientation.specialistes %}
+  <p class="note">🩺 Vos réponses évoquent un point de santé : parlez-en d'abord à un professionnel
+    (voir « Synthèse »). Un complément ne remplace pas un traitement.</p>
+  {% endif %}
   {% for c in d.cures %}
   <div class="card cure">
     <h4>{{ c.cure.titre }}</h4>
@@ -360,16 +397,12 @@
     </ul>
   </div>
   {% endfor %}
-  {% if d.cures_message %}<p class="note">{{ d.cures_message }}</p>{% endif %}
-  {% endif %}
-
-  <h3 class="moment">Au naturel, chaque jour</h3>
-  <ul class="tip-cards">{% for c in d.conseils_naturels %}<li>{{ c }}</li>{% endfor %}</ul>
-
-  <p class="help legal">Recettes à base d'ingrédients courants : faites un test sur une petite zone avant la
-    première utilisation. Certains liens sont des liens affiliés : TrichoSens peut toucher une commission,
-    sans surcoût pour vous. En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
-    remplissant les conditions requises.</p>
+  {% if d.cures_message %}<p class="note">{{ d.cures_message }}</p>
+  {% elif not d.cures %}<p class="note">D'après vos réponses, aucune cure n'est nécessaire : une alimentation
+    variée (voir l'onglet « Naturel ») apporte à vos cheveux ce dont ils ont besoin.</p>{% endif %}
+  <p class="help legal">Les compléments alimentaires ne sont pas des médicaments. Certains liens sont des liens
+    affiliés : TrichoSens peut toucher une commission, sans surcoût pour vous. En tant que Partenaire Amazon,
+    TrichoSens réalise un bénéfice sur les achats remplissant les conditions requises.</p>
   <div class="panel-next"><button type="button" class="button" data-goto="conseils">Voir nos conseils →</button></div>
 </section>
 

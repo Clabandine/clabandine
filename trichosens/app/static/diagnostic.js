@@ -16,7 +16,26 @@
   form.classList.add("wizard");
   document.getElementById("step-total").textContent = panels.length;
 
-  const stepper = Array.from(document.querySelectorAll(".stepper li"));
+  const phases = Array.from(document.querySelectorAll(".phases-bar li"));
+  const diagHead = document.querySelector(".diag-head");
+  const tempsRestant = document.getElementById("temps-restant");
+
+  function majProgression(index) {
+    // Remplissage de chaque grande partie (Vous, Vos cheveux, Vos habitudes).
+    phases.forEach((li) => {
+      const etapes = panels.filter((p) => p.dataset.phase === li.dataset.phase);
+      const faites = etapes.filter((p) => panels.indexOf(p) < index).length;
+      const encours = etapes.includes(panels[index]) ? 0.5 : 0;
+      li.querySelector(".phase-fill").style.width = (etapes.length ? ((faites + encours) / etapes.length) * 100 : 0) + "%";
+      li.classList.toggle("current", etapes.includes(panels[index]));
+      li.classList.toggle("done", etapes.length > 0 && faites === etapes.length);
+    });
+    // Temps restant estimé à partir de la durée moyenne des étapes suivantes.
+    const secondes = panels.slice(index).reduce((t, p) => t + Number(p.dataset.duree || 30), 0);
+    const minutes = Math.round(secondes / 60);
+    tempsRestant.textContent = index === panels.length - 1 ? "Dernière étape !"
+      : secondes < 50 ? "Moins d'une minute" : `Environ ${Math.max(1, minutes)} min`;
+  }
 
   function show(index) {
     const forward = index >= current;
@@ -29,15 +48,25 @@
         p.classList.add(forward ? "enter-right" : "enter-left");
       }
     });
-    stepper.forEach((li, i) => {
-      li.classList.toggle("done", i < index);
-      li.classList.toggle("current", i === index);
-    });
-    submit.hidden = index !== panels.length - 1;
+    majProgression(index);
+    if (diagHead) diagHead.hidden = index !== 0;
+    submit.hidden = true; // le bouton final est dans la dernière étape
+    personnaliser(panels[index]);
     document.getElementById("step-num").textContent = index + 1;
     document.getElementById("step-name").textContent = panels[index].dataset.title;
     document.getElementById("progress-fill").style.width = ((index + 1) / panels.length) * 100 + "%";
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Petite touche personnelle : le prénom dans le titre de l'étape suivante.
+  const titresOrigine = new Map(panels.map((p) => [p, p.querySelector(".step-head h2").textContent]));
+  function personnaliser(panel) {
+    const prenomInput = document.getElementById("prenom");
+    const prenom = prenomInput ? prenomInput.value.trim().split(/\s+/)[0] : "";
+    const h2 = panel.querySelector(".step-head h2");
+    if (panel.dataset.step === "description") {
+      h2.textContent = prenom ? `${prenom}, racontez-nous vos cheveux` : titresOrigine.get(panel);
+    }
   }
 
   function setError(container, message) {
@@ -99,7 +128,10 @@
       return;
     }
     submit.disabled = true;
-    submit.textContent = "Préparation de votre diagnostic…";
+    form.querySelectorAll(".submit-wizard").forEach((b) => {
+      b.disabled = true;
+      b.textContent = "Préparation de votre diagnostic…";
+    });
     // Écran d'attente animé pendant le calcul du résultat.
     const screen = document.getElementById("loading-screen");
     if (screen) {
@@ -117,6 +149,33 @@
     const q = e.target.closest(".question");
     if (q && q.classList.contains("has-error")) validatePanel(q.closest(".step-panel"));
   });
+
+  // Après une réponse à choix unique, on descend doucement vers la question suivante.
+  const SANS_DEFILEMENT = new Set(["famille", "type_cheveux", "type_secondaire"]);
+  form.addEventListener("change", (e) => {
+    const t = e.target;
+    if (!e.isTrusted || t.type !== "radio" || t.name.startsWith("gene_") || SANS_DEFILEMENT.has(t.name)) return;
+    const q = t.closest(".question");
+    if (!q) return;
+    let suivante = q.nextElementSibling;
+    while (suivante && (!suivante.matches(".question") || suivante.hidden)) {
+      if (suivante.matches(".step-nav")) break;
+      suivante = suivante.nextElementSibling;
+    }
+    setTimeout(() => {
+      if (suivante && suivante.matches(".question")) suivante.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (suivante) suivante.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 300);
+  });
+
+  // « Passer cette étape » devient « Suivant » dès qu'il y a une réponse.
+  const description = document.getElementById("description");
+  if (description) {
+    const bouton = description.closest(".step-panel").querySelector("[data-passer]");
+    description.addEventListener("input", () => {
+      if (bouton) bouton.textContent = description.value.trim() ? "Suivant →" : "Passer cette étape →";
+    });
+  }
 
   // Au maximum N choix pour les questions à choix multiples limités.
   form.querySelectorAll(".question[data-max]").forEach((q) => {
@@ -366,6 +425,10 @@
         }
       });
       if (suggerees.has(cle(e.target))) { suggerees.delete(cle(e.target)); demarquer(e.target); }
+      form.querySelectorAll(`input[name="${e.target.name}"]`).forEach((i) => {
+        const badge = !i.checked && i.closest(".pain, .option") && i.closest(".pain, .option").querySelector(".text-badge.valide");
+        if (badge) badge.remove();
+      });
     });
 
     function appliquer(res) {
@@ -374,7 +437,7 @@
       const noter = (name, values) => (values || []).forEach((v) => voulues.add(name + "=" + v));
       noter("preoccupations", r.preoccupations);
       (r.preoccupations || []).forEach((p) => voulues.add(`gene_${p}=${res.intensites[p] || "beaucoup"}`));
-      ["demangeaisons_details", "specifiques", "traitements", "periodes"].forEach((q) => noter(q, r[q]));
+      ["demangeaisons_details", "specifiques", "traitements", "periodes", "sante"].forEach((q) => noter(q, r[q]));
       ["type_cheveux", "type_secondaire", "epaisseur", "densite", "porosite", "cuir_chevelu",
         "chaleur", "objectif", "age"].forEach((q) => r[q] && voulues.add(q + "=" + r[q]));
       const famille = r.type_cheveux ? r.type_cheveux[0] : r.famille;
@@ -420,7 +483,7 @@
       ["epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif", "age"].forEach((q) => {
         if (r[q]) cocher(q, r[q], { siVide: true });
       });
-      ["traitements", "periodes"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
+      ["traitements", "periodes", "sante"].forEach((q) => (r[q] || []).forEach((v) => cocher(q, v)));
       updateDependants();
 
       afficherResume(res);
@@ -452,8 +515,36 @@
         : '<p class="texte-disclaimer">✍️ <strong>D’après votre texte, nous avons pré-coché quelques réponses.</strong> ' +
           "Confirmez-les, modifiez-les ou cochez-en d'autres à chaque étape.</p>" +
           '<div class="chips">' + items.map((x) => `<span class="chip static">${escapeHtml(x)}</span>`).join("") + "</div>" +
+          '<div class="texte-boutons">' +
+          '<button type="button" class="button small" data-texte-valider>✓ Valider</button>' +
+          '<button type="button" class="button small secondary" data-texte-modifier>✎ Modifier</button>' +
+          "</div>" +
           (res.metisse ? "<p>Cheveux métissés : l'aide « Je ne suis pas sûre de mon type » de l'étape « Vos cheveux » vous aidera à préciser vos deux types.</p>" : "");
     }
+
+    // « Valider » : les réponses pré-cochées deviennent celles de la personne, puis on
+    // passe à l'étape suivante. « Modifier » : on l'emmène aux questions.
+    resumeBox.addEventListener("click", (e) => {
+      if (e.target.closest("[data-texte-valider]")) {
+        suggerees.forEach((input) => {
+          const badge = input.closest(".pain, .option") && input.closest(".pain, .option").querySelector(".text-badge");
+          if (badge) { badge.textContent = "Validé"; badge.classList.add("valide"); }
+        });
+        suggerees.clear();
+        const suite = panels[current].querySelector("[data-next]");
+        if (suite) suite.click();
+      } else if (e.target.closest("[data-texte-modifier]")) {
+        const question = panels[current].querySelector(".question:not([hidden])");
+        let aide = resumeBox.querySelector(".texte-aide");
+        if (!aide) {
+          aide = document.createElement("p");
+          aide.className = "help texte-aide";
+          resumeBox.appendChild(aide);
+        }
+        aide.textContent = "Cochez ou décochez ce que vous voulez à chaque étape, puis cliquez sur « Continuer ».";
+        if (question) question.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
 
     function analyser() {
       clearTimeout(minuteur);
@@ -619,7 +710,7 @@
       status.textContent = body.exploitable ? "Analyse terminée ✓" : "";
       render(body);
       const next = panels[current].querySelector("[data-next]");
-      if (next && body.exploitable) next.textContent = "Continuer";
+      if (next && body.exploitable) next.textContent = "Suivant →";
     } catch (err) {
       status.textContent = err.message + " Vous pouvez aussi continuer sans photo.";
     } finally {

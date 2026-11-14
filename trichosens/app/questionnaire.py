@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from .hair_types import HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .profil import AGES, PERIODES, SENSIBILITES
+from .sante import FACTEURS
 from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
 
@@ -59,19 +60,36 @@ class Step:
     id: str
     titre: str
     intro: str
+    # Grande partie du parcours : « vous », « cheveux » ou « habitudes ».
+    phase: str = "cheveux"
+    # Temps moyen pour remplir l'étape, en secondes (pour estimer le temps restant).
+    duree: int = 30
 
 
 STEPS: tuple[Step, ...] = (
+    Step("bienvenue", "Faisons connaissance",
+         "Deux questions pour personnaliser votre diagnostic. Tout est facultatif.",
+         "vous", 10),
+    Step("description", "Racontez-nous vos cheveux",
+         "Avec vos mots, comme à une coiffeuse : nous pré-remplissons le diagnostic pour vous. "
+         "Vous pouvez aussi passer cette étape.", "vous", 30),
     Step("douleurs", "Ce qui vous gêne",
-         "Commençons par l'essentiel : qu'est-ce qui vous dérange dans vos cheveux aujourd'hui ?"),
+         "Qu'est-ce qui vous dérange dans vos cheveux aujourd'hui ?", "cheveux", 30),
     Step("photo", "Votre photo",
-         "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic."),
-    Step("cheveux", "Vos cheveux", "Apprenons à connaître la nature de vos cheveux."),
+         "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic.", "cheveux", 30),
+    Step("cheveux", "Votre type de cheveux",
+         "Observez-les au naturel, après un lavage, sans coiffage.", "cheveux", 30),
+    Step("texture", "Leur texture",
+         "Épaisseur, densité, porosité : un petit test vous aide si vous hésitez.", "cheveux", 30),
     Step("vous", "Vos cheveux au fil du temps",
-         "Âge, période de vie, saisons : vos cheveux changent avec vous. Ces questions sont facultatives."),
-    Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien."),
-    Step("objectif", "Objectif et préférences", "Dernières questions !"),
+         "Période de vie, santé, saisons : vos cheveux changent avec vous. Tout est facultatif.",
+         "habitudes", 20),
+    Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien.",
+         "habitudes", 15),
+    Step("objectif", "Objectif et préférences", "Dernière étape !", "habitudes", 20),
 )
+
+PHASES_PARCOURS = {"vous": "Vous", "cheveux": "Vos cheveux", "habitudes": "Vos habitudes"}
 
 QUESTIONS: tuple[Question, ...] = (
     Question(
@@ -125,7 +143,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="epaisseur",
-        step="cheveux",
+        step="texture",
         label="Quelle est l'épaisseur d'un cheveu ?",
         help="Faites rouler un cheveu entre vos doigts : le sentez-vous à peine, ou nettement ?",
         options=(
@@ -143,7 +161,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="densite",
-        step="cheveux",
+        step="texture",
         label="Quelle est la densité de votre chevelure ?",
         help="Voit-on facilement votre cuir chevelu quand les cheveux sont secs ?",
         options=(
@@ -160,7 +178,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="porosite",
-        step="cheveux",
+        step="texture",
         label="Comment vos cheveux réagissent-ils à l'eau ?",
         help="La porosité indique la facilité avec laquelle le cheveu absorbe et garde l'hydratation.",
         options=(
@@ -188,7 +206,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="elasticite",
-        step="cheveux",
+        step="texture",
         label="Votre cheveu est-il élastique ?",
         help="Ce test dit si vos cheveux manquent plutôt d'hydratation ou de protéines.",
         required=False,
@@ -212,7 +230,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="age",
-        step="vous",
+        step="bienvenue",
         label="Quel âge avez-vous ?",
         help="Les besoins des cheveux évoluent avec l'âge.",
         required=False,
@@ -226,6 +244,17 @@ QUESTIONS: tuple[Question, ...] = (
         multiple=True,
         required=False,
         options=tuple(Option(k, label, hint) for k, (label, hint) in PERIODES.items()),
+    ),
+    Question(
+        id="sante",
+        step="vous",
+        label="Votre santé : l'un de ces points vous concerne-t-il ?",
+        help="Facultatif, plusieurs réponses possibles. Certains problèmes de santé et "
+             "carences jouent beaucoup sur les cheveux. Ces informations restent sur votre "
+             "appareil et ne sont jamais enregistrées.",
+        multiple=True,
+        required=False,
+        options=tuple(Option(f.id, f.label, f.hint, "", f.groupe) for f in FACTEURS.values()),
     ),
     Question(
         id="saisons_sensibles",
@@ -333,6 +362,7 @@ class Answers:
     budget: str = "indifferent"
     age: str = "nc"
     elasticite: str = "non_teste"
+    sante: list[str] = field(default_factory=list)
     periodes: list[str] = field(default_factory=list)
     saisons_sensibles: list[str] = field(default_factory=list)
     prenom: str = ""
@@ -429,9 +459,9 @@ def validate(raw: dict) -> Answers:
     clean["intensites"] = intensites
 
     # « Rien de particulier » / « Pas de différence » n'ont de sens que seuls.
-    for qid in ("periodes", "saisons_sensibles"):
-        if len(clean.get(qid, [])) > 1 and "aucune" in clean[qid]:
-            clean[qid] = [v for v in clean[qid] if v != "aucune"]
+    for qid, rien in (("periodes", "aucune"), ("saisons_sensibles", "aucune"), ("sante", "aucun")):
+        if len(clean.get(qid, [])) > 1 and rien in clean[qid]:
+            clean[qid] = [v for v in clean[qid] if v != rien]
 
     clean["prenom"] = nettoyer_prenom(raw.get("prenom"))
 
