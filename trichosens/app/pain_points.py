@@ -42,6 +42,8 @@ class PainPoint:
     actions: tuple[str, ...]
     a_eviter: tuple[str, ...]
     delai: str
+    # Parcours où la gêne est proposée : adulte, enfant, ado.
+    publics: tuple[str, ...] = ("adulte", "enfant", "ado")
 
 
 PAIN_POINTS: dict[str, PainPoint] = {}
@@ -281,6 +283,7 @@ _add(PainPoint(
         "Les après-shampoings appliqués sur le cuir chevelu.",
     ),
     delai="Visible dès le prochain lavage.",
+    publics=("adulte", "ado"),
 ))
 
 _add(PainPoint(
@@ -390,6 +393,53 @@ _add(PainPoint(
     ),
     a_eviter=("Les beurres et huiles épaisses près des racines.",),
     delai="Visible dès le prochain lavage.",
+    publics=("adulte", "ado"),
+))
+
+
+_add(PainPoint(
+    id="poux",
+    label="Poux ou lentes",
+    description="Ça gratte derrière les oreilles et sur la nuque, des petits points collés aux cheveux.",
+    causes=("Les poux passent d'une tête à l'autre par contact (école, activités, câlins). Ce n'est "
+            "pas une question d'hygiène : ils aiment autant les cheveux propres.",),
+    causes_profil=(
+        (lambda a: a.pour == "enfant", "Les enfants de 3 à 11 ans sont les plus touchés, à cause des "
+                                       "contacts tête contre tête."),
+        (lambda a: a.famille in {"1", "2"}, "Les poux s'accrochent plus facilement aux cheveux raides "
+                                            "et ondulés."),
+    ),
+    actions=(
+        "Demander conseil au pharmacien pour un traitement anti-poux adapté à l'âge.",
+        "Passer un peigne anti-poux mèche par mèche sur cheveux mouillés et démêlés, tous les "
+        "2 jours pendant 2 semaines.",
+        "Prévenir l'école et vérifier les têtes de toute la famille ; laver bonnets, taies et "
+        "peluches à 60 °C (ou les enfermer 48 h dans un sac).",
+    ),
+    a_eviter=(
+        "Les traitements « préventifs » à répétition et les huiles essentielles chez les petits.",
+        "Partager brosses, bonnets et élastiques.",
+    ),
+    delai="Débarrassé en 1 à 2 semaines si le peigne est passé régulièrement.",
+    publics=("enfant", "ado"),
+))
+
+_add(PainPoint(
+    id="croutes_lait",
+    label="Croûtes de lait",
+    description="Des plaques jaunâtres et grasses sur le crâne du bébé.",
+    causes=("Les croûtes de lait sont une forme de dermite séborrhéique du nourrisson, bénigne et "
+            "fréquente : la peau produit un peu trop de sébum.",),
+    causes_profil=(),
+    actions=(
+        "Le soir, appliquer une huile végétale douce (ou une crème émolliente) sur les croûtes.",
+        "Le lendemain, les décoller délicatement avec une brosse très douce, puis laver avec un "
+        "shampoing doux pour bébé.",
+        "En parler au pédiatre si elles s'étendent, rougissent ou démangent.",
+    ),
+    a_eviter=("Gratter ou arracher les croûtes avec les ongles.",),
+    delai="Elles disparaissent en quelques semaines, presque toujours avant 1 an.",
+    publics=("enfant",),
 ))
 
 

@@ -16,6 +16,7 @@ GENERALISTE = "Médecin généraliste"
 DERMATO = "Dermatologue"
 GYNECO = "Gynécologue"
 ENDOCRINO = "Endocrinologue"
+PEDIATRE = "Pédiatre ou médecin traitant"
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class Facteur:
     # Pas de cure de compléments sans avis médical.
     sans_cure: bool = False
     note_cure: str = ""
+    publics: tuple[str, ...] = ()  # vide = tous les parcours
 
 
 FACTEURS: dict[str, Facteur] = {f.id: f for f in (
@@ -84,6 +86,7 @@ FACTEURS: dict[str, Facteur] = {f.id: f for f in (
         {"cuir_chevelu": 2},
         note_cure="Une cure de compléments peut accompagner, mais ne remplace pas le "
                   "traitement du SOPK.",
+        publics=("adulte", "ado"),
     ),
     Facteur(
         "pelade", "Pelade (chute par plaques)", "Maladie auto-immune du cheveu.", "connu",
@@ -120,6 +123,7 @@ FACTEURS: dict[str, Facteur] = {f.id: f for f in (
         ((GENERALISTE, "vérifier les carences et vous accompagner"),),
         ("ferritine", "vitamine B12", "zinc"),
         {"reparation": 1, "proteines": 2},
+        publics=("adulte", "ado"),
     ),
     Facteur(
         "maladie_recente", "Forte fièvre, infection, COVID ou opération récente",
@@ -158,6 +162,7 @@ FACTEURS: dict[str, Facteur] = {f.id: f for f in (
         ((GENERALISTE, "doser la ferritine"), (GYNECO, "chercher la cause des règles "
                                                         "abondantes")),
         ("ferritine",),
+        publics=("adulte", "ado"),
     ),
     Facteur(
         "chute_plaques", "Chute par plaques rondes", "", "signe",
@@ -179,6 +184,7 @@ FACTEURS: dict[str, Facteur] = {f.id: f for f in (
         "d'hormones androgènes (comme dans le SOPK).",
         ((GYNECO, "faire un bilan hormonal"),),
         ("bilan hormonal",),
+        publics=("adulte", "ado"),
     ),
     Facteur(
         "signes_thyroide", "Frilosité, prise de poids, ongles cassants (ou palpitations)",
@@ -186,6 +192,7 @@ FACTEURS: dict[str, Facteur] = {f.id: f for f in (
         "Ces signes avec une chute de cheveux peuvent venir de la thyroïde.",
         ((GENERALISTE, "doser la TSH"),),
         ("TSH",),
+        publics=("adulte", "ado"),
     ),
     Facteur("aucun", "Rien de tout cela", "", "connu", ""),
 )}
@@ -221,7 +228,13 @@ def orientation(a: "Answers") -> dict:
     if "plaques" in a.demangeaisons_details:
         _ajouter(specialistes, DERMATO, "examiner les plaques du cuir chevelu")
 
-    ordre = [GENERALISTE, DERMATO, GYNECO, ENDOCRINO]
+    if a.pour == "enfant" and ("chute" in a.preoccupations
+                               or {"chute_plaques", "chute_brutale"} & set(a.sante)):
+        _ajouter(specialistes, GENERALISTE, "examiner une chute de cheveux chez l'enfant")
+        _ajouter(specialistes, DERMATO, "chercher une teigne ou une pelade")
+    if a.pour != "adulte" and GENERALISTE in specialistes:
+        specialistes = {(PEDIATRE if n == GENERALISTE else n): r for n, r in specialistes.items()}
+    ordre = [PEDIATRE, GENERALISTE, DERMATO, GYNECO, ENDOCRINO]
     return {
         "facteurs": [{"id": f.id, "label": f.label, "explication": f.explication}
                      for f in facteurs],

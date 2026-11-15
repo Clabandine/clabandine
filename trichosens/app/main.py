@@ -128,8 +128,10 @@ def _form_context(answers: dict, errors: dict) -> dict:
 
 
 @app.get("/diagnostic", response_class=HTMLResponse)
-def diagnostic_form(request: Request):
-    return templates.TemplateResponse(request, "diagnostic.html", _form_context({}, {}))
+def diagnostic_form(request: Request, pour: str = ""):
+    # /diagnostic?pour=enfant ou ?pour=ado ouvre directement le bon parcours.
+    answers = {"pour": pour} if pour in {"adulte", "enfant", "ado"} else {}
+    return templates.TemplateResponse(request, "diagnostic.html", _form_context(answers, {}))
 
 
 def _parse_photo(raw: str | None) -> photo_ai.AnalysePhoto | None:
@@ -307,9 +309,11 @@ def api_questions():
                 "options": [
                     {"value": o.value, "label": o.label, "hint": o.hint,
                      "image": visuel(o.visuel) if o.visuel else None,
-                     "famille": o.groupe or None}
+                     "famille": o.groupe or None, "publics": list(o.publics) or None}
                     for o in q.options
                 ],
+                "publics": list(q.publics),
+                "label_enfant": q.label_enfant or None,
             }
             for q in QUESTIONS
         ],

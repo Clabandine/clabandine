@@ -56,10 +56,11 @@
 {% macro question_block(q, num) %}
 {% set current = answers.get(q.id) %}
 <fieldset class="question q-{{ q.id }}{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
+          {% if q.publics | length < 3 %}data-publics="{{ q.publics | join(' ') }}"{% endif %}
           {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons pellicules"{% endif %}
           data-required="{{ 'true' if q.required else 'false' }}"
           {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
-  <legend>{{ q.label }}</legend>
+  <legend><span class="lbl-std">{{ q.label }}</span>{% if q.label_enfant %}<span class="lbl-enfant">{{ q.label_enfant }}</span>{% endif %}</legend>
   {% if q.help %}<p class="help">{{ q.help }}</p>{% endif %}
   <p class="error" {% if not errors.get(q.id) %}hidden{% endif %}>{{ errors.get(q.id, '') }}</p>
 
@@ -68,7 +69,7 @@
     {% for o in q.options %}
     {% set checked = current and o.value in current %}
     {% set gene = (answers.get('intensites') or {}).get(o.value) %}
-    <div class="pain{% if errors.get('gene_' ~ o.value) %} has-error{% endif %}">
+    <div class="pain{% if errors.get('gene_' ~ o.value) %} has-error{% endif %}"{% if o.publics %} data-publics="{{ o.publics | join(' ') }}"{% endif %}>
       <label class="pain-head">
         <input type="checkbox" name="preoccupations" value="{{ o.value }}" {% if checked %}checked{% endif %}>
         <span><strong>{{ o.label }}</strong><small>{{ o.hint }}</small></span>
@@ -132,7 +133,7 @@
   <div class="options">
     {% for o in q.options if o.groupe == groupe %}
     {% set checked = current and o.value in current %}
-    <label class="option" data-value="{{ o.value }}">
+    <label class="option" data-value="{{ o.value }}"{% if o.publics %} data-publics="{{ o.publics | join(' ') }}"{% endif %}>
       <input type="checkbox" name="{{ q.id }}" value="{{ o.value }}" {% if checked %}checked{% endif %}>
       <span class="option-text"><strong>{{ o.label }}</strong>{% if o.hint %}<small>{{ o.hint }}</small>{% endif %}</span>
     </label>
@@ -140,10 +141,22 @@
   </div>
   {% endfor %}
 
-  {% elif q.id == 'age' %}
+  {% elif q.id == 'pour' %}
+  {% set pour_icones = {'adulte': '🙋‍♀️', 'enfant': '🧒', 'ado': '🧑‍🎓'} %}
+  <div class="pour-cards">
+    {% for o in q.options %}
+    <label class="pour-card">
+      <input type="radio" name="pour" value="{{ o.value }}" {% if (current or 'adulte') == o.value %}checked{% endif %}>
+      <span class="pour-icone" aria-hidden="true">{{ pour_icones[o.value] }}</span>
+      <strong>{{ o.label }}</strong><small>{{ o.hint }}</small>
+    </label>
+    {% endfor %}
+  </div>
+
+  {% elif q.id in ('age', 'age_jeune') %}
   <div class="chips-select" role="radiogroup" aria-label="{{ q.label }}">
     {% for o in q.options %}
-    <label class="chip{% if o.value == 'nc' %} wide{% endif %}">
+    <label class="chip{% if o.value == 'nc' %} wide{% endif %}"{% if o.publics %} data-publics="{{ o.publics | join(' ') }}"{% endif %}>
       <input type="radio" name="{{ q.id }}" value="{{ o.value }}" {% if current == o.value %}checked{% endif %}>
       <span>{{ o.label }}</span>
     </label>
@@ -172,7 +185,7 @@
     {% else %}
       {% set checked = current == o.value %}
     {% endif %}
-    <label class="option" data-value="{{ o.value }}"{% if q.id == 'specifiques' %} data-familles="{{ o.groupe }}"{% endif %}>
+    <label class="option" data-value="{{ o.value }}"{% if q.id == 'specifiques' %} data-familles="{{ o.groupe }}"{% endif %}{% if o.publics %} data-publics="{{ o.publics | join(' ') }}"{% endif %}>
       <input type="{{ 'checkbox' if q.multiple else 'radio' }}" name="{{ q.id }}" value="{{ o.value }}"
              {% if checked %}checked{% endif %}>
       {% if o.visuel %}<img src="{{ visuel(o.visuel) }}" alt="" loading="lazy" width="240" height="240">{% endif %}
@@ -225,25 +238,16 @@
   {% set ns = namespace(num=0) %}
   {% for s in steps %}
   {% if s.id != 'photo' or photo_active %}
-  <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}" data-phase="{{ s.phase }}" data-duree="{{ s.duree }}">
+  <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}" data-phase="{{ s.phase }}" data-duree="{{ s.duree }}"
+           {% if s.publics | length < 3 %}data-publics="{{ s.publics | join(' ') }}"{% endif %}>
     <div class="step-head">
       <svg class="step-icon" viewBox="0 0 48 48" aria-hidden="true">{{ icones[s.id] | safe }}</svg>
       <div>
-        <h2>{{ s.titre }}</h2>
-        <p class="step-intro">{{ s.intro }}</p>
+        <h2 data-titre="{{ s.titre }}" data-titre-enfant="{{ s.titre_enfant or s.titre }}">{{ s.titre }}</h2>
+        <p class="step-intro" data-intro="{{ s.intro }}" data-intro-enfant="{{ s.intro_enfant or s.intro }}">{{ s.intro }}</p>
       </div>
     </div>
 
-    {% if s.id == 'bienvenue' %}
-    <div class="prenom-box intro-card">
-      <label for="prenom"><span>Comment vous appelez-vous ? <small>(facultatif)</small></span>
-        <input type="text" id="prenom" name="prenom" maxlength="30" autocomplete="given-name"
-               placeholder="Votre prénom" value="{{ answers.get('prenom') or '' }}">
-      </label>
-      <p class="help">Il sert seulement à personnaliser votre résultat et n'est pas enregistré sur nos serveurs.</p>
-    </div>
-
-    {% endif %}
 
     {% if s.id == 'description' %}
     <div class="texte-box js-only" hidden>
@@ -295,6 +299,16 @@
 
     {% for q in questions if q.step == s.id %}
     {% set ns.num = ns.num + 1 %}
+    {% if q.id == 'age_jeune' %}
+    <div class="prenom-box intro-card">
+      <label for="prenom"><span><span class="lbl-std">Comment vous appelez-vous ?</span><span class="lbl-enfant">Comment s'appelle-t-il ou elle ?</span> <small>(facultatif)</small></span>
+        <input type="text" id="prenom" name="prenom" maxlength="30" autocomplete="given-name"
+               placeholder="Votre prénom" value="{{ answers.get('prenom') or '' }}">
+      </label>
+      <p class="help">Il sert seulement à personnaliser votre résultat et n'est pas enregistré sur nos serveurs.</p>
+    </div>
+
+    {% endif %}
     {{ question_block(q, ns.num) }}
     {% endfor %}
 

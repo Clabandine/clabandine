@@ -102,7 +102,7 @@ def test_coily_hair_gets_rich_products_and_night_care():
 def test_every_profile_gets_a_product_for_each_step():
     """Toutes les combinaisons de réponses simples doivent produire une routine complète."""
     ids = ["type_cheveux", "epaisseur", "densite", "porosite", "cuir_chevelu", "chaleur", "objectif"]
-    choices = [[o.value for o in QUESTIONS_BY_ID[i].options] for i in ids]
+    choices = [sorted(QUESTIONS_BY_ID[i].valeurs_pour("adulte")) for i in ids]
     for combo in itertools.product(*choices):
         d = diag(**dict(zip(ids, combo)))
         missing = [s.titre for s in d.routine if s.categorie and s.produit is None]

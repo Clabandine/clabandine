@@ -17,7 +17,11 @@
   </div>
   <div class="result-hero-text">
     <p class="eyebrow">Votre diagnostic</p>
+    {% if d.pour == 'enfant' %}
+    <h1>Le profil capillaire {% if d.prenom %}{{ "d’" if d.prenom[0] | lower in "aeiouyhàâéèêëîïôöûü" else "de " }}{{ d.prenom }}{% else %}de votre enfant{% endif %}</h1>
+    {% else %}
     <h1>{% if d.prenom %}{{ d.prenom }}, voici votre profil capillaire{% else %}Votre profil capillaire{% endif %}</h1>
+    {% endif %}
     <p class="lead">{{ d.resume }}</p>
     <div class="hero-chips">
       {% for p in d.priorites %}<span class="chip static">{{ NEEDS[p] }}</span>{% endfor %}

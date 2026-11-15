@@ -39,7 +39,8 @@ def valeurs(d: Diagnostic) -> dict[str, str]:
         "TS_PRODUITS": produits,
         "TS_PHASE": phase,
         "TS_ID": ref,
-        "TS_RESUME": (f"Type {d.type_code} · Gêne : {problemes} · Priorités : {priorites}"
+        "TS_RESUME": (("" if d.pour == "adulte" else f"Parcours {d.pour} · ")
+                      + f"Type {d.type_code} · Gêne : {problemes} · Priorités : {priorites}"
                       f" · {phase} · Photo : {photo}"
                       f" · Fiabilité {d.fiabilite.get('score', '?')}/100 · Réf. {ref}"),
     }

@@ -45,6 +45,7 @@ CATEGORIES = {
     "complement": "Complément alimentaire",
 }
 POIDS = {"leger", "moyen", "riche"}
+PUBLICS = {"", "enfant", "tous"}
 SAISONS = {"hiver", "printemps", "ete", "automne"}
 CUIRS = {"normal", "sec", "gras", "sensible", "pellicules"}
 TYPE_CODES = list(HAIR_TYPES)  # dans l'ordre, de 1A à 4C
@@ -92,6 +93,8 @@ class Product:
     ingredients_cles: tuple[str, ...] = ()
     a_verifier: bool = True
     verifie_le: dt.date | None = None
+    # Public : "" (adultes et ados), "enfant" (enfants) ou "tous" (convient à tout âge).
+    public: str = ""
     offres: tuple[Offre, ...] = ()
 
     @property
@@ -194,6 +197,8 @@ def parse_product(row: dict) -> Product:
     if errors:
         raise ValueError(f"Produit {pid or '(sans id)'} : " + " ; ".join(errors))
 
+    if (row.get("public") or "").strip() not in PUBLICS:
+        errors.append(f"public inconnu « {row.get('public')} »")
     return Product(
         id=pid,
         marque=row["marque"].strip(),
@@ -211,6 +216,7 @@ def parse_product(row: dict) -> Product:
         saisons=saisons,
         prix=prix,
         contenance=(row.get("contenance") or "").strip(),
+        public=(row.get("public") or "").strip(),
         ingredients_cles=_list(row.get("ingredients_cles", "")),
         a_verifier=_bool(row.get("a_verifier", "")) is not False,
         verifie_le=verifie_le,

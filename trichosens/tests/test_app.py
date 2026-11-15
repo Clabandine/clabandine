@@ -56,7 +56,8 @@ def test_incomplete_form_shows_errors_and_keeps_answers():
 def test_api_questions():
     r = client.get("/api/questions")
     assert r.status_code == 200
-    assert r.json()["questions"][0]["id"] == "preoccupations"
+    ids = [q["id"] for q in r.json()["questions"]]
+    assert ids[0] == "pour" and "preoccupations" in ids
 
 
 API_PAYLOAD = {k: v for k, v in FORM.items() if not k.startswith("gene_")}
