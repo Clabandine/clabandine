@@ -173,7 +173,8 @@ QUESTIONS: tuple[Question, ...] = (
         id="type_cheveux",
         step="cheveux",
         label="Quel est votre type de cheveux ?",
-        help="Choisissez d'abord la famille, puis le type le plus proche.",
+        help="Observez vos cheveux au naturel, après un lavage, sans coiffage. "
+             "Choisissez d'abord la famille, puis le type le plus proche.",
         label_enfant="Quel est le type de cheveux de votre enfant ?",
         options=tuple(
             Option(t.code, f"{t.code} · {t.nom}", t.description, t.visuel, t.famille)
