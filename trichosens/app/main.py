@@ -7,6 +7,7 @@ import datetime as dt
 import hmac
 import logging
 import os
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
@@ -19,6 +20,8 @@ from starlette.concurrency import run_in_threadpool
 from . import photo as photo_ai
 from .catalog import CATEGORIES, VERIFICATION_MAX_JOURS, load_catalog, offres_par_id, raison_a_revoir
 from .clicks import counter as clics
+from . import admin, stats as statistiques
+from .stats import stats
 from .engine import MOMENTS, NEEDS, PHASES, run_diagnostic
 from .evolution import TENDANCE_LABEL, ResumeSuivi
 from .feedback import lien_avis
@@ -112,8 +115,19 @@ def sante():
 # --- Pages -------------------------------------------------------------------
 
 
+ROBOTS = re.compile(r"bot|crawl|spider|slurp|preview|monitor|uptime|headless|curl|wget|python",
+                    re.IGNORECASE)
+
+
+def _compter(request: Request, evenement: str, valeur: str = "") -> None:
+    """Compte une visite, sauf pour les robots et les outils de surveillance."""
+    if not ROBOTS.search(request.headers.get("user-agent", "")):
+        stats.compter(evenement, valeur)
+
+
 @app.get("/", response_class=HTMLResponse)
 def accueil(request: Request):
+    _compter(request, "visite_accueil")
     return templates.TemplateResponse(request, "index.html")
 
 
@@ -131,6 +145,7 @@ def _form_context(answers: dict, errors: dict) -> dict:
 def diagnostic_form(request: Request, pour: str = ""):
     # /diagnostic?pour=enfant ou ?pour=ado ouvre directement le bon parcours.
     answers = {"pour": pour} if pour in {"adulte", "enfant", "ado"} else {}
+    _compter(request, "diagnostic_ouvert", answers.get("pour", ""))
     return templates.TemplateResponse(request, "diagnostic.html", _form_context(answers, {}))
 
 
@@ -155,12 +170,14 @@ def _parse_precedent(raw: str | None) -> ResumeSuivi | None:
 
 
 @app.get("/acheter/{offre_id}")
-def acheter(offre_id: str):
+def acheter(request: Request, offre_id: str):
     """Compte le clic puis redirige vers le revendeur (seulement les liens du catalogue)."""
     offre = offres_par_id(load_catalog()).get(offre_id)
     if not offre:
         raise HTTPException(status_code=404, detail="Lien introuvable.")
     clics.add(offre.id)
+    _compter(request, "clic_produit", offre.produit_id)
+    _compter(request, "clic_marchand", re.sub(r"[^A-Za-z0-9_.-]", "_", offre.marchand))
     return RedirectResponse(offre.url, status_code=302)
 
 
@@ -169,6 +186,23 @@ def _verifier_cle(cle: str) -> None:
     attendue = os.environ.get("ADMIN_CLE", "")
     if not attendue or not hmac.compare_digest(cle, attendue):
         raise HTTPException(status_code=404)
+
+
+@app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+def admin_tableau(request: Request, cle: str = "", jours: int = 30):
+    """Tableau de bord : statistiques anonymes, protégé par la clé ADMIN_CLE."""
+    _verifier_cle(cle)
+    jours = jours if jours in admin.PERIODES else 30
+    return templates.TemplateResponse(request, "admin_tableau.html", {
+        "tableau": admin.tableau(stats, jours), "cle": cle})
+
+
+@app.get("/admin/export.csv", include_in_schema=False)
+def admin_export(cle: str = "", jours: int = 90):
+    _verifier_cle(cle)
+    jours = max(1, min(jours, 3650))
+    return Response("\ufeff" + admin.export_csv(stats, jours), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="trichosens-stats.csv"'})
 
 
 @app.get("/admin/catalogue", response_class=HTMLResponse, include_in_schema=False)
@@ -225,6 +259,7 @@ def rappels_ics(
     if not rappels:
         raise HTTPException(status_code=422, detail="Choisissez au moins un rappel.")
     site = str(request.base_url).rstrip("/")
+    _compter(request, "rappels_telecharges")
     ics = build_ics(jours=jours, heure=h, rappels=rappels, masque=masque,
                     prochain_point=prochain_point, type_cheveux=type_cheveux or "?",
                     site_url=site)
@@ -234,6 +269,7 @@ def rappels_ics(
 
 @app.get("/suivi", response_class=HTMLResponse)
 def suivi(request: Request):
+    _compter(request, "suivi_vu")
     return templates.TemplateResponse(request, "suivi.html")
 
 
@@ -250,11 +286,14 @@ async def diagnostic_submit(request: Request):
     try:
         answers = validate(raw)
     except InvalidAnswers as e:
+        _compter(request, "erreur_formulaire")
         ctx = _form_context(raw, e.errors)
         ctx["photo_json"] = photo_json
         return templates.TemplateResponse(request, "diagnostic.html", ctx, status_code=422)
     diagnostic = run_diagnostic(answers, photo=_parse_photo(photo_json),
                                 precedent=_parse_precedent(precedent_json))
+    if not ROBOTS.search(request.headers.get("user-agent", "")):
+        statistiques.enregistrer_diagnostic(answers, diagnostic)
     return templates.TemplateResponse(request, "resultat.html", {"d": diagnostic})
 
 
@@ -285,6 +324,7 @@ async def api_analyse_photo(
         photo_ai.limiter.check(_client_ip(request))
         # L'appel à l'IA est bloquant : on le lance dans un fil séparé.
         result = await run_in_threadpool(photo_ai.analyse, image_b64)
+        stats.compter("analyse_photo", "exploitable" if result.exploitable else "inexploitable")
     except photo_ai.PhotoError as e:
         return JSONResponse(status_code=422, content={"detail": str(e)})
     return result.model_dump()
@@ -328,7 +368,9 @@ async def api_analyse_texte(request: Request, payload: dict):
         raise HTTPException(status_code=422, detail="Écrivez quelques mots sur vos cheveux.")
     ia = payload.get("ia") is True
     try:
-        return await run_in_threadpool(texte_libre.analyser, texte, ia, _client_ip(request))
+        resultat = await run_in_threadpool(texte_libre.analyser, texte, ia, _client_ip(request))
+        stats.compter("analyse_texte", resultat["source"])
+        return resultat
     except texte_libre.TexteErreur as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -337,11 +379,27 @@ async def api_analyse_texte(request: Request, payload: dict):
 def api_trouver_type(payload: dict):
     """Mini-questionnaire pour aider à trouver son type (et un éventuel second type)."""
     try:
-        return trouver.trouver_type(
+        resultat = trouver.trouver_type(
             str(payload.get("forme") or ""), str(payload.get("taille") or ""),
             str(payload.get("retractation") or ""), str(payload.get("textures") or "une"))
+        stats.compter("aide_type", "deux_types" if resultat["secondaire"] else "un_type")
+        return resultat
     except trouver.ReponseInvalide as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/api/evenement", status_code=204, include_in_schema=False)
+async def api_evenement(request: Request):
+    """Petits événements envoyés par le navigateur (étape vue, onglet ouvert…), anonymes."""
+    try:
+        data = await request.json()
+    except ValueError:
+        return Response(status_code=204)
+    nom = data.get("nom") if isinstance(data, dict) else None
+    valeur = data.get("valeur", "") if isinstance(data, dict) else ""
+    if nom in statistiques.EVENEMENTS_NAVIGATEUR and isinstance(valeur, str):
+        _compter(request, nom, valeur)
+    return Response(status_code=204)
 
 
 @app.post("/api/diagnostic")

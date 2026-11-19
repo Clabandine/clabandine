@@ -295,6 +295,22 @@ commence par un type de cheveux (ex. `3b-portrait.jpg`) ajoute la légende « Ty
 Tant que le dossier est vide, le carrousel montre les photos des types de cheveux. N'utilisez
 que des photos dont vous avez les droits, avec l'accord des personnes photographiées.
 
+## Tableau de bord admin
+
+`/admin?cle=VOTRE_CLE_ADMIN` (la clé est la variable `ADMIN_CLE` de Render) : visites,
+diagnostics commencés et terminés, étapes où les personnes s'arrêtent, parcours, types,
+gênes, objectifs, fiabilité, tests maison, texte libre, onglets consultés, produits et
+revendeurs cliqués, retours (diagnostic refait), avis, fiches PDF et partages, sur 7, 30 ou
+90 jours. Export CSV : `/admin/export.csv?cle=...&jours=90`.
+
+Seuls des **compteurs anonymes par jour** sont enregistrés (`app/stats.py`) : ni prénom, ni
+adresse IP, ni texte saisi, ni réponse sur la santé ou la période de vie. Les robots et les
+outils de surveillance ne sont pas comptés.
+
+**Garder les chiffres durablement :** créez une base Postgres gratuite (Neon) et collez son
+adresse de connexion dans la variable `DATABASE_URL` de Render. Sans elle, le tableau de bord
+fonctionne mais repart à zéro à chaque redémarrage du site.
+
 ## Organisation du code
 
 ```
@@ -304,6 +320,8 @@ trichosens/
 │   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
 │   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
+│   ├── stats.py           # Statistiques anonymes (mémoire ou base Postgres)
+│   ├── admin.py           # Chiffres du tableau de bord admin et export CSV
 │   ├── texte.py           # Pré-remplissage à partir d'une description libre
 │   ├── sante.py           # Santé et cheveux : carences, maladies, signes, orientation
 │   ├── naturel.py         # Recettes maison, cures de compléments, gestes naturels

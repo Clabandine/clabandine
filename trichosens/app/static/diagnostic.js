@@ -53,6 +53,7 @@
       }
     });
     majProgression(index);
+    if (window.tsStat) window.tsStat("etape_vue", panels[index].dataset.step);
     if (diagHead) diagHead.hidden = index !== 0;
     submit.hidden = true; // le bouton final est dans la dernière étape
     personnaliser(panels[index]);
@@ -294,6 +295,7 @@
     if (!bouton) return;
     const input = form.querySelector(`input[name="${bouton.dataset.testQ}"][value="${bouton.dataset.testV}"]`);
     if (!input) return;
+    if (window.tsStat) window.tsStat("test_maison", bouton.dataset.testQ);
     input.checked = true;
     input.dispatchEvent(new Event("change", { bubbles: true }));
     const details = bouton.closest("details");
@@ -568,6 +570,7 @@
         .then((response) => response.json().then((res) => {
           if (!response.ok) throw new Error(res.detail || "");
           statut.textContent = "";
+          if (window.tsStat) window.tsStat("texte_utilise", res.source);
           if (area.value.trim() === texte) appliquer(res);
         }))
         .catch(() => {

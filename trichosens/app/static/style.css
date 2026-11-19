@@ -869,3 +869,34 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .jeunes-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .jeunes-actions .button small { font-weight: 500; opacity: .8; margin-left: 4px; }
 @media (min-width: 860px) { .jeunes-band { grid-template-columns: 1.4fr 1fr; padding: 32px; } }
+
+/* --- Tableau de bord admin ----------------------------------------------------------- */
+.page-admin .container { max-width: 1080px; }
+.admin-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
+.admin-head h1 { margin: 0; }
+.periodes { display: flex; gap: 6px; }
+.periodes a { font-family: var(--font-ui); font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--brand);
+  border: 1.5px solid var(--line); border-radius: 999px; padding: 5px 12px; background: var(--surface); }
+.periodes a[aria-current] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.admin-stats .stat strong { font-size: 1.6rem; }
+.admin-stats .stat small { color: var(--muted); font-size: .76rem; margin-top: 2px; }
+.admin-titre { font-size: 1.05rem; margin: 0 0 4px; }
+.admin-courbe { width: 100%; height: auto; display: block; margin-top: 8px; overflow: visible; }
+.admin-courbe .grille { stroke: var(--line); stroke-width: 1; }
+.admin-courbe .base { stroke: #D9C6CD; stroke-width: 1; }
+.admin-courbe .axe { fill: var(--muted); font-family: var(--font-ui); font-size: 11px; }
+.admin-courbe .barre path { fill: var(--accent); }
+.admin-courbe .barre .cible { fill: transparent; }
+.admin-courbe .barre:hover path { fill: var(--brand); }
+.admin-courbe .barre:hover .cible { fill: rgba(142, 59, 99, .06); }
+.admin-grille { display: grid; gap: 14px; }
+@media (min-width: 760px) { .admin-grille { grid-template-columns: repeat(2, 1fr); } }
+.admin-grille .card { margin: 0; }
+.classement { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 7px; }
+.classement li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(60px, 1fr) auto; align-items: center; gap: 10px; margin: 0; font-size: .86rem; }
+.cl-label { overflow-wrap: anywhere; }
+.cl-barre { height: 10px; background: var(--brand-soft); border-radius: 999px; overflow: hidden; }
+.cl-barre span { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+.cl-n { font-weight: 700; color: var(--ink); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cl-n small { display: block; font-weight: 500; color: var(--muted); font-size: .72rem; }
+.admin-outils ul { padding-left: 18px; }
