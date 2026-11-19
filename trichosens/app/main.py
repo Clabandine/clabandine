@@ -32,6 +32,7 @@ from .questionnaire import PHASES_PARCOURS, QUESTIONS, STEPS, InvalidAnswers, va
 from .reminders import JOURS, RAPPELS, build_ics
 from . import specifiques as trouver
 from . import texte as texte_libre
+from . import legal
 
 logging.basicConfig(level=logging.INFO)
 
@@ -103,6 +104,7 @@ templates.env.globals.update(
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
     TROUVER=trouver, PHASES_PARCOURS=PHASES_PARCOURS,
+    EDITEUR=legal.EDITEUR, HEBERGEUR=legal.HEBERGEUR, MISE_A_JOUR=legal.MISE_A_JOUR,
 )
 
 
@@ -194,7 +196,8 @@ def admin_tableau(request: Request, cle: str = "", jours: int = 30):
     _verifier_cle(cle)
     jours = jours if jours in admin.PERIODES else 30
     return templates.TemplateResponse(request, "admin_tableau.html", {
-        "tableau": admin.tableau(stats, jours), "cle": cle})
+        "tableau": admin.tableau(stats, jours), "cle": cle,
+        "legal_manquant": legal.manquants()})
 
 
 @app.get("/admin/export.csv", include_in_schema=False)
@@ -265,6 +268,21 @@ def rappels_ics(
                     site_url=site)
     return Response(ics, media_type="text/calendar; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="trichosens-rappels.ics"'})
+
+
+@app.get("/mentions-legales", response_class=HTMLResponse)
+def mentions_legales(request: Request):
+    return templates.TemplateResponse(request, "mentions_legales.html")
+
+
+@app.get("/confidentialite", response_class=HTMLResponse)
+def confidentialite(request: Request):
+    return templates.TemplateResponse(request, "confidentialite.html")
+
+
+@app.get("/conditions", response_class=HTMLResponse)
+def conditions(request: Request):
+    return templates.TemplateResponse(request, "conditions.html")
 
 
 @app.get("/suivi", response_class=HTMLResponse)

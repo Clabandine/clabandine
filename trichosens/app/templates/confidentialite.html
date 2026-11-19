@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Confidentialité – TrichoSens{% endblock %}
+{% block content %}
+<article class="legal-page">
+  <p class="eyebrow">Vos données</p>
+  <h1>Politique de confidentialité</h1>
+  <p class="help">Dernière mise à jour : {{ MISE_A_JOUR }}.</p>
+
+  <p class="key-tip">En bref : pas de compte, pas de publicité, pas de revente de données. Vos réponses servent à
+    calculer votre diagnostic sur le moment et ne sont pas enregistrées sur nos serveurs. Votre historique reste
+    sur votre téléphone ou votre ordinateur.</p>
+
+  <h2>Responsable du traitement</h2>
+  <p>{{ EDITEUR.nom }}{% if EDITEUR.forme %} ({{ EDITEUR.forme }}){% endif %}, {{ EDITEUR.ville }}. Contact :
+    <a href="mailto:{{ EDITEUR.email }}">{{ EDITEUR.email }}</a>.</p>
+
+  <h2>Ce que nous traitons, et pourquoi</h2>
+  <ul class="tips">
+    <li><strong>Vos réponses au diagnostic</strong> (type de cheveux, gênes, habitudes, prénom facultatif…) : elles
+      sont envoyées à notre serveur pour calculer votre résultat, puis oubliées. Elles ne sont ni enregistrées, ni
+      transmises à des tiers. Base légale : votre demande de diagnostic.</li>
+    <li><strong>Les questions de santé et de période de vie</strong> (grossesse, carences, thyroïde…) sont
+      facultatives. En y répondant, vous acceptez qu'elles servent à personnaliser vos conseils, sur le moment
+      seulement : elles ne sont jamais enregistrées sur nos serveurs, jamais jointes aux avis et jamais comptées dans
+      nos statistiques. Base légale : votre consentement explicite.</li>
+    <li><strong>Votre historique</strong> (résumé de vos diagnostics, journal de pousse) est gardé dans votre
+      navigateur (stockage local), sur votre appareil uniquement. Vous pouvez l'effacer à tout moment depuis la page
+      <a href="/suivi">Mon suivi</a>.</li>
+    <li><strong>Des statistiques anonymes</strong> : nous comptons, jour par jour, des événements comme « diagnostic
+      terminé », « type 3C » ou « clic sur un produit ». Aucun identifiant, aucune adresse IP, aucun prénom, aucun
+      texte saisi : ces chiffres ne permettent pas de vous retrouver. Ils nous aident à améliorer le service.</li>
+    <li><strong>Votre texte libre et votre photo</strong> : par défaut, le texte est lu par notre serveur et n'est pas
+      enregistré. Si vous choisissez l'analyse par intelligence artificielle (texte ou photo), ils sont envoyés à notre
+      prestataire Anthropic pour être analysés ; TrichoSens ne les conserve pas, et Anthropic ne les utilise pas pour
+      entraîner ses modèles selon ses conditions commerciales. Base légale : votre consentement, donné en cochant
+      la case prévue.</li>
+    <li><strong>Vos avis</strong> : le bouton « Donner mon avis » ouvre un formulaire Google Forms, où un résumé anonyme
+      de votre diagnostic peut être pré-rempli (sans prénom, âge, santé ni période de vie). Ce que vous y écrivez est
+      traité par Google selon ses propres règles.</li>
+  </ul>
+
+  <h2>Cookies</h2>
+  <p>TrichoSens n'utilise aucun cookie publicitaire ni de mesure d'audience. Le stockage local de votre navigateur sert
+    uniquement à votre suivi, une fonction que vous utilisez directement. Quand vous cliquez sur un lien d'achat, vous
+    arrivez sur le site du marchand (Amazon par exemple), qui peut déposer ses propres cookies, notamment pour
+    l'affiliation : reportez-vous à sa politique.</p>
+
+  <h2>Nos prestataires</h2>
+  <ul class="tips">
+    <li><strong>Hébergement</strong> : {{ HEBERGEUR.nom }} (États-Unis), {{ HEBERGEUR.region }}.</li>
+    <li><strong>Statistiques anonymes</strong> : base de données hébergée en Europe.</li>
+    <li><strong>Analyse par IA</strong> (seulement si vous la choisissez) : Anthropic, PBC (États-Unis).</li>
+    <li><strong>Polices d'écriture</strong> : Google Fonts. Pour afficher le site, votre navigateur les télécharge
+      depuis les serveurs de Google, qui reçoivent alors votre adresse IP.</li>
+  </ul>
+  <p>Lorsque des données sont traitées par une société située hors de l'Union européenne, ces transferts sont encadrés
+    par les clauses contractuelles types de la Commission européenne ou par le cadre de protection des données
+    UE–États-Unis.</p>
+
+  <h2>Mineurs</h2>
+  <p>Le diagnostic « enfant » (de la naissance à 11 ans) est prévu pour être rempli par un parent. Pour les moins de
+    15 ans, l'accord d'un parent est nécessaire pour utiliser l'analyse par IA.</p>
+
+  <h2>Vos droits</h2>
+  <p>Vous disposez d'un droit d'accès, de rectification, d'effacement, d'opposition et de retrait de votre
+    consentement. Comme nous n'enregistrons pas vos réponses, la plupart de vos données sont sur votre seul appareil
+    et vous pouvez les effacer vous-même. Pour toute question : <a href="mailto:{{ EDITEUR.email }}">{{ EDITEUR.email }}</a>.
+    Vous pouvez aussi adresser une réclamation à la CNIL (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).</p>
+</article>
+{% endblock %}

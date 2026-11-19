@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Conditions d'utilisation – TrichoSens{% endblock %}
+{% block content %}
+<article class="legal-page">
+  <p class="eyebrow">Règles du service</p>
+  <h1>Conditions d'utilisation</h1>
+  <p class="help">Dernière mise à jour : {{ MISE_A_JOUR }}.</p>
+
+  <h2>1. Le service</h2>
+  <p>TrichoSens, édité par {{ EDITEUR.nom }}, propose gratuitement un diagnostic capillaire en ligne : à partir de vos
+    réponses (et, si vous le souhaitez, d'un texte ou d'une photo), il calcule des besoins, une routine de soins, des
+    suggestions de produits, de recettes maison et de compléments, ainsi qu'un suivi dans le temps. Utiliser le site
+    vaut acceptation des présentes conditions.</p>
+
+  <h2>2. Pas un avis médical</h2>
+  <p>Les résultats sont des conseils de soin généraux, calculés automatiquement à partir de vos réponses. Ils ne
+    constituent ni un diagnostic médical, ni une prescription, et ne remplacent pas l'avis d'un médecin, d'un
+    dermatologue, d'un pédiatre ou d'un pharmacien. Les compléments alimentaires ne sont pas des médicaments :
+    demandez conseil à un professionnel de santé avant d'en prendre, en particulier pendant une grossesse, un
+    allaitement ou un traitement, et pour un enfant.</p>
+
+  <h2>3. Recettes maison et produits</h2>
+  <p>Faites toujours un test sur une petite zone avant d'utiliser une recette ou un produit nouveau, et arrêtez en cas
+    de réaction. Les fiches produits sont données à titre indicatif : composition, prix et disponibilité peuvent
+    changer ; seules les informations du vendeur font foi. TrichoSens ne vend pas lui-même ces produits : l'achat se
+    fait sur le site du marchand, selon ses propres conditions.</p>
+
+  <h2>4. Liens d'affiliation</h2>
+  <p>Certains liens sont affiliés : TrichoSens peut percevoir une commission sur les achats effectués par leur
+    intermédiaire, sans surcoût pour vous. Les recommandations dépendent de vos réponses, pas des commissions.</p>
+
+  <h2>5. Mineurs</h2>
+  <p>Le diagnostic « enfant » est destiné à être rempli par un parent ou un adulte responsable. Les adolescents
+    peuvent remplir leur diagnostic ; pour les moins de 15 ans, l'analyse par IA nécessite l'accord d'un parent.</p>
+
+  <h2>6. Responsabilité</h2>
+  <p>TrichoSens fait de son mieux pour fournir des informations exactes et un service disponible, sans pouvoir le
+    garantir. TrichoSens ne peut être tenu responsable de l'usage fait des conseils, des produits achetés auprès de
+    tiers, ni d'une interruption du service.</p>
+
+  <h2>7. Propriété intellectuelle</h2>
+  <p>Le contenu du site (textes, visuels, logos, fonctionnement du diagnostic) est protégé. Vous pouvez partager votre
+    résultat pour votre usage personnel ; toute autre reproduction nécessite notre accord.</p>
+
+  <h2>8. Modifications et droit applicable</h2>
+  <p>Ces conditions peuvent évoluer ; la version en vigueur est celle publiée sur cette page. Elles sont soumises au
+    droit français. Pour toute question : <a href="mailto:{{ EDITEUR.email }}">{{ EDITEUR.email }}</a>.</p>
+</article>
+{% endblock %}

@@ -23,6 +23,8 @@
 <p class="help">✓ Chiffres enregistrés durablement dans la base de données.</p>
 {% endif %}
 {% if t.erreur %}<p class="alert">{{ t.erreur }}</p>{% endif %}
+{% if legal_manquant %}<p class="note">📝 Mentions légales à compléter : {{ legal_manquant | join(', ') }}
+  (fichier <code>app/legal.py</code>, ou variables LEGAL_CAPITAL, LEGAL_SIREN, LEGAL_DIRECTEUR dans Render).</p>{% endif %}
 
 <div class="stat-grid admin-stats">
   {% for c in t.chiffres %}

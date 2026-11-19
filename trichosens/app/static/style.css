@@ -900,3 +900,9 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .cl-n { font-weight: 700; color: var(--ink); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .cl-n small { display: block; font-weight: 500; color: var(--muted); font-size: .72rem; }
 .admin-outils ul { padding-left: 18px; }
+
+/* --- Pages légales ------------------------------------------------------------------- */
+.legal-page { max-width: 760px; margin: 0 auto; }
+.legal-page h2 { font-size: 1.15rem; margin-top: 1.6em; }
+.legal-page p, .legal-page li { line-height: 1.65; }
+.footer-liens-legaux { font-size: .82rem; opacity: .9; }
