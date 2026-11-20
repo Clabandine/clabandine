@@ -10,6 +10,11 @@ from dataclasses import dataclass, field
 from .hair_types import HAIR_TYPES
 from .pain_points import INTENSITES, PAIN_POINTS
 from .profil import AGES, PERIODES, SENSIBILITES
+
+PERIODES_PUBLICS = {
+    "cycle": ("adulte", "ado"), "grossesse": ("adulte",), "post_partum": ("adulte",),
+    "menopause": ("adulte",), "stress": ("adulte", "ado"), "traitement": ("adulte", "ado"),
+}
 from .sante import FACTEURS
 from .specifiques import DETAILS_DEMANGEAISONS, SPECIFICITES
 
@@ -21,6 +26,8 @@ class Option:
     hint: str = ""
     visuel: str = ""  # nom d'image (sans extension), voir main.visuel()
     groupe: str = ""  # famille de cheveux (1 à 4) pour la question du type
+    # Parcours où la réponse est proposée (vide = tous).
+    publics: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -46,6 +53,16 @@ class Question:
     required: bool = True
     max_choices: int | None = None
     test: TestMaison | None = None
+    # Parcours où la question est posée, et intitulé pour le parcours enfant.
+    publics: tuple[str, ...] = ("adulte", "enfant", "ado")
+    label_enfant: str = ""
+    help_enfant: str = ""
+
+    def pour(self, public: str) -> bool:
+        return public in self.publics
+
+    def valeurs_pour(self, public: str) -> set[str]:
+        return {o.value for o in self.options if not o.publics or public in o.publics}
 
     def values(self) -> set[str]:
         return {o.value for o in self.options}
@@ -64,34 +81,73 @@ class Step:
     phase: str = "cheveux"
     # Temps moyen pour remplir l'étape, en secondes (pour estimer le temps restant).
     duree: int = 30
+    publics: tuple[str, ...] = ("adulte", "enfant", "ado")
+    titre_enfant: str = ""
+    intro_enfant: str = ""
 
 
 STEPS: tuple[Step, ...] = (
     Step("bienvenue", "Faisons connaissance",
-         "Deux questions pour personnaliser votre diagnostic. Tout est facultatif.",
+         "Pour qui est ce diagnostic ? Quelques mots pour le personnaliser.",
          "vous", 10),
     Step("description", "Racontez-nous vos cheveux",
          "Avec vos mots, comme à une coiffeuse : nous pré-remplissons le diagnostic pour vous. "
-         "Vous pouvez aussi passer cette étape.", "vous", 30),
+         "Vous pouvez aussi passer cette étape.", "vous", 30,
+         titre_enfant="Racontez-nous ses cheveux",
+         intro_enfant="Avec vos mots : ce qui vous inquiète, ce qui est difficile au quotidien… "
+                      "Nous pré-remplissons le diagnostic pour vous."),
     Step("douleurs", "Ce qui vous gêne",
-         "Qu'est-ce qui vous dérange dans vos cheveux aujourd'hui ?", "cheveux", 30),
+         "Qu'est-ce qui vous dérange dans vos cheveux aujourd'hui ?", "cheveux", 30,
+         titre_enfant="Ce qui gêne votre enfant",
+         intro_enfant="Qu'est-ce qui pose problème dans ses cheveux aujourd'hui ?"),
     Step("photo", "Votre photo",
-         "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic.", "cheveux", 30),
+         "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic.", "cheveux", 30,
+         publics=("adulte",)),
     Step("cheveux", "Votre type de cheveux",
-         "Observez-les au naturel, après un lavage, sans coiffage.", "cheveux", 30),
+         "Observez-les au naturel, après un lavage, sans coiffage.", "cheveux", 30,
+         titre_enfant="Le type de cheveux de votre enfant"),
     Step("texture", "Leur texture",
          "Épaisseur, densité, porosité : un petit test vous aide si vous hésitez.", "cheveux", 30),
     Step("vous", "Vos cheveux au fil du temps",
          "Période de vie, santé, saisons : vos cheveux changent avec vous. Tout est facultatif.",
-         "habitudes", 20),
+         "habitudes", 20, titre_enfant="Santé et saisons",
+         intro_enfant="Quelques questions facultatives sur sa santé et les saisons."),
     Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien.",
-         "habitudes", 15),
+         "habitudes", 15, titre_enfant="Cuir chevelu et coiffures",
+         intro_enfant="Ce que vivent ses cheveux au quotidien."),
     Step("objectif", "Objectif et préférences", "Dernière étape !", "habitudes", 20),
 )
 
 PHASES_PARCOURS = {"vous": "Vous", "cheveux": "Vos cheveux", "habitudes": "Vos habitudes"}
 
+PUBLICS = ("adulte", "enfant", "ado")
+
 QUESTIONS: tuple[Question, ...] = (
+    Question(
+        id="pour",
+        step="bienvenue",
+        label="Pour qui est ce diagnostic ?",
+        required=False,
+        options=(
+            Option("adulte", "Pour moi", "Adulte"),
+            Option("enfant", "Pour mon enfant", "De la naissance à 11 ans"),
+            Option("ado", "Pour un·e ado", "De 12 à 17 ans"),
+        ),
+    ),
+    Question(
+        id="age_jeune",
+        step="bienvenue",
+        label="Quel âge a-t-il ou a-t-elle ?",
+        required=False,
+        publics=("enfant", "ado"),
+        options=(
+            Option("bebe", "Moins de 3 ans", publics=("enfant",)),
+            Option("petit", "3 à 5 ans", publics=("enfant",)),
+            Option("enfant", "6 à 11 ans", publics=("enfant",)),
+            Option("ado_jeune", "12 à 14 ans", publics=("ado",)),
+            Option("ado", "15 à 17 ans", publics=("ado",)),
+        ),
+    ),
     Question(
         id="preoccupations",
         step="douleurs",
@@ -99,7 +155,9 @@ QUESTIONS: tuple[Question, ...] = (
         help="Choisissez jusqu'à 3 réponses, puis dites-nous à quel point cela vous gêne.",
         multiple=True,
         max_choices=3,
-        options=tuple(Option(p.id, p.label, p.description) for p in PAIN_POINTS.values()),
+        options=tuple(Option(p.id, p.label, p.description, publics=p.publics)
+                      for p in PAIN_POINTS.values()),
+        label_enfant="Qu'est-ce qui gêne le plus dans les cheveux de votre enfant ?",
     ),
     Question(
         id="demangeaisons_details",
@@ -117,6 +175,7 @@ QUESTIONS: tuple[Question, ...] = (
         label="Quel est votre type de cheveux ?",
         help="Observez vos cheveux au naturel, après un lavage, sans coiffage. "
              "Choisissez d'abord la famille, puis le type le plus proche.",
+        label_enfant="Quel est le type de cheveux de votre enfant ?",
         options=tuple(
             Option(t.code, f"{t.code} · {t.nom}", t.description, t.visuel, t.famille)
             for t in HAIR_TYPES.values()
@@ -126,6 +185,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="type_secondaire",
         step="cheveux",
         label="Vos cheveux mélangent-ils deux types ?",
+        label_enfant="Ses cheveux mélangent-ils deux types ?",
         help="Facultatif. Fréquent quand on est entre deux types, avec des textures différentes "
              "selon les zones, ou pour les cheveux métissés.",
         required=False,
@@ -135,6 +195,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="specifiques",
         step="cheveux",
         label="Avec vos cheveux, qu'est-ce qui vous arrive souvent ?",
+        label_enfant="Avec ses cheveux, qu'est-ce qui arrive souvent ?",
         help="Facultatif, plusieurs réponses possibles. Nous vous proposons les situations "
              "propres à votre type.",
         multiple=True,
@@ -163,6 +224,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="densite",
         step="texture",
         label="Quelle est la densité de votre chevelure ?",
+        label_enfant="Quelle est la densité de sa chevelure ?",
         help="Voit-on facilement votre cuir chevelu quand les cheveux sont secs ?",
         options=(
             Option("faible", "Faible", "Le cuir chevelu se voit facilement.", "densite-faible"),
@@ -208,6 +270,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="elasticite",
         step="texture",
         label="Votre cheveu est-il élastique ?",
+        publics=("adulte", "ado"),
         help="Ce test dit si vos cheveux manquent plutôt d'hydratation ou de protéines.",
         required=False,
         options=(
@@ -232,6 +295,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="age",
         step="bienvenue",
         label="Quel âge avez-vous ?",
+        publics=("adulte",),
         help="Les besoins des cheveux évoluent avec l'âge.",
         required=False,
         options=tuple(Option(k, v) for k, v in AGES.items()),
@@ -243,7 +307,9 @@ QUESTIONS: tuple[Question, ...] = (
         help="Plusieurs réponses possibles. Ces informations restent sur votre appareil.",
         multiple=True,
         required=False,
-        options=tuple(Option(k, label, hint) for k, (label, hint) in PERIODES.items()),
+        options=tuple(Option(k, label, hint, publics=PERIODES_PUBLICS.get(k, ()))
+                      for k, (label, hint) in PERIODES.items()),
+        publics=("adulte", "ado"),
     ),
     Question(
         id="sante",
@@ -254,12 +320,15 @@ QUESTIONS: tuple[Question, ...] = (
              "appareil et ne sont jamais enregistrées.",
         multiple=True,
         required=False,
-        options=tuple(Option(f.id, f.label, f.hint, "", f.groupe) for f in FACTEURS.values()),
+        options=tuple(Option(f.id, f.label, f.hint, "", f.groupe, f.publics)
+                      for f in FACTEURS.values()),
+        label_enfant="La santé de votre enfant : l'un de ces points le concerne-t-il ?",
     ),
     Question(
         id="saisons_sensibles",
         step="vous",
         label="Vos cheveux changent-ils selon les saisons ?",
+        label_enfant="Ses cheveux changent-ils selon les saisons ?",
         help="Plusieurs réponses possibles : votre routine s'adaptera à chaque saison.",
         multiple=True,
         required=False,
@@ -269,6 +338,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="cuir_chevelu",
         step="habitudes",
         label="Comment décririez-vous votre cuir chevelu ?",
+        label_enfant="Comment est son cuir chevelu ?",
         options=(
             Option("normal", "Normal"),
             Option("sec", "Sec, tiraille"),
@@ -281,6 +351,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="traitements",
         step="habitudes",
         label="Vos cheveux ont-ils subi des traitements chimiques ?",
+        publics=("adulte", "ado"),
         help="Plusieurs réponses possibles. Ne cochez rien si ce n'est pas le cas.",
         multiple=True,
         required=False,
@@ -295,6 +366,7 @@ QUESTIONS: tuple[Question, ...] = (
         id="chaleur",
         step="habitudes",
         label="À quelle fréquence utilisez-vous des outils chauffants ?",
+        publics=("adulte", "ado"),
         help="Lisseur, fer à boucler, sèche-cheveux à température élevée.",
         options=(
             Option("jamais", "Jamais ou presque"),
@@ -303,16 +375,36 @@ QUESTIONS: tuple[Question, ...] = (
         ),
     ),
     Question(
+        id="coiffures",
+        step="habitudes",
+        label="Comment vos cheveux sont-ils coiffés le plus souvent ?",
+        label_enfant="Comment ses cheveux sont-ils coiffés le plus souvent ?",
+        help="Facultatif, plusieurs réponses possibles.",
+        multiple=True,
+        required=False,
+        publics=("enfant", "ado"),
+        options=(
+            Option("serrees", "Tresses, nattes ou queues de cheval serrées"),
+            Option("rajouts", "Tresses avec rajouts ou tissage"),
+            Option("laches", "Surtout lâchés"),
+            Option("piscine", "Piscine plusieurs fois par semaine", "Le chlore assèche les cheveux."),
+            Option("casque", "Casquette, bonnet ou casque souvent"),
+        ),
+    ),
+    Question(
         id="objectif",
         step="objectif",
         label="Quel est votre objectif principal ?",
+        label_enfant="Quel est votre objectif pour ses cheveux ?",
         options=(
+            Option("demelage", "Un démêlage sans pleurs", publics=("enfant",)),
             Option("hydratation", "Des cheveux mieux hydratés"),
             Option("definition", "Des boucles plus définies"),
-            Option("volume", "Plus de volume"),
+            Option("volume", "Plus de volume", publics=("adulte", "ado")),
             Option("longueur", "Garder la longueur, limiter la casse"),
             Option("sante_cuir", "Un cuir chevelu sain"),
-            Option("brillance", "Plus de brillance"),
+            Option("brillance", "Plus de brillance", publics=("adulte", "ado")),
+            Option("autonomie", "Savoir m'occuper de mes cheveux", publics=("ado",)),
         ),
     ),
     Question(
@@ -363,6 +455,10 @@ class Answers:
     age: str = "nc"
     elasticite: str = "non_teste"
     sante: list[str] = field(default_factory=list)
+    # Parcours : adulte, enfant (0-11 ans) ou ado (12-17 ans).
+    pour: str = "adulte"
+    age_jeune: str = ""
+    coiffures: list[str] = field(default_factory=list)
     periodes: list[str] = field(default_factory=list)
     saisons_sensibles: list[str] = field(default_factory=list)
     prenom: str = ""
@@ -413,8 +509,15 @@ def validate(raw: dict) -> Answers:
     """
     errors: dict[str, str] = {}
     clean: dict = {}
+    pour = raw.get("pour")
+    if isinstance(pour, list):
+        pour = pour[0] if pour else None
+    pour = pour if pour in PUBLICS else "adulte"
 
     for q in QUESTIONS:
+        if not q.pour(pour):
+            continue  # question d'un autre parcours : ignorée
+        valeurs = q.valeurs_pour(pour)
         value = raw.get(q.id)
         if q.multiple:
             if value is None:
@@ -424,7 +527,7 @@ def validate(raw: dict) -> Answers:
             else:
                 items = list(value)
             items = list(dict.fromkeys(v for v in items if v))  # sans doublons
-            unknown = [v for v in items if v not in q.values()]
+            unknown = [v for v in items if v not in valeurs]
             if unknown:
                 errors[q.id] = f"Réponse inconnue : {', '.join(unknown)}"
             elif q.required and not items:
@@ -439,7 +542,7 @@ def validate(raw: dict) -> Answers:
                 continue  # valeur par défaut de Answers
             if not value:
                 errors[q.id] = "Cette question est obligatoire."
-            elif value not in q.values():
+            elif value not in valeurs:
                 errors[q.id] = f"Réponse inconnue : {value}"
             else:
                 clean[q.id] = value
@@ -464,6 +567,12 @@ def validate(raw: dict) -> Answers:
             clean[qid] = [v for v in clean[qid] if v != rien]
 
     clean["prenom"] = nettoyer_prenom(raw.get("prenom"))
+    clean["pour"] = pour
+    if pour != "adulte":
+        clean["age"] = "moins_18"  # pas de cure ni de soin réservé aux adultes
+    if pour == "enfant":
+        clean["chaleur"] = "jamais"  # ni chaleur ni traitement chimique pour un enfant
+        clean["traitements"] = []
 
     # Questions qui dépendent d'une autre réponse : on ignore ce qui ne s'applique plus.
     principal = HAIR_TYPES.get(clean.get("type_cheveux", ""))

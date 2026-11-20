@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Mentions légales – TrichoSens{% endblock %}
+{% block content %}
+<article class="legal-page">
+  <p class="eyebrow">Informations légales</p>
+  <h1>Mentions légales</h1>
+  <p class="help">Dernière mise à jour : {{ MISE_A_JOUR }}.</p>
+
+  <h2>Éditeur du site</h2>
+  <p>Le site TrichoSens est édité par <strong>{{ EDITEUR.nom }}</strong>{% if EDITEUR.forme %}, {{ EDITEUR.forme }}{% endif %}{% if EDITEUR.capital %} au capital de {{ EDITEUR.capital }}{% endif %},
+    dont le siège est situé à {{ EDITEUR.ville }}.{% if EDITEUR.siren %} Immatriculation : {{ EDITEUR.siren }}.{% endif %}</p>
+  <p>Contact : <a href="mailto:{{ EDITEUR.email }}">{{ EDITEUR.email }}</a></p>
+  {% if EDITEUR.directeur_publication %}<p>Directeur·rice de la publication : {{ EDITEUR.directeur_publication }}.</p>{% endif %}
+
+  <h2>Hébergement</h2>
+  <p>{{ HEBERGEUR.nom }}, {{ HEBERGEUR.adresse }} (<a href="{{ HEBERGEUR.site }}" rel="noopener">{{ HEBERGEUR.site | replace('https://', '') }}</a>), {{ HEBERGEUR.region }}.</p>
+
+  <h2>Nature du service</h2>
+  <p>TrichoSens propose un diagnostic capillaire en ligne, gratuit, qui donne des conseils de soin et des
+    suggestions de produits adaptés aux réponses de la personne. <strong>Ce diagnostic n'est pas un diagnostic
+    médical</strong> et ne remplace pas l'avis d'un médecin, d'un dermatologue ou d'un pharmacien. En cas de chute
+    importante, de plaques, de douleurs ou de tout symptôme inquiétant, consultez un professionnel de santé.</p>
+
+  <h2>Liens d'affiliation</h2>
+  <p>Certains liens vers des sites marchands sont des liens affiliés : si vous achetez par leur intermédiaire,
+    TrichoSens peut percevoir une commission, sans surcoût pour vous. Les produits sont choisis selon les besoins
+    indiqués dans le diagnostic, jamais selon le montant des commissions. En tant que Partenaire Amazon, TrichoSens
+    réalise un bénéfice sur les achats remplissant les conditions requises. Les prix affichés sont indicatifs.</p>
+
+  <h2>Propriété intellectuelle</h2>
+  <p>Les textes, illustrations, logos, photos et le fonctionnement du diagnostic sont la propriété de TrichoSens ou
+    sont utilisés avec l'autorisation de leurs auteurs. Toute reproduction sans autorisation est interdite. Les noms
+    de marques et de produits cités appartiennent à leurs propriétaires respectifs.</p>
+
+  <h2>Données personnelles</h2>
+  <p>Voir notre <a href="/confidentialite">politique de confidentialité</a>.</p>
+</article>
+{% endblock %}

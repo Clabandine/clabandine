@@ -6,7 +6,10 @@
   const form = document.getElementById("diagnostic-form");
   if (!form) return;
 
-  const panels = Array.from(form.querySelectorAll(".step-panel"));
+  // Toutes les étapes, et celles du parcours choisi (adulte, enfant ou ado).
+  const tousPanels = Array.from(form.querySelectorAll(".step-panel"));
+  let panels = tousPanels.slice();
+  let publicActuel = "adulte";
   const submit = form.querySelector(".submit");
   let current = 0;
 
@@ -40,6 +43,7 @@
   function show(index) {
     const forward = index >= current;
     current = index;
+    tousPanels.forEach((p) => { if (!panels.includes(p)) p.hidden = true; });
     panels.forEach((p, i) => {
       p.hidden = i !== index;
       if (i === index) {
@@ -49,6 +53,7 @@
       }
     });
     majProgression(index);
+    if (window.tsStat) window.tsStat("etape_vue", panels[index].dataset.step);
     if (diagHead) diagHead.hidden = index !== 0;
     submit.hidden = true; // le bouton final est dans la dernière étape
     personnaliser(panels[index]);
@@ -58,14 +63,18 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Petite touche personnelle : le prénom dans le titre de l'étape suivante.
-  const titresOrigine = new Map(panels.map((p) => [p, p.querySelector(".step-head h2").textContent]));
+  // Titres selon le parcours, et le prénom dans le titre de l'étape de description.
   function personnaliser(panel) {
     const prenomInput = document.getElementById("prenom");
     const prenom = prenomInput ? prenomInput.value.trim().split(/\s+/)[0] : "";
+    const enfant = publicActuel === "enfant";
     const h2 = panel.querySelector(".step-head h2");
-    if (panel.dataset.step === "description") {
-      h2.textContent = prenom ? `${prenom}, racontez-nous vos cheveux` : titresOrigine.get(panel);
+    const intro = panel.querySelector(".step-intro");
+    h2.textContent = enfant ? h2.dataset.titreEnfant : h2.dataset.titre;
+    if (intro) intro.textContent = enfant ? intro.dataset.introEnfant : intro.dataset.intro;
+    if (panel.dataset.step === "description" && prenom) {
+      const de = /^[aeiouyhàâéèêëîïôöûü]/i.test(prenom) ? "d’" : "de ";
+      h2.textContent = enfant ? `Racontez-nous les cheveux ${de}${prenom}` : `${prenom}, racontez-nous vos cheveux`;
     }
   }
 
@@ -81,6 +90,7 @@
   function validatePanel(panel) {
     let ok = true;
     panel.querySelectorAll(".question").forEach((q) => {
+      if (q.hidden) return; // question d'un autre parcours ou sans objet
       let message = "";
       const checked = q.querySelectorAll(`input[name="${q.dataset.question}"]:checked`);
       if (q.dataset.required === "true" && checked.length === 0) {
@@ -285,6 +295,7 @@
     if (!bouton) return;
     const input = form.querySelector(`input[name="${bouton.dataset.testQ}"][value="${bouton.dataset.testV}"]`);
     if (!input) return;
+    if (window.tsStat) window.tsStat("test_maison", bouton.dataset.testQ);
     input.checked = true;
     input.dispatchEvent(new Event("change", { bubbles: true }));
     const details = bouton.closest("details");
@@ -402,7 +413,7 @@
     function cocher(name, value, { siVide = false } = {}) {
       const input = form.querySelector(`input[name="${name}"][value="${value}"]`);
       if (!input || refusees.has(cle(input))) return false;
-      if (input.closest(".question[hidden], .option[hidden], .chip[hidden]") || input.disabled) return false;
+      if (input.closest(".question[hidden], .option[hidden], .chip[hidden], .pain[hidden]") || input.disabled) return false;
       const deja = form.querySelector(`input[name="${name}"]:checked`);
       if (siVide && deja && deja !== input && deja.value !== "" && !suggerees.has(cle(deja))) return false;
       if (!input.checked) {
@@ -559,6 +570,7 @@
         .then((response) => response.json().then((res) => {
           if (!response.ok) throw new Error(res.detail || "");
           statut.textContent = "";
+          if (window.tsStat) window.tsStat("texte_utilise", res.source);
           if (area.value.trim() === texte) appliquer(res);
         }))
         .catch(() => {
@@ -578,6 +590,33 @@
     if (iaBox) iaBox.addEventListener("change", () => { dernierTexte = ""; analyser(); });
     avantSuite = (panel) => (panel.contains(texteBox) ? analyser() : Promise.resolve());
   }
+
+  // --- Parcours : adulte, enfant ou ado ---------------------------------------------
+
+  const PLACEHOLDERS = {
+    adulte: "Ex. : J'ai des cheveux bouclés, très secs, qui cassent beaucoup aux pointes. Mon cuir chevelu gratte depuis que je porte des tresses. J'aimerais garder ma longueur.",
+    enfant: "Ex. : Ma fille a 6 ans, des cheveux crépus très secs. Le démêlage est un moment difficile, elle pleure. Elle a eu des poux le mois dernier.",
+    ado: "Ex. : J'ai 15 ans, mes racines regraissent dès le lendemain mais mes pointes sont sèches. J'utilise mon lisseur tous les matins.",
+  };
+
+  function majPublic() {
+    publicActuel = checkedValue("pour") || "adulte";
+    form.dataset.public = publicActuel;
+    const pourMoi = (el) => !el.dataset.publics || el.dataset.publics.split(" ").includes(publicActuel);
+    panels = tousPanels.filter(pourMoi);
+    form.querySelectorAll(".question[data-publics]").forEach((q) => hideAndClear(q, !pourMoi(q)));
+    form.querySelectorAll(".pain[data-publics], .option[data-publics], .chip[data-publics]")
+      .forEach((o) => hideAndClear(o, !pourMoi(o)));
+    const zone = document.getElementById("description");
+    if (zone) zone.placeholder = PLACEHOLDERS[publicActuel];
+    updateDependants();
+    document.getElementById("step-total").textContent = panels.length;
+  }
+  form.querySelectorAll('input[name="pour"]').forEach((r) => r.addEventListener("change", () => {
+    majPublic();
+    majProgression(current);
+  }));
+  majPublic();
 
   // Après une erreur côté serveur, ouvrir la première étape concernée.
   const firstError = panels.findIndex((p) => p.querySelector(".has-error"));

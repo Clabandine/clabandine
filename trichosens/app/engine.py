@@ -91,7 +91,20 @@ PREOCCUPATION_POINTS = {
     "alourdis": {"volume": 2},
     "demangeaisons": {"cuir_chevelu": 5},
     "pellicules": {"cuir_chevelu": 5},
+    "poux": {"cuir_chevelu": 3},
+    "croutes_lait": {"cuir_chevelu": 3},
 }
+
+COIFFURE_POINTS = {
+    "serrees": {"reparation": 1},
+    "rajouts": {"reparation": 1, "cuir_chevelu": 1},
+    "laches": {},
+    "piscine": {"hydratation": 2, "proteines": 1},
+    "casque": {"cuir_chevelu": 1},
+}
+
+AGES_JEUNES = {"bebe": "moins de 3 ans", "petit": "3 à 5 ans", "enfant": "6 à 11 ans",
+               "ado_jeune": "12 à 14 ans", "ado": "15 à 17 ans"}
 
 # Part du second type quand les cheveux mélangent deux types.
 PART_SECONDAIRE = 0.35
@@ -119,6 +132,8 @@ OBJECTIF_POINTS = {
     "longueur": {"reparation": 2, "proteines": 2},
     "sante_cuir": {"cuir_chevelu": 4},
     "brillance": {"nutrition": 3},
+    "demelage": {"hydratation": 3, "nutrition": 1},
+    "autonomie": {},
 }
 
 
@@ -142,6 +157,8 @@ def compute_needs(a: Answers, photo: AnalysePhoto | None = None,
         add(SPECIFICITES[sid].points)
     for pts in sante.points(a):
         add(pts)
+    for c in a.coiffures:
+        add(COIFFURE_POINTS[c])
     for did in a.demangeaisons_details:
         add(DETAILS_DEMANGEAISONS[did].points)
     if saison:
@@ -179,6 +196,8 @@ class Step:
     categorie: str | None = None
     produit: Product | None = None
     hors_preferences: list[str] = field(default_factory=list)
+    # Produit précis à proposer s'il convient (ex. le bonnet en satin pour la nuit).
+    produit_id: str | None = None
     # Recette maison qui peut remplacer le produit de cette étape.
     alternative: naturel.Recette | None = None
 
@@ -223,6 +242,7 @@ class Diagnostic:
     fiabilite: dict = field(default_factory=dict)
     # Santé : facteurs, professionnels à consulter, examens à demander.
     orientation: dict = field(default_factory=dict)
+    pour: str = "adulte"
     # Alternatives naturelles : recettes maison, cures et gestes du quotidien.
     recettes: list[dict] = field(default_factory=list)
     cures: list[dict] = field(default_factory=list)
@@ -245,6 +265,7 @@ class Diagnostic:
             "specifiques": self.specifiques,
             "fiabilite": self.fiabilite,
             "orientation": self.orientation,
+            "pour": self.pour,
             "recettes": [
                 {"id": r["recette"].id, "titre": r["recette"].titre,
                  "remplace": r["recette"].categorie,
@@ -328,12 +349,30 @@ def _resume(a: Answers) -> str:
     if a.porosite != "inconnue":
         parts.append(f"porosité {a.porosite}")
     parts.append(f"cuir chevelu {CUIR_LABELS[a.cuir_chevelu]}")
+    if a.pour != "adulte":
+        qui = "Enfant" if a.pour == "enfant" else "Ado"
+        age = f" de {AGES_JEUNES[a.age_jeune]}" if a.age_jeune in AGES_JEUNES else ""
+        parts[0] = f"{qui}{age} · {parts[0]}"
     if "demangeaisons" in a.preoccupations:
         parts[-1] += " qui démange"
     return ", ".join(parts) + "."
 
 
 def _frequence_lavage(a: Answers) -> str:
+    if a.pour == "enfant":
+        if a.age_jeune == "bebe":
+            return "1 à 2 fois par semaine, avec un shampoing pour bébé"
+        return {
+            "lisse": "1 à 2 fois par semaine, et après la piscine",
+            "ondule": "1 à 2 fois par semaine",
+            "boucle": "1 fois par semaine",
+            "frise": "1 fois par semaine",
+            "crepu": "1 fois par semaine à tous les 10 jours",
+        }[a.texture]
+    return _frequence_adulte(a)
+
+
+def _frequence_adulte(a: Answers) -> str:
     base = {
         "lisse": "2 à 3 fois par semaine",
         "ondule": "2 fois par semaine",
@@ -397,7 +436,62 @@ def cuir_effectif(a: Answers) -> str:
     return a.cuir_chevelu
 
 
+def _routine_enfant(a: Answers, besoins: dict[str, int], poids: str) -> list[Step]:
+    """Routine courte et douce pour un enfant : peu d'étapes, que des soins adaptés à l'âge."""
+    texture_bouclee = a.texture in {"ondule", "boucle", "frise", "crepu"}
+    steps: list[Step] = [Step(
+        "lavage", "Shampoing doux",
+        "Une noisette suffit : massez doucement le cuir chevelu, puis rincez longtemps en "
+        "protégeant les yeux.", "shampoing")]
+    if a.age_jeune == "bebe":
+        if "croutes_lait" in a.preoccupations:
+            steps.append(Step(
+                "hebdomadaire", "Croûtes de lait",
+                "Le soir, une huile végétale douce sur les croûtes ; le lendemain, décollez-les avec "
+                "une brosse très douce avant le shampoing.", "huile"))
+        return steps
+    steps.append(Step(
+        "lavage", "Démêlant",
+        "Sur les longueurs : démêlez avec un peigne à dents larges, des pointes vers les "
+        "racines, par petites mèches, sans tirer. C'est le secret d'un démêlage sans pleurs.",
+        "apres_shampoing"))
+    if texture_bouclee:
+        steps.append(Step("lavage", "Soin sans rinçage",
+                          "Sur cheveux encore humides, pour garder l'hydratation et faciliter le "
+                          "coiffage.", "leave_in"))
+    if a.texture in {"boucle", "frise", "crepu"} and (besoins["definition"] >= 30
+                                                      or a.objectif == "definition"):
+        steps.append(Step("lavage", "Crème coiffante",
+                          "Une petite quantité par sections, pour des boucles définies sans les "
+                          "durcir.", "coiffant"))
+    if a.texture in {"frise", "crepu"}:
+        steps.append(Step("lavage", "Sceller l'hydratation",
+                          "Quelques gouttes d'huile ou un peu de beurre sur les longueurs.", "huile"))
+    steps.append(Step("lavage", "Séchage",
+                      "Essorez dans une serviette douce en tamponnant, sans frotter ; laissez "
+                      "sécher à l'air libre, sans sèche-cheveux chaud."))
+    if texture_bouclee:
+        steps.append(Step("quotidien", "Réhydrater",
+                          "Le matin, un peu d'eau ou de soin sans rinçage en spray, puis "
+                          "coiffez avec les doigts.", "leave_in"))
+    steps.append(Step("quotidien", "Coiffer sans tirer",
+                      "Des coiffures souples, des élastiques sans métal, et une pause entre deux "
+                      "coiffures serrées pour protéger les tempes."))
+    if "poux" in a.preoccupations:
+        steps.append(Step("hebdomadaire", "Vérifier les poux",
+                          "Une fois par semaine, passez le peigne anti-poux sur cheveux mouillés "
+                          "et démêlés, mèche par mèche.", "accessoire",
+                          produit_id="divers-peigne-anti-poux"))
+    if texture_bouclee or "frisottis" in a.preoccupations:
+        steps.append(Step("nuit", "Protéger les cheveux",
+                          "Une taie ou un bonnet en satin, et les cheveux rassemblés en tresse "
+                          "lâche ou en ananas.", "accessoire", produit_id="bonnet-satin"))
+    return steps
+
+
 def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step]:
+    if a.pour == "enfant":
+        return _routine_enfant(a, besoins, poids)
     boucles = a.texture in {"boucle", "frise", "crepu"}
     texture_bouclee = a.texture in {"ondule", "boucle", "frise", "crepu"}
     steps: list[Step] = []
@@ -541,7 +635,8 @@ def _build_routine(a: Answers, besoins: dict[str, int], poids: str) -> list[Step
         conseil = "Dormez sur une taie en satin ou en soie, ou protégez vos cheveux avec un bonnet en satin."
         if boucles:
             conseil += " Rassemblez vos cheveux en ananas (queue haute et lâche) pour préserver les boucles."
-        steps.append(Step("nuit", "Protéger les cheveux", conseil, "accessoire"))
+        steps.append(Step("nuit", "Protéger les cheveux", conseil, "accessoire",
+                          produit_id="bonnet-satin"))
 
     return steps
 
@@ -603,7 +698,8 @@ def _conseils(a: Answers, besoins: dict[str, int], poids: str) -> list[str]:
             "nuque), des textures plus légères sur les zones plus souples. Vos soins ont été "
             "choisis pour convenir aux deux."
         )
-    if a.texture in {"frise", "crepu"}:
+    conseils += _conseils_jeunes(a)
+    if a.texture in {"frise", "crepu"} and a.pour != "enfant":
         conseils.append(
             "Les coiffures protectrices (tresses, vanilles, chignons) limitent les manipulations ; "
             "évitez qu'elles tirent sur les tempes."
@@ -611,10 +707,52 @@ def _conseils(a: Answers, besoins: dict[str, int], poids: str) -> list[str]:
     return conseils
 
 
+def _conseils_jeunes(a: Answers) -> list[str]:
+    """Conseils propres aux parcours enfant et ado."""
+    c: list[str] = []
+    if a.pour == "enfant":
+        c.append("Pour un démêlage sans larmes : toujours sur cheveux mouillés et couverts de "
+                 "démêlant, en commençant par les pointes, et en laissant votre enfant tenir une "
+                 "mèche ou le peigne : il se sent acteur.")
+        c.append("Pas de lissage, de défrisage, de coloration ni d'outil chauffant chez l'enfant : "
+                 "sa fibre et son cuir chevelu sont encore fragiles.")
+        c.append("Gardez des soins simples et doux, pensés pour les enfants : les produits pour "
+                 "adultes sont souvent trop parfumés ou trop actifs.")
+        if a.age_jeune != "bebe":
+            c.append("Les poux reviennent souvent avec l'école : un coup de peigne anti-poux une "
+                     "fois par semaine permet de les repérer tôt.")
+    if a.pour == "ado":
+        c.append("À la puberté, le cuir chevelu regraisse plus vite : un shampoing doux plus "
+                 "fréquent ne l'abîme pas. Évitez de frotter fort, ce qui relance le sébum.")
+        if a.chaleur != "jamais":
+            c.append("Lisseur ou fer à boucler : toujours un protecteur thermique, et pas plus de "
+                     "180 °C. Gardez-les pour les grandes occasions.")
+        c.append("Coloration, décoloration, défrisage : mieux vaut attendre au moins 16 ans, et "
+                 "toujours faire un test d'allergie 48 heures avant.")
+        c.append("Examens, manque de sommeil, régime : ce que vit le corps se voit sur les "
+                 "cheveux 2 à 3 mois plus tard.")
+        if a.objectif == "autonomie":
+            c.append("Pour vous lancer : un shampoing doux, un après-shampoing sur les longueurs, "
+                     "un soin sans rinçage si vos cheveux sont bouclés. Ajoutez le reste peu à peu.")
+    if {"serrees", "rajouts"} & set(a.coiffures):
+        c.append("Les coiffures serrées et les rajouts tirent sur les tempes : desserrez dès que "
+                 "ça fait mal, gardez une coiffure 6 semaines au plus et faites des pauses.")
+    if "piscine" in a.coiffures:
+        c.append("Piscine : mouillez les cheveux à l'eau claire et mettez un peu de soin sans "
+                 "rinçage avant, un bonnet si possible, et rincez bien après.")
+    return c
+
+
 def _alertes(a: Answers) -> list[str]:
     alertes = [DETAILS_DEMANGEAISONS[d].alerte for d in a.demangeaisons_details
                if DETAILS_DEMANGEAISONS[d].alerte]
-    if "chute" in a.preoccupations:
+    if a.pour == "enfant" and ("chute" in a.preoccupations
+                               or {"chute_plaques", "chute_brutale"} & set(a.sante)):
+        alertes.append(
+            "Une chute de cheveux chez l'enfant n'est jamais banale : consultez le pédiatre ou un "
+            "dermatologue. Elle peut venir d'une teigne (contagieuse), d'une pelade, ou de cheveux "
+            "arrachés par habitude.")
+    elif "chute" in a.preoccupations:
         alertes.append(
             "Une chute importante, soudaine ou qui dure plus de 3 mois mérite l'avis d'un médecin "
             "ou d'un dermatologue : elle peut avoir des causes hormonales, nutritionnelles ou médicales."
@@ -637,6 +775,11 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
                   saison: str | None = None) -> float | None:
     """Score d'adéquation d'un produit au profil, ou None s'il ne convient pas."""
     if p.types and a.type_cheveux not in p.types:
+        return None
+    # Produits adaptés à l'âge : seulement des soins pour enfants ou de tout âge pour un enfant.
+    if a.pour == "enfant" and p.public not in {"enfant", "tous"}:
+        return None
+    if a.pour != "enfant" and p.public == "enfant":
         return None
     cuir = cuir_effectif(a)
     if p.cuir_chevelu and cuir not in p.cuir_chevelu:
@@ -666,6 +809,8 @@ def score_product(p: Product, a: Answers, besoins: dict[str, int], poids: str,
         score += 5  # convient aussi à la nature habituelle du cuir chevelu
     if a.type_secondaire and p.types:
         score += 3 if a.type_secondaire in p.types else -3
+    if a.pour == "enfant" and p.sans_parfum is True:
+        score += 5
     if ("demangeaisons" in a.preoccupations and p.sans_parfum is True
             and p.categorie in {"shampoing", "soin_cuir", "leave_in"}):
         score += 6
@@ -789,12 +934,12 @@ def fiabilite(a: Answers, photo: AnalysePhoto | None = None,
         score -= 15
         a_ameliorer.append("Faites le test du verre d'eau pour connaître votre porosité "
                            "(5 minutes) : elle change le choix des soins.")
-    if a.elasticite == "non_teste":
+    if a.elasticite == "non_teste" and a.pour != "enfant":
         score -= 10
         a_ameliorer.append("Faites le test d'élasticité (1 minute) : il dit si vos cheveux "
                            "manquent plutôt d'hydratation ou de protéines.")
     photo_ok = bool(photo and photo.exploitable)
-    if photo_dispo and not photo_ok:
+    if photo_dispo and not photo_ok and a.pour == "adulte":
         score -= 5
         a_ameliorer.append("Ajoutez une photo de vos cheveux : l'IA vérifie votre type et les "
                            "signes visibles.")
@@ -857,6 +1002,13 @@ def _programme(phase: str, a: Answers, besoins: dict[str, int], priorites: list[
             "Refaites votre diagnostic tous les 2 à 3 mois, ou à chaque changement de saison.",
         ],
     }
+    if a.pour == "enfant":
+        entretien["actions"] = [
+            "Gardez la même routine douce : elle suffit dans la durée.",
+            "Démêlage sous démêlant, coiffures souples, satin la nuit.",
+            "Refaites le diagnostic tous les 3 mois ou à chaque changement de saison : ses "
+            "cheveux changent en grandissant.",
+        ]
     if phase == "entretien":
         return [entretien], today + dt.timedelta(weeks=8)
     intensif = {
@@ -864,7 +1016,8 @@ def _programme(phase: str, a: Answers, besoins: dict[str, int], priorites: list[
         "periode": "Semaines 1 à 4",
         "actions": [
             f"Priorité : {focus}.",
-            "Masque à chaque lavage, en suivant la routine ci-dessous.",
+            "Suivez la routine ci-dessous à chaque lavage." if a.pour == "enfant"
+            else "Masque à chaque lavage, en suivant la routine ci-dessous.",
             "Notez ce que vous observez après chaque lavage (souplesse, frisottis, casse).",
         ],
     }
@@ -881,7 +1034,7 @@ def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
         intensites=dict(a.intensites), besoins=d.besoins, phase=d.phase,
         prochain_point=d.prochain_point, preferences=list(a.preferences), budget=a.budget,
         age=a.age, saisons_sensibles=list(a.saisons_sensibles), prenom=a.prenom,
-        type_secondaire=a.type_secondaire,
+        type_secondaire=a.type_secondaire, pour=a.pour,
     ).model_dump(mode="json")
 
 
@@ -893,11 +1046,18 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
     saison = seasons.saison_du(today)
     besoins = compute_needs(a, photo, saison)
     poids = _poids_produits(a, saison)
+    # On ne compare qu'avec un diagnostic du même parcours (pas un parent et son enfant).
+    if precedent and precedent.pour != a.pour:
+        precedent = None
     evolution = compare(precedent, a, besoins, today) if precedent else None
     phase = evolution.phase if evolution else "intensive"
     routine = _build_routine(a, besoins, poids)
+    par_id_cat = {p.id: p for p in catalog}
     for step in routine:
-        if step.categorie:
+        prefere = par_id_cat.get(step.produit_id or "")
+        if prefere and score_product(prefere, a, besoins, poids, saison.id) is not None:
+            step.produit, step.hors_preferences = prefere, preferences_non_respectees(prefere, a)
+        elif step.categorie:
             step.produit, step.hors_preferences = recommend(
                 step.categorie, a, besoins, poids, catalog, saison.id)
         if step.categorie == "masque" and phase == "entretien":
@@ -950,13 +1110,15 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         notes_photo=notes_photo,
         signes_photo_en_plus=en_plus,
         saison=saison,
-        conseils_saison=profil.conseils_saison_perso(a, saison) + seasons.conseils(saison, a),
+        conseils_saison=profil.conseils_saison_perso(a, saison)
+        + ([] if a.pour == "enfant" else seasons.conseils(saison, a)),
         conseils_vie=profil.conseils_vie(a),
         prochaine_saison=seasons.prochaine(saison),
         # Ce qui changera à la saison suivante : la réaction propre à la personne si elle
         # l'a indiquée, sinon le principal conseil de la saison.
         anticipation=(profil.anticipation(a, seasons.prochaine(saison))
-                      or seasons.conseils(seasons.prochaine(saison), a)[:1]),
+                      or ([] if a.pour == "enfant"
+                          else seasons.conseils(seasons.prochaine(saison), a)[:1])),
         phase=phase,
         programme=programme,
         prochain_point=prochain_point,
@@ -978,6 +1140,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         conseils_naturels=naturel.conseils_naturels(a),
         fiabilite=fiabilite(a, photo),
         orientation=sante.orientation(a),
+        pour=a.pour,
     )
     d.suivi = resume_suivi(d, a, today)
     return d

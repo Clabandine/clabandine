@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord – TrichoSens{% endblock %}
+{% block main_class %}page-admin{% endblock %}
+{% block content %}
+{% set t = tableau %}
+<div class="admin-head">
+  <div>
+    <p class="eyebrow">Espace admin</p>
+    <h1>Tableau de bord</h1>
+  </div>
+  <nav class="periodes" aria-label="Période">
+    {% for j in t.periodes %}
+    <a href="?cle={{ cle | urlencode }}&jours={{ j }}"{% if j == t.jours %} aria-current="page"{% endif %}>{{ j }} jours</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if not t.persistant %}
+<p class="note">⚠️ Les chiffres sont gardés en mémoire : ils repartent à zéro à chaque redémarrage du site
+  (depuis le {{ t.depuis.strftime('%d/%m/%Y à %H:%M') }} UTC). Branchez la base de données (variable
+  <code>DATABASE_URL</code> dans Render) pour les garder durablement.</p>
+{% else %}
+<p class="help">✓ Chiffres enregistrés durablement dans la base de données.</p>
+{% endif %}
+{% if t.erreur %}<p class="alert">{{ t.erreur }}</p>{% endif %}
+{% if legal_manquant %}<p class="note">📝 Mentions légales à compléter : {{ legal_manquant | join(', ') }}
+  (fichier <code>app/legal.py</code>, ou variables LEGAL_CAPITAL, LEGAL_SIREN, LEGAL_DIRECTEUR dans Render).</p>{% endif %}
+
+<div class="stat-grid admin-stats">
+  {% for c in t.chiffres %}
+  <div class="stat"><span class="stat-label">{{ c.label }}</span><strong>{{ c.valeur }}</strong>{% if c.detail %}<small>{{ c.detail }}</small>{% endif %}</div>
+  {% endfor %}
+</div>
+
+{% set g = t.courbe %}
+<section class="card">
+  <h2 class="admin-titre">Diagnostics terminés par jour</h2>
+  <p class="help">{{ g.total }} sur les {{ t.jours }} derniers jours. Survolez une barre pour voir le chiffre du jour.</p>
+  <svg class="admin-courbe" viewBox="-34 -8 {{ g.largeur + 40 }} {{ g.hauteur + 30 }}" role="img"
+       aria-label="Diagnostics terminés par jour, {{ g.total }} au total">
+    {% for r in g.reperes %}
+    <line x1="0" x2="{{ g.largeur }}" y1="{{ r.y }}" y2="{{ r.y }}" class="grille"/>
+    <text x="-8" y="{{ r.y + 4 }}" text-anchor="end" class="axe">{{ r.v }}</text>
+    {% endfor %}
+    {% for b in g.barres %}
+    <g class="barre">
+      <rect x="{{ b.x - 2 }}" y="0" width="{{ b.l + 4 }}" height="{{ g.hauteur }}" class="cible"/>
+      {% if b.h > 0 %}<path d="M{{ b.x }},{{ g.hauteur }} V{{ b.y + [4, b.h] | min }} q0,-{{ [4, b.h] | min }} {{ [4, b.l / 2] | min }},-{{ [4, b.h] | min }} H{{ b.x + b.l - [4, b.l / 2] | min }} q{{ [4, b.l / 2] | min }},0 {{ [4, b.l / 2] | min }},{{ [4, b.h] | min }} V{{ g.hauteur }} Z"/>{% endif %}
+      <title>{{ b.jour.strftime('%d/%m') }} : {{ b.v }} diagnostic{{ 's' if b.v > 1 }}</title>
+    </g>
+    {% endfor %}
+    <line x1="0" x2="{{ g.largeur }}" y1="{{ g.hauteur }}" y2="{{ g.hauteur }}" class="base"/>
+    {% for e in g.etiquettes %}
+    <text x="{{ [0, g.largeur / 2, g.largeur][loop.index0] }}" y="{{ g.hauteur + 18 }}"
+          text-anchor="{{ ['start', 'middle', 'end'][loop.index0] }}" class="axe">{{ e.strftime('%d/%m') }}</text>
+    {% endfor %}
+  </svg>
+</section>
+
+<section class="card">
+  <h2 class="admin-titre">Où les personnes s'arrêtent</h2>
+  <p class="help">Étapes du diagnostic vues, en pourcentage de la première étape.
+    {% if t.erreurs_formulaire %}{{ t.erreurs_formulaire }} envoi(s) avec une réponse manquante.{% endif %}</p>
+  {% if t.entonnoir %}
+  <ul class="classement">
+    {% for e in t.entonnoir %}
+    <li title="{{ e.label }} : {{ e.n }} ({{ e.part }} %)">
+      <span class="cl-label">{{ e.label }}</span>
+      <span class="cl-barre"><span style="width: {{ e.part }}%"></span></span>
+      <span class="cl-n">{{ e.part }} %<small>{{ e.n }}</small></span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="help">Pas encore de données.</p>{% endif %}
+</section>
+
+<div class="admin-grille">
+  {% for titre, lignes in t.sections if lignes %}
+  <section class="card">
+    <h2 class="admin-titre">{{ titre }}</h2>
+    {% if lignes %}
+    <ul class="classement">
+      {% for l in lignes %}
+      <li title="{{ l.label }} : {{ l.n }} ({{ l.part }} %)">
+        <span class="cl-label">{{ l.label }}</span>
+        <span class="cl-barre"><span style="width: {{ l.largeur }}%"></span></span>
+        <span class="cl-n">{{ l.n }}<small>{{ l.part }} %</small></span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="help">Pas encore de données.</p>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+<section class="card admin-outils">
+  <h2 class="admin-titre">Aller plus loin</h2>
+  <ul>
+    <li><a href="/admin/export.csv?cle={{ cle | urlencode }}&jours={{ t.jours }}">Télécharger les données ({{ t.jours }} jours, CSV)</a> pour Excel ou Google Sheets.</li>
+    <li><a href="/admin/catalogue?cle={{ cle | urlencode }}">État du catalogue</a> (fiches à vérifier).</li>
+    <li>Ventes et commissions : dans les tableaux de bord Amazon Partenaires et Awin.</li>
+    <li>Avis des testeuses : dans les réponses de votre Google Form.</li>
+  </ul>
+  <p class="help">Confidentialité : seuls des compteurs anonymes par jour sont enregistrés. Ni prénom, ni adresse IP,
+    ni texte saisi, ni réponse sur la santé ou la période de vie.</p>
+</section>
+{% endblock %}

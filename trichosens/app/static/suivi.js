@@ -59,31 +59,47 @@
   const precedent = document.getElementById("precedent");
   if (precedent) {
     const history = load(KEY);
-    const last = history[history.length - 1];
+    const form = precedent.form;
+    const prenom = form.querySelector('input[name="prenom"]');
+    const info = document.querySelector(".suivi-info");
+
+    // Dernier diagnostic du même parcours (adulte, enfant ou ado) : on ne compare pas
+    // le diagnostic d'un parent avec celui de son enfant.
+    function reprendre(pour) {
+      const last = [...history].reverse().find((e) => (e.pour || "adulte") === pour);
+      precedent.value = last ? JSON.stringify(last) : "";
+      if (prenom && (!prenom.value || prenom.dataset.repris === "1")) {
+        prenom.value = (last && last.prenom) || "";
+        prenom.dataset.repris = prenom.value ? "1" : "";
+      }
+      if (info) {
+        if (last) info.querySelector("span").textContent = frDate(last.date);
+        info.hidden = !last;
+      }
+      return last;
+    }
+
+    if (prenom) prenom.addEventListener("input", () => (prenom.dataset.repris = ""));
+    const pourChoisi = form.querySelector('input[name="pour"]:checked');
+    const last = reprendre(pourChoisi ? pourChoisi.value : "adulte");
+    form.querySelectorAll('input[name="pour"]').forEach((r) =>
+      r.addEventListener("change", () => reprendre(r.value))
+    );
+
     if (last) {
-      precedent.value = JSON.stringify(last);
       // Reprendre les préférences du dernier diagnostic si rien n'est encore coché.
-      const form = precedent.form;
       const prefs = form.querySelectorAll('input[name="preferences"]');
       const budgets = form.querySelectorAll('input[name="budget"]');
       if (![...prefs, ...budgets].some((i) => i.checked)) {
         prefs.forEach((i) => (i.checked = (last.preferences || []).includes(i.value)));
         budgets.forEach((i) => (i.checked = i.value === last.budget));
       }
-      // Prénom : repris du dernier diagnostic s'il n'a pas été saisi.
-      const prenom = form.querySelector('input[name="prenom"]');
-      if (prenom && !prenom.value && last.prenom) prenom.value = last.prenom;
       // Âge et réaction aux saisons : repris du dernier diagnostic (modifiables).
       const ages = form.querySelectorAll('input[name="age"]');
       const sens = form.querySelectorAll('input[name="saisons_sensibles"]');
       if (![...ages, ...sens].some((i) => i.checked)) {
         ages.forEach((i) => (i.checked = last.age && last.age !== "nc" && i.value === last.age));
         sens.forEach((i) => (i.checked = (last.saisons_sensibles || []).includes(i.value)));
-      }
-      const info = document.querySelector(".suivi-info");
-      if (info) {
-        info.querySelector("span").textContent = frDate(last.date);
-        info.hidden = false;
       }
     }
   }

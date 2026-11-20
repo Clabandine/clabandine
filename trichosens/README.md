@@ -19,6 +19,22 @@ habitudes, objectif. Une barre par partie et le temps restant estimé remplacent
 restent à portée de pouce en bas de l'écran ; après une réponse, la page descend vers la
 question suivante ; le prénom personnalise le titre de l'étape suivante.
 
+## Trois parcours : adulte, enfant, ado
+
+Le diagnostic commence par « Pour qui ? » (ou s'ouvre avec `/diagnostic?pour=enfant` ou
+`?pour=ado`). Un seul moteur, mais des questions, des réponses et des soins adaptés à l'âge :
+
+- **Enfant (0-11 ans)**, rempli par le parent : intitulés « votre enfant », gênes propres
+  (poux, croûtes de lait), coiffures et piscine ; ni chaleur, ni traitement chimique, ni
+  photo, ni complément. Routine courte (démêlage sans pleurs, coiffer sans tirer), produits
+  marqués `enfant` ou `tous` dans la colonne `public` du catalogue, alerte « pédiatre » si
+  chute. Moins de 3 ans : shampoing doux (et croûtes de lait) seulement.
+- **Ado (12-17 ans)** : puberté et cuir chevelu gras, outils chauffants, premières
+  colorations, stress, règles ; pas de cure de compléments ; orientation vers le pédiatre ou
+  le médecin traitant.
+- Le suivi ne compare un diagnostic qu'avec le précédent du même parcours, et le prénom
+  repris dépend du parcours choisi.
+
 ## Ce que fait la version actuelle (v0.5)
 
 1. **Ce qui vous gêne d'abord** : le diagnostic commence par les points de douleur
@@ -108,6 +124,7 @@ Google Sheets ou Excel. **Les prix sont indicatifs et toutes les fiches sont à 
 
 | Colonne | Contenu |
 |---|---|
+| `public` | vide (adultes et ados), `enfant` ou `tous` (tout âge) |
 | `categorie` | shampoing, apres_shampoing, masque, leave_in, coiffant, huile, protecteur_thermique, soin_cuir, shampoing_clarifiant, accessoire ; hors routine : ingredient (recettes maison), complement (cures) |
 | `besoins` | hydratation, nutrition, proteines, reparation, cuir_chevelu, protection, definition, volume (+ `anti_chute`, réservé aux personnes qui ont de la chute) |
 | `poids` | leger, moyen ou riche |
@@ -278,6 +295,22 @@ commence par un type de cheveux (ex. `3b-portrait.jpg`) ajoute la légende « Ty
 Tant que le dossier est vide, le carrousel montre les photos des types de cheveux. N'utilisez
 que des photos dont vous avez les droits, avec l'accord des personnes photographiées.
 
+## Tableau de bord admin
+
+`/admin?cle=VOTRE_CLE_ADMIN` (la clé est la variable `ADMIN_CLE` de Render) : visites,
+diagnostics commencés et terminés, étapes où les personnes s'arrêtent, parcours, types,
+gênes, objectifs, fiabilité, tests maison, texte libre, onglets consultés, produits et
+revendeurs cliqués, retours (diagnostic refait), avis, fiches PDF et partages, sur 7, 30 ou
+90 jours. Export CSV : `/admin/export.csv?cle=...&jours=90`.
+
+Seuls des **compteurs anonymes par jour** sont enregistrés (`app/stats.py`) : ni prénom, ni
+adresse IP, ni texte saisi, ni réponse sur la santé ou la période de vie. Les robots et les
+outils de surveillance ne sont pas comptés.
+
+**Garder les chiffres durablement :** créez une base Postgres gratuite (Neon) et collez son
+adresse de connexion dans la variable `DATABASE_URL` de Render. Sans elle, le tableau de bord
+fonctionne mais repart à zéro à chaque redémarrage du site.
+
 ## Organisation du code
 
 ```
@@ -287,6 +320,8 @@ trichosens/
 │   ├── questionnaire.py   # Étapes, questions du diagnostic et validation des réponses
 │   ├── hair_types.py      # Les 12 types de cheveux et leurs problèmes fréquents
 │   ├── pain_points.py     # Points de douleur : causes, actions, à éviter, délais
+│   ├── stats.py           # Statistiques anonymes (mémoire ou base Postgres)
+│   ├── admin.py           # Chiffres du tableau de bord admin et export CSV
 │   ├── texte.py           # Pré-remplissage à partir d'une description libre
 │   ├── sante.py           # Santé et cheveux : carences, maladies, signes, orientation
 │   ├── naturel.py         # Recettes maison, cures de compléments, gestes naturels

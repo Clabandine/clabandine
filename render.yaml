@@ -22,6 +22,10 @@ services:
         value: "5"
       - key: PHOTO_MAX_PAR_JOUR
         value: "200"
-      # Mot de passe de la page de statistiques des clics : /admin/clics?cle=...
+      # Mot de passe de l'espace admin : /admin?cle=... (tableau de bord)
       - key: ADMIN_CLE
         generateValue: true
+      # Base de données des statistiques anonymes (Neon, gratuit) : à saisir dans Render.
+      # Sans elle, le tableau de bord marche mais repart à zéro à chaque redémarrage.
+      - key: DATABASE_URL
+        sync: false

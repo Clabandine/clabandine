@@ -145,7 +145,7 @@ RECETTES: dict[str, Recette] = {r.id: r for r in (
          "Laissez agir 1 minute, puis rincez légèrement à l'eau fraîche."),
         "1 fois par semaine ou après un lavage au rhassoul.",
         precaution="À éviter sur un cuir chevelu irrité ou avec des plaies.",
-        pour=_cuir_calme,
+        pour=lambda a: _cuir_calme(a) and a.pour != "enfant",
         douleurs=("terne", "alourdis", "demelage", "pellicules"),
     ),
     Recette(
@@ -193,6 +193,8 @@ RECETTES: dict[str, Recette] = {r.id: r for r in (
 def recettes_pour(a: "Answers", besoins: dict[str, int],
                   categories_routine: set[str], nombre: int = 4) -> list[Recette]:
     """Les recettes les plus utiles pour ce profil, une par étape de routine au plus."""
+    if a.age_jeune == "bebe":
+        return []
     notes = []
     for r in RECETTES.values():
         if not r.pour(a):
@@ -235,6 +237,9 @@ PERIODES_CURE = {"post_partum", "stress", "menopause"}
 
 def cures_pour(a: "Answers", saison: str | None = None) -> tuple[list[Cure], str]:
     """Cures conseillées et message de prudence (ou raison de ne rien proposer)."""
+    if a.pour == "enfant":
+        return [], ("Pas de complément alimentaire pour un enfant sans l'avis du pédiatre : "
+                    "une alimentation variée apporte à ses cheveux tout ce dont ils ont besoin.")
     if "grossesse" in a.periodes:
         return [], ("Pendant la grossesse, ne prenez aucun complément alimentaire sans l'avis "
                     "de votre médecin ou de votre sage-femme : certains sont déconseillés.")

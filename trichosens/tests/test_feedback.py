@@ -25,7 +25,10 @@ def test_placeholders_are_replaced():
     resume = q["entry.111"][0]
     assert "Type 4C" in resume and "Casse (énormément)" in resume
     # Aucune donnée personnelle : ni âge ni période de vie.
-    assert "30" not in resume and "grossesse" not in resume.lower()
+    # (on retire la référence, faite de caractères aléatoires qui peuvent contenir « 30 »)
+    sans_ref = resume.split("Réf.")[0]
+    assert "30" not in sans_ref and "44" not in sans_ref and "âge" not in resume.lower()
+    assert "grossesse" not in resume.lower()
 
 
 def test_plain_link_is_unchanged():

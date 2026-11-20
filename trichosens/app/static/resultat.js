@@ -13,6 +13,7 @@
 
   function show(id, { focus = false, scroll = true } = {}) {
     if (!ids.includes(id)) id = ids[0];
+    if (window.tsStat) window.tsStat("onglet_resultat", id);
     tabs.forEach((t) => {
       const on = t.dataset.tab === id;
       t.setAttribute("aria-selected", on ? "true" : "false");
@@ -85,11 +86,12 @@
   const say = (msg) => { if (status) { status.textContent = msg; setTimeout(() => (status.textContent = ""), 4000); } };
 
   document.querySelectorAll("[data-print]").forEach((b) =>
-    b.addEventListener("click", () => window.print())
+    b.addEventListener("click", () => { if (window.tsStat) window.tsStat("fiche_pdf"); window.print(); })
   );
 
   document.querySelectorAll("[data-share]").forEach((b) =>
     b.addEventListener("click", async () => {
+      if (window.tsStat) window.tsStat("partage");
       const text = b.dataset.text;
       if (navigator.share) {
         try {

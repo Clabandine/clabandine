@@ -143,7 +143,7 @@ def conseils_saison_perso(a: "Answers", saison: "Saison") -> list[str]:
 
 def conseils_vie(a: "Answers") -> list[str]:
     out = []
-    if a.age in AGE_CONSEILS:
+    if a.age in AGE_CONSEILS and a.pour != "enfant":
         out.append(AGE_CONSEILS[a.age])
     out += [PERIODE_CONSEILS[p] for p in a.periodes if p in PERIODE_CONSEILS]
     return out
