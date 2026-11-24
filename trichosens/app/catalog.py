@@ -42,6 +42,7 @@ CATEGORIES = {
     "accessoire": "Accessoire",
     # Hors routine : ingrédients des recettes maison et cures (voir app/naturel.py).
     "ingredient": "Ingrédient naturel",
+    "coffret": "Coffret routine",
     "complement": "Complément alimentaire",
 }
 POIDS = {"leger", "moyen", "riche"}
@@ -61,6 +62,13 @@ class Offre:
     url: str
     prix: float | None = None
     affilie: bool = False
+    # Pays où le lien est proposé (codes ISO : FR, BE, CA…) ; vide = tous les pays.
+    pays: tuple[str, ...] = ()
+
+    @property
+    def trichosens(self) -> bool:
+        """Produit vendu par TrichoSens (votre boutique)."""
+        return self.marchand.strip().lower() == "trichosens"
 
     @property
     def recherche(self) -> bool:
@@ -260,15 +268,19 @@ def load_offres(path: Path, produits: set[str]) -> dict[str, list[Offre]]:
             if not awin_mid.isdigit():
                 raise ValueError(f"{where} : l'ID annonceur Awin doit être un nombre (« {awin_mid} »)")
             url, affilie = lien_awin(url, awin_mid), True
+        pays = tuple(p.upper() for p in _list(row.get("pays", "")))
+        if any(not (len(p) == 2 and p.isalpha()) for p in pays):
+            raise ValueError(f"{where} : pays à indiquer en 2 lettres, séparés par | (ex. FR|BE)")
         oid = f"{pid}--{_slug(marchand)}"
         if oid in ids:
             raise ValueError(f"{where} : deux liens pour {marchand} sur le même produit")
         ids.add(oid)
         offres.setdefault(pid, []).append(Offre(
             id=oid, produit_id=pid, marchand=marchand, url=url, prix=prix, affilie=affilie,
+            pays=pays,
         ))
-    for pid in offres:  # le moins cher d'abord
-        offres[pid].sort(key=lambda o: (o.prix is None, o.prix or 0))
+    for pid in offres:  # TrichoSens d'abord, puis le moins cher
+        offres[pid].sort(key=lambda o: (not o.trichosens, o.prix is None, o.prix or 0))
     return offres
 
 

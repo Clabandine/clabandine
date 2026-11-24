@@ -10,6 +10,25 @@
   {% set ns.produits = ns.produits + [s] %}
 {% endfor %}
 
+{# Boutons d'achat : tous les liens, avec leurs pays ; le navigateur garde ceux du pays choisi. #}
+{% macro liens_achat(p, petit=False) %}
+{% if p and p.offres %}
+<div class="offres{% if petit %} petit{% endif %}">
+  {% for o in p.offres %}
+  <span class="offre{% if o.trichosens %} offre-trichosens{% endif %}" data-pays="{{ o.pays | join(' ') or '*' }}">
+    <a class="buy{% if petit %} small{% elif loop.first %} first{% endif %}" href="/acheter/{{ o.id }}" target="_blank"
+       rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">
+      {% if o.trichosens %}Acheter chez TrichoSens{% else %}{{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}{% endif %}{% if o.prix and not petit %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
+    </a>
+    {% if o.trichosens and not petit %}<small class="affiliate">Vendu et expédié par TrichoSens</small>
+    {% elif o.affilie and not petit %}<small class="affiliate">Lien affilié</small>{% endif %}
+  </span>
+  {% endfor %}
+  <small class="offre-note" hidden>Livraison depuis la France</small>
+</div>
+{% endif %}
+{% endmacro %}
+
 <section class="result-hero reveal">
   <div class="result-hero-media">
     <img src="{{ visuel(d.type_cheveux.visuel) }}" alt="Cheveux de type {{ d.type_cheveux.code }}" width="160" height="160">
@@ -293,6 +312,20 @@
 {# ---------------------------------------------------------------- Produits #}
 <section class="tab-panel" id="panel-produits" role="tabpanel" aria-labelledby="tab-produits">
   <h2 class="panel-title">Vos produits</h2>
+  <label class="pays-choix js-only" hidden>Livraison :
+    <select id="pays-livraison">
+      {% for code, nom in PAYS_LIVRAISON.items() %}<option value="{{ code }}">{{ nom }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if d.coffret %}{% set c = d.coffret %}
+  <article class="coffret-card">
+    <p class="eyebrow">Votre routine en un coffret</p>
+    <h3>{{ c.nom }}</h3>
+    <p>{{ c.description }}</p>
+    {% if c.prix %}<p class="price">≈ {{ '%.2f' | format(c.prix) | replace('.', ',') }} €{% if c.contenance %} <small>· {{ c.contenance }}</small>{% endif %}</p>{% endif %}
+    {{ liens_achat(c) }}
+  </article>
+  {% endif %}
   {% if d.cout_total %}
   <p class="key-tip">💶 Budget de départ : <strong>≈ {{ '%.0f' | format(d.cout_total) }} €</strong>
     (chaque produit compté une fois ; un flacon dure en général plusieurs semaines).
@@ -313,17 +346,7 @@
       {% if p.labels %}<span class="labels">{% for l in p.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
       {% if p.prix %}<span class="price">≈ {{ '%.2f' | format(p.prix) | replace('.', ',') }} €{% if p.contenance %} <small>· {{ p.contenance }}</small>{% endif %}</span>{% endif %}
       {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
-      {% if p.offres %}
-      <div class="offres">
-        {% for o in p.offres[:3] %}
-        <a class="buy{% if loop.first %} first{% endif %}" href="/acheter/{{ o.id }}" target="_blank"
-           rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">
-          {{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}{% if o.prix %} · {{ '%.2f' | format(o.prix) | replace('.', ',') }} €{% endif %}
-        </a>
-        {% if o.affilie %}<small class="affiliate">Lien affilié</small>{% endif %}
-        {% endfor %}
-      </div>
-      {% endif %}
+      {{ liens_achat(p) }}
     </article>
     {% endfor %}
   </div>
@@ -339,11 +362,7 @@
 </section>
 
 {# ----------------------------------------------------------------- Naturel #}
-{% macro achat(p) %}
-{% if p and p.offres %}{% set o = p.offres[0] %}
-<a class="buy small" href="/acheter/{{ o.id }}" target="_blank" rel="{{ 'sponsored ' if o.affilie else '' }}noopener nofollow">{{ 'Voir sur' if o.recherche else 'Acheter chez' }} {{ o.marchand }}</a>
-{% endif %}
-{% endmacro %}
+{% macro achat(p) %}{{ liens_achat(p, petit=True) }}{% endmacro %}
 <section class="tab-panel" id="panel-naturel" role="tabpanel" aria-labelledby="tab-naturel">
   <h2 class="panel-title">Les alternatives naturelles</h2>
   <p class="lead small-lead">Pour celles qui préfèrent le fait maison et les ingrédients bruts.</p>

@@ -906,3 +906,39 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .legal-page h2 { font-size: 1.15rem; margin-top: 1.6em; }
 .legal-page p, .legal-page li { line-height: 1.65; }
 .footer-liens-legaux { font-size: .82rem; opacity: .9; }
+
+/* --- Liens d'achat par pays, TrichoSens, coffret ------------------------------------- */
+.offre { display: flex; flex-direction: column; gap: 2px; }
+.offres.petit { display: inline-flex; flex-direction: row; padding: 0; margin: 0; }
+.offre-trichosens .buy { background: var(--accent); border-color: var(--accent); color: #fff; }
+.offre-trichosens .buy:hover { background: var(--brand); border-color: var(--brand); }
+.offre-note { font-size: .74rem; color: var(--muted); text-align: center; }
+.pays-choix { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--muted); margin: 0 0 12px; }
+.pays-choix select { font: inherit; padding: 5px 10px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); }
+.coffret-card {
+  background: linear-gradient(135deg, var(--brand-soft), var(--accent-soft)); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.coffret-card h3 { margin: 2px 0 6px; font-family: var(--font-brand); font-size: 1.25rem; }
+.coffret-card .offres { max-width: 340px; }
+
+/* --- Page Marques partenaires --------------------------------------------------------- */
+.marques-page { max-width: 900px; margin: 0 auto; }
+.marques-hero { text-align: center; padding: 24px 0 8px; }
+.marques-hero .lead { max-width: 620px; margin: 0 auto 18px; }
+.marques-grille { display: grid; gap: 12px; }
+@media (min-width: 760px) { .marques-grille { grid-template-columns: repeat(3, 1fr); } }
+.marques-grille .card { margin: 0; }
+.marques-grille h3 { font-size: 1.02rem; margin-top: 0; }
+.partenaire-form { display: grid; gap: 14px; }
+.partenaire-form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.partenaire-form input[type=text], .partenaire-form input[type=email], .partenaire-form select, .partenaire-form textarea {
+  font: inherit; font-weight: 400; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: var(--radius-sm); background: var(--bg);
+}
+.partenaire-form .consent { flex-direction: row; font-weight: 400; }
+.partenaire-form .error { color: var(--danger); font-weight: 500; font-size: .85rem; }
+.requis { color: var(--accent); }
+.piege { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.demandes { display: grid; gap: 12px; }
+.demande h2 { margin: 2px 0 4px; font-size: 1.15rem; }
+.demande-message { white-space: pre-line; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; }

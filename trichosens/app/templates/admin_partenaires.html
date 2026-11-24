@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Demandes de partenariat – TrichoSens{% endblock %}
+{% block main_class %}page-admin{% endblock %}
+{% block content %}
+<p class="eyebrow">Espace admin</p>
+<h1>Demandes de partenariat</h1>
+<p><a href="/admin?cle={{ cle | urlencode }}">← Retour au tableau de bord</a></p>
+{% if not persistant %}
+<p class="note">⚠️ Sans base de données, les demandes sont perdues au redémarrage du site. Branchez
+  <code>DATABASE_URL</code> pour les garder.</p>
+{% endif %}
+{% if demandes %}
+<div class="demandes">
+  {% for d in demandes %}
+  <article class="card demande">
+    <p class="eyebrow">{{ d.cree_le.strftime('%d/%m/%Y %H:%M') }} UTC · {{ TYPES_PARTENAIRES.get(d.type, d.type) }}</p>
+    <h2>{{ d.marque }}</h2>
+    <p>{% if d.nom %}{{ d.nom }} · {% endif %}<a href="mailto:{{ d.email }}">{{ d.email }}</a>
+      {% if d.site %} · <a href="{{ d.site }}" rel="noopener nofollow" target="_blank">{{ d.site }}</a>{% endif %}</p>
+    {% if d.message %}<p class="demande-message">{{ d.message }}</p>{% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p>Aucune demande pour l'instant.</p>
+{% endif %}
+{% endblock %}

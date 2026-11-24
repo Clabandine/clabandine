@@ -109,4 +109,45 @@
       }
     })
   );
+
+  // --- Liens d'achat selon le pays de livraison ------------------------------------
+  // Chaque lien porte ses pays (data-pays) ; on garde ceux du pays choisi. Sans lien
+  // pour ce pays, on montre ceux de France avec la mention « Livraison depuis la France ».
+  const choix = document.getElementById("pays-livraison");
+  const PAYS = choix ? Array.from(choix.options).map((o) => o.value) : [];
+  function paysParDefaut() {
+    try {
+      const garde = localStorage.getItem("ts_pays");
+      if (garde && PAYS.includes(garde)) return garde;
+    } catch (e) { /* stockage indisponible */ }
+    for (const lang of navigator.languages || [navigator.language || ""]) {
+      const region = (lang.split("-")[1] || "").toUpperCase();
+      if (region) return PAYS.includes(region) ? region : "AUTRE";
+    }
+    return "FR";
+  }
+  function appliquerPays(pays) {
+    document.querySelectorAll(".offres").forEach((bloc) => {
+      const offres = Array.from(bloc.querySelectorAll(".offre"));
+      const pour = (code) => offres.filter((o) => o.dataset.pays === "*" || o.dataset.pays.split(" ").includes(code));
+      let visibles = pour(pays);
+      const repli = visibles.length === 0;
+      if (repli) visibles = pour("FR");
+      if (bloc.classList.contains("petit")) visibles = visibles.slice(0, 1);
+      offres.forEach((o) => { o.hidden = !visibles.includes(o); });
+      offres.forEach((o) => o.querySelector(".buy").classList.remove("first"));
+      if (visibles[0] && !bloc.classList.contains("petit")) visibles[0].querySelector(".buy").classList.add("first");
+      const note = bloc.querySelector(".offre-note");
+      if (note) note.hidden = !(repli && pays !== "FR" && visibles.length);
+    });
+  }
+  if (choix) {
+    choix.closest(".pays-choix").hidden = false;
+    choix.value = paysParDefaut();
+    appliquerPays(choix.value);
+    choix.addEventListener("change", () => {
+      try { localStorage.setItem("ts_pays", choix.value); } catch (e) { /* rien */ }
+      appliquerPays(choix.value);
+    });
+  }
 })();

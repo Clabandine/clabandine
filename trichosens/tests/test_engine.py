@@ -38,7 +38,8 @@ def test_catalog_is_valid():
     catalog = load_catalog()
     ids = [p.id for p in catalog]
     assert len(ids) == len(set(ids)), "identifiants en double"
-    assert {p.categorie for p in catalog} == set(CATEGORIES)
+    # « coffret » reste vide tant que TrichoSens ne vend pas encore ses propres coffrets.
+    assert set(CATEGORIES) - {"coffret"} <= {p.categorie for p in catalog} <= set(CATEGORIES)
 
 
 def test_missing_answer_is_rejected():
