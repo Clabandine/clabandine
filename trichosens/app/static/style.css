@@ -942,3 +942,33 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .demandes { display: grid; gap: 12px; }
 .demande h2 { margin: 2px 0 4px; font-size: 1.15rem; }
 .demande-message { white-space: pre-line; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; }
+
+/* --- Application installable ---------------------------------------------------------- */
+.installer-bloc { display: flex; gap: 14px; align-items: center; border-left: 5px solid var(--accent); }
+.installer-bloc img { border-radius: 14px; flex-shrink: 0; }
+.installer-bloc h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.installer-bloc p { margin: 0 0 10px; font-size: .9rem; color: var(--muted); }
+.installer-bloc-simple { display: block; border: 0; background: none; box-shadow: none; padding: 0; }
+.app-installee .installer-bloc { display: none !important; }
+.app-deja { display: none; color: var(--success); font-weight: 600; }
+.app-installee .app-deja { display: block; }
+.appli-page { max-width: 860px; margin: 0 auto; }
+.appli-hero { text-align: center; padding: 24px 0 8px; }
+.appli-hero img { border-radius: 22px; box-shadow: var(--shadow-lg); margin-bottom: 10px; }
+.appli-hero .lead { max-width: 560px; margin: 0 auto 16px; }
+.appli-grille { display: grid; gap: 12px; }
+@media (min-width: 720px) { .appli-grille { grid-template-columns: 1fr 1fr; } }
+.appli-grille .card { margin: 0; }
+.appli-grille ol { padding-left: 20px; margin: 0; }
+.appli-grille li { margin-bottom: 6px; }
+.installer-aide { border: 0; border-radius: var(--radius); padding: 22px; max-width: 420px; width: calc(100% - 32px);
+  box-shadow: var(--shadow-lg); color: var(--ink); background: var(--surface); }
+.installer-aide::backdrop { background: rgba(59, 31, 59, .45); }
+.installer-aide h2 { margin-top: 0; font-size: 1.2rem; }
+.installer-aide ol { padding-left: 20px; }
+.installer-aide li { margin-bottom: 8px; }
+.aide-ios { display: none; }
+.ios .aide-ios { display: block; }
+.ios .aide-autres { display: none; }
+/* Dans l'application installée : un peu d'air sous la barre d'état. */
+.app-installee .site-header { padding-top: env(safe-area-inset-top); }

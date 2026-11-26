@@ -137,8 +137,8 @@ def _compter(request: Request, evenement: str, valeur: str = "") -> None:
 
 
 @app.get("/", response_class=HTMLResponse)
-def accueil(request: Request):
-    _compter(request, "visite_accueil")
+def accueil(request: Request, source: str = ""):
+    _compter(request, "ouverture_app" if source == "app" else "visite_accueil")
     return templates.TemplateResponse(request, "index.html")
 
 
@@ -277,6 +277,52 @@ def rappels_ics(
                     site_url=site)
     return Response(ics, media_type="text/calendar; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="trichosens-rappels.ics"'})
+
+
+# --- Application installable (PWA) ------------------------------------------------
+
+STATIQUE = Path(__file__).parent / "static"
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    """Le service worker doit être servi depuis la racine pour couvrir tout le site."""
+    version = (os.environ.get("RENDER_GIT_COMMIT") or "dev")[:12]
+    code = (STATIQUE / "sw.js").read_text(encoding="utf-8").replace("__VERSION__", version)
+    return Response(code, media_type="text/javascript; charset=utf-8",
+                    headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/site.webmanifest", include_in_schema=False)
+def manifeste():
+    return Response((STATIQUE / "site.webmanifest").read_bytes(),
+                    media_type="application/manifest+json")
+
+
+@app.get("/.well-known/assetlinks.json", include_in_schema=False)
+def assetlinks():
+    """Lien avec l'application Android du Play Store (variables ANDROID_PACKAGE et
+    ANDROID_CERT_SHA256, données par PWABuilder) ; absent tant qu'elle n'existe pas."""
+    package = os.environ.get("ANDROID_PACKAGE", "").strip()
+    empreintes = [e.strip() for e in os.environ.get("ANDROID_CERT_SHA256", "").split(",") if e.strip()]
+    if not package or not empreintes:
+        raise HTTPException(status_code=404)
+    return JSONResponse([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {"namespace": "android_app", "package_name": package,
+                   "sha256_cert_fingerprints": empreintes},
+    }])
+
+
+@app.get("/application", response_class=HTMLResponse)
+def application(request: Request):
+    _compter(request, "page_application")
+    return templates.TemplateResponse(request, "application.html")
+
+
+@app.get("/hors-ligne", response_class=HTMLResponse, include_in_schema=False)
+def hors_ligne(request: Request):
+    return templates.TemplateResponse(request, "hors_ligne.html")
 
 
 @app.get("/marques", response_class=HTMLResponse)

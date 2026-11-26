@@ -130,6 +130,12 @@
   });
 
   form.addEventListener("submit", (e) => {
+    // Hors connexion : on garde les réponses et on prévient, au lieu d'une page d'erreur.
+    if (navigator.onLine === false) {
+      e.preventDefault();
+      alert("Pas de connexion pour le moment. Vos réponses sont gardées : réessayez dès que vous êtes en ligne.");
+      return;
+    }
     const bad = panels.findIndex((p) => !validatePanel(p));
     if (bad !== -1) {
       e.preventDefault();

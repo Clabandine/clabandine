@@ -181,6 +181,10 @@
     <p class="key-tip">💡 {{ d.type_cheveux.conseil_cle }}</p>
   </div>
 
+  {% with titre="Gardez votre routine dans votre poche", texte="Installez l'application TrichoSens : votre résultat, votre suivi et vos rappels à portée de main, même sans connexion." %}
+  {% include "_installer.html" %}
+  {% endwith %}
+
   <div class="panel-next"><button type="button" class="button" data-goto="{{ 'problemes' if d.douleurs or d.photo or d.specifiques else 'routine' }}">Voir la suite →</button></div>
 </section>
 

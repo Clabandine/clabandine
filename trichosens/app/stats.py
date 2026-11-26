@@ -30,7 +30,7 @@ VALEUR_RE = re.compile(r"^[A-Za-z0-9_.-]{0,60}$")
 # Événements envoyés par le navigateur (étapes, onglets, partage…) : liste fermée.
 EVENEMENTS_NAVIGATEUR = {
     "etape_vue", "onglet_resultat", "fiche_pdf", "partage", "avis_clic", "texte_utilise",
-    "test_maison", "aide_type",
+    "test_maison", "aide_type", "installer_clic", "app_installee",
 }
 
 

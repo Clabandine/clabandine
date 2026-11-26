@@ -9,12 +9,17 @@
   {% set logo = logo_url() %}
   <link rel="icon" href="{{ url_for('static', path='img/favicon.svg') }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{{ url_for('static', path='img/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', path='site.webmanifest') }}">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="TrichoSens">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
   <script src="{{ url_for('static', path='stats.js') }}" defer></script>
+  <script src="{{ url_for('static', path='installer.js') }}" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -46,6 +51,7 @@
       <nav class="footer-nav">
         <a href="/diagnostic">Faire mon diagnostic</a>
         <a href="/suivi">Mon suivi</a>
+        <a href="/application">L'application</a>
         <a href="/marques">Marques partenaires</a>
       </nav>
       <nav class="footer-nav footer-liens-legaux" aria-label="Informations légales">
@@ -59,6 +65,22 @@
         Vos réponses ne sont pas enregistrées sur nos serveurs : votre historique reste sur votre appareil.</p>
     </div>
   </footer>
+  <dialog id="installer-aide" class="installer-aide" aria-labelledby="installer-aide-titre">
+    <h2 id="installer-aide-titre">Installer TrichoSens</h2>
+    <div class="aide-ios">
+      <ol>
+        <li>Touchez le bouton <strong>Partager</strong> de Safari (le carré avec une flèche vers le haut, en bas de l'écran).</li>
+        <li>Faites défiler et choisissez <strong>« Sur l'écran d'accueil »</strong>.</li>
+        <li>Touchez <strong>« Ajouter »</strong> : l'icône TrichoSens apparaît sur votre écran d'accueil.</li>
+      </ol>
+      <p class="help">Sur iPhone, l'installation se fait depuis Safari.</p>
+    </div>
+    <div class="aide-autres">
+      <p>Ouvrez le menu de votre navigateur (⋮ ou ⋯) et choisissez <strong>« Installer l'application »</strong> ou
+        <strong>« Ajouter à l'écran d'accueil »</strong>.</p>
+    </div>
+    <button type="button" class="button" data-fermer-aide>J'ai compris</button>
+  </dialog>
   <script src="{{ url_for('static', path='app.js') }}" defer></script>
   <script src="{{ url_for('static', path='suivi.js') }}" defer></script>
 </body>
