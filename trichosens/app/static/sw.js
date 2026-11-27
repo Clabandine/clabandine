@@ -30,7 +30,11 @@ self.addEventListener("activate", (event) => {
 });
 
 function enCache(requete, reponse) {
-  if (reponse && reponse.ok) {
+  // Seulement les vraies pages du site (marquées par le serveur), jamais une page
+  // d'attente de l'hébergeur pendant son réveil.
+  const pageDuSite = !requete.url || !reponse || reponse.headers.get("X-TrichoSens") === "1"
+    || !(reponse.headers.get("Content-Type") || "").includes("text/html");
+  if (reponse && reponse.ok && pageDuSite) {
     const copie = reponse.clone();
     caches.open(VERSION).then((cache) => cache.put(requete, copie));
   }
@@ -45,13 +49,23 @@ self.addEventListener("fetch", (event) => {
   if (url.origin === self.location.origin) {
     if (RESEAU_SEUL.some((p) => url.pathname.startsWith(p))) return;
 
-    // Pages : le réseau d'abord (contenu à jour), le cache si la connexion manque.
-    if (req.mode === "navigate") {
+    // Pages principales : affichées tout de suite depuis le cache (même si le serveur est
+    // en train de se réveiller), puis mises à jour en arrière-plan pour la prochaine fois.
+    if (req.mode === "navigate" && PAGES.includes(url.pathname)) {
+      const cle = new Request(url.pathname);
+      const reseau = fetch(req).then((rep) => enCache(cle, rep));
+      event.waitUntil(reseau.catch(() => null));
       event.respondWith(
-        fetch(req)
-          .then((rep) => (PAGES.includes(url.pathname) ? enCache(new Request(url.pathname), rep) : rep))
-          .catch(() => caches.match(url.pathname).then((rep) => rep || caches.match("/hors-ligne")))
+        caches.match(cle).then((cache) => {
+          if (cache) return cache;
+          return reseau.catch(() => caches.match("/hors-ligne"));
+        })
       );
+      return;
+    }
+    // Autres pages : le réseau d'abord, la page « hors connexion » sinon.
+    if (req.mode === "navigate") {
+      event.respondWith(fetch(req).catch(() => caches.match("/hors-ligne")));
       return;
     }
 

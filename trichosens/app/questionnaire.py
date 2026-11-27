@@ -57,6 +57,8 @@ class Question:
     publics: tuple[str, ...] = ("adulte", "enfant", "ado")
     label_enfant: str = ""
     help_enfant: str = ""
+    # Posée dans le parcours express (sinon seulement dans le parcours complet).
+    express: bool = False
 
     def pour(self, public: str) -> bool:
         return public in self.publics
@@ -84,6 +86,7 @@ class Step:
     publics: tuple[str, ...] = ("adulte", "enfant", "ado")
     titre_enfant: str = ""
     intro_enfant: str = ""
+    express: bool = True
 
 
 STEPS: tuple[Step, ...] = (
@@ -95,23 +98,23 @@ STEPS: tuple[Step, ...] = (
          "Vous pouvez aussi passer cette étape.", "vous", 30,
          titre_enfant="Racontez-nous ses cheveux",
          intro_enfant="Avec vos mots : ce qui vous inquiète, ce qui est difficile au quotidien… "
-                      "Nous pré-remplissons le diagnostic pour vous."),
+                      "Nous pré-remplissons le diagnostic pour vous.", express=False),
     Step("douleurs", "Ce qui vous gêne",
          "Qu'est-ce qui vous dérange dans vos cheveux aujourd'hui ?", "cheveux", 30,
          titre_enfant="Ce qui gêne votre enfant",
          intro_enfant="Qu'est-ce qui pose problème dans ses cheveux aujourd'hui ?"),
     Step("photo", "Votre photo",
          "Facultatif : notre IA observe vos cheveux pour affiner le diagnostic.", "cheveux", 30,
-         publics=("adulte",)),
+         publics=("adulte",), express=False),
     Step("cheveux", "Votre type de cheveux",
          "Observez-les au naturel, après un lavage, sans coiffage.", "cheveux", 30,
          titre_enfant="Le type de cheveux de votre enfant"),
     Step("texture", "Leur texture",
-         "Épaisseur, densité, porosité : un petit test vous aide si vous hésitez.", "cheveux", 30),
+         "Épaisseur, densité, porosité : un petit test vous aide si vous hésitez.", "cheveux", 30, express=False),
     Step("vous", "Vos cheveux au fil du temps",
          "Période de vie, santé, saisons : vos cheveux changent avec vous. Tout est facultatif.",
          "habitudes", 20, titre_enfant="Santé et saisons",
-         intro_enfant="Quelques questions facultatives sur sa santé et les saisons."),
+         intro_enfant="Quelques questions facultatives sur sa santé et les saisons.", express=False),
     Step("habitudes", "Cuir chevelu et habitudes", "Ce que vivent vos cheveux au quotidien.",
          "habitudes", 15, titre_enfant="Cuir chevelu et coiffures",
          intro_enfant="Ce que vivent ses cheveux au quotidien."),
@@ -124,7 +127,19 @@ PUBLICS = ("adulte", "enfant", "ado")
 
 QUESTIONS: tuple[Question, ...] = (
     Question(
+        id="mode",
+        step="bienvenue",
+        label="Quel diagnostic souhaitez-vous ?",
+        required=False,
+        express=True,
+        options=(
+            Option("express", "Express", "1 à 2 minutes : l'essentiel"),
+            Option("complet", "Complet", "3 à 4 minutes : le plus précis"),
+        ),
+    ),
+    Question(
         id="pour",
+        express=True,
         step="bienvenue",
         label="Pour qui est ce diagnostic ?",
         required=False,
@@ -136,6 +151,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="age_jeune",
+        express=True,
         step="bienvenue",
         label="Quel âge a-t-il ou a-t-elle ?",
         required=False,
@@ -150,6 +166,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="preoccupations",
+        express=True,
         step="douleurs",
         label="Qu'est-ce qui vous gêne le plus dans vos cheveux ?",
         help="Choisissez jusqu'à 3 réponses, puis dites-nous à quel point cela vous gêne.",
@@ -171,6 +188,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="type_cheveux",
+        express=True,
         step="cheveux",
         label="Quel est votre type de cheveux ?",
         help="Observez vos cheveux au naturel, après un lavage, sans coiffage. "
@@ -336,6 +354,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="cuir_chevelu",
+        express=True,
         step="habitudes",
         label="Comment décririez-vous votre cuir chevelu ?",
         label_enfant="Comment est son cuir chevelu ?",
@@ -364,6 +383,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="chaleur",
+        express=True,
         step="habitudes",
         label="À quelle fréquence utilisez-vous des outils chauffants ?",
         publics=("adulte", "ado"),
@@ -393,6 +413,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="objectif",
+        express=True,
         step="objectif",
         label="Quel est votre objectif principal ?",
         label_enfant="Quel est votre objectif pour ses cheveux ?",
@@ -423,6 +444,7 @@ QUESTIONS: tuple[Question, ...] = (
     ),
     Question(
         id="budget",
+        express=True,
         step="objectif",
         label="Quel budget par produit ?",
         required=False,
@@ -435,6 +457,9 @@ QUESTIONS: tuple[Question, ...] = (
 )
 
 QUESTIONS_BY_ID: dict[str, Question] = {q.id: q for q in QUESTIONS}
+
+# Réponses par défaut des questions obligatoires non posées dans le parcours express.
+DEFAUTS_EXPRESS = {"epaisseur": "moyen", "densite": "moyenne", "porosite": "inconnue"}
 
 
 @dataclass
@@ -457,6 +482,7 @@ class Answers:
     sante: list[str] = field(default_factory=list)
     # Parcours : adulte, enfant (0-11 ans) ou ado (12-17 ans).
     pour: str = "adulte"
+    mode: str = "complet"
     age_jeune: str = ""
     coiffures: list[str] = field(default_factory=list)
     periodes: list[str] = field(default_factory=list)
@@ -514,9 +540,18 @@ def validate(raw: dict) -> Answers:
         pour = pour[0] if pour else None
     pour = pour if pour in PUBLICS else "adulte"
 
+    mode = raw.get("mode")
+    if isinstance(mode, list):
+        mode = mode[0] if mode else None
+    mode = mode if mode in {"express", "complet"} else "complet"
+
     for q in QUESTIONS:
         if not q.pour(pour):
             continue  # question d'un autre parcours : ignorée
+        if mode == "express" and not q.express and not raw.get(q.id):
+            if q.id in DEFAUTS_EXPRESS:
+                clean[q.id] = DEFAUTS_EXPRESS[q.id]
+            continue  # non posée en express : valeur par défaut
         valeurs = q.valeurs_pour(pour)
         value = raw.get(q.id)
         if q.multiple:
@@ -568,6 +603,7 @@ def validate(raw: dict) -> Answers:
 
     clean["prenom"] = nettoyer_prenom(raw.get("prenom"))
     clean["pour"] = pour
+    clean["mode"] = mode
     if pour != "adulte":
         clean["age"] = "moins_18"  # pas de cure ni de soin réservé aux adultes
     if pour == "enfant":

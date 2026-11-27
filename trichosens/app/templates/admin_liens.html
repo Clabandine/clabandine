@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Liens d'achat – TrichoSens{% endblock %}
+{% block main_class %}page-admin{% endblock %}
+{% block content %}
+<p class="eyebrow">Espace admin</p>
+<h1>Liens d'achat</h1>
+<p><a href="/admin?cle={{ cle | urlencode }}">← Retour au tableau de bord</a> ·
+  <a href="/admin/liens.csv?cle={{ cle | urlencode }}">Télécharger liens.csv complet</a></p>
+{% if message %}<p class="key-tip">✓ {{ message }}</p>{% endif %}
+{% if erreur %}<p class="alert">{{ erreur }}</p>{% endif %}
+{% if not persistant %}
+<p class="note">⚠️ Sans base de données, vos liens sont perdus au redémarrage du site. Branchez
+  <code>DATABASE_URL</code>, ou envoyez-moi le fichier liens.csv téléchargé pour l'ajouter au projet.</p>
+{% endif %}
+<p><strong>{{ a_faire }}</strong> produit{{ 's' if a_faire > 1 }} n'{{ 'ont' if a_faire > 1 else 'a' }} encore qu'un lien de recherche.</p>
+<details class="card aide-liens">
+  <summary>Comment trouver le lien exact d'un produit Amazon ?</summary>
+  <ol>
+    <li>Cliquez sur « Rechercher » à côté du produit : la recherche Amazon s'ouvre.</li>
+    <li>Ouvrez la bonne fiche (vérifiez le nom exact et la contenance).</li>
+    <li>Copiez l'adresse de la page (elle contient <code>/dp/</code> suivi de 10 caractères) et collez-la ici.
+      Votre identifiant Partenaires est ajouté automatiquement.</li>
+  </ol>
+  <p class="help">Pour un revendeur officiel (site de la marque, parapharmacie), choisissez « Autre revendeur »,
+    indiquez son nom et collez le lien de la fiche (ou votre lien affilié Awin).</p>
+</details>
+
+<div class="liens-liste">
+  {% for p in produits %}
+  {% set recherche = p.offres and (p.offres | selectattr('recherche') | list | length == p.offres | length) %}
+  <article class="card lien-produit{% if recherche %} a-faire{% endif %}" id="p-{{ p.id }}">
+    <h2>{{ p.nom_complet }} <small>{{ CATEGORIES[p.categorie] }}</small></h2>
+    <ul class="liens-actuels">
+      {% for o in p.offres %}
+      <li>
+        <span class="{{ 'tag-option' if o.recherche else 'tag-indispensable' }}">{{ 'Recherche' if o.recherche else 'Fiche exacte' }}</span>
+        {{ o.marchand }}{% if o.pays %} ({{ o.pays | join(', ') }}){% endif %} ·
+        <a href="{{ o.url }}" target="_blank" rel="noopener nofollow">{{ 'Rechercher' if o.recherche else 'Voir' }}</a>
+        <form method="post" action="/admin/liens" class="inline">
+          <input type="hidden" name="cle" value="{{ cle }}"><input type="hidden" name="produit_id" value="{{ p.id }}">
+          <input type="hidden" name="marchand" value="{{ o.marchand }}"><input type="hidden" name="action" value="retirer">
+          <button type="submit" class="lien-discret" title="Retirer l'ajustement (revient au lien du fichier)">Réinitialiser</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="/admin/liens" class="lien-form">
+      <input type="hidden" name="cle" value="{{ cle }}"><input type="hidden" name="produit_id" value="{{ p.id }}">
+      <input type="url" name="url" required placeholder="https://www.amazon.fr/…/dp/B0…" aria-label="Lien de la fiche">
+      <input type="text" name="marchand" value="Amazon" aria-label="Revendeur" list="marchands">
+      <button type="submit" class="button small">Enregistrer</button>
+    </form>
+  </article>
+  {% endfor %}
+</div>
+<datalist id="marchands"><option value="Amazon"><option value="Aroma-Zone"><option value="Sephora"><option value="Nocibé"><option value="Site officiel"><option value="TrichoSens"></datalist>
+{% endblock %}

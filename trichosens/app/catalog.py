@@ -47,6 +47,8 @@ CATEGORIES = {
 }
 POIDS = {"leger", "moyen", "riche"}
 PUBLICS = {"", "enfant", "tous"}
+AMAZON_DOMAINES = ("amazon.fr", "amazon.com", "amazon.ca", "amazon.de", "amazon.co.uk", "amazon.com.be",
+                   "amazon.es", "amazon.it")
 SAISONS = {"hiver", "printemps", "ete", "automne"}
 CUIRS = {"normal", "sec", "gras", "sensible", "pellicules"}
 TYPE_CODES = list(HAIR_TYPES)  # dans l'ordre, de 1A à 4C

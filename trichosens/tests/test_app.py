@@ -57,7 +57,7 @@ def test_api_questions():
     r = client.get("/api/questions")
     assert r.status_code == 200
     ids = [q["id"] for q in r.json()["questions"]]
-    assert ids[0] == "pour" and "preoccupations" in ids
+    assert ids[:2] == ["mode", "pour"] and "preoccupations" in ids
 
 
 API_PAYLOAD = {k: v for k, v in FORM.items() if not k.startswith("gene_")}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Inscriptions e-mail – TrichoSens{% endblock %}
+{% block main_class %}page-admin{% endblock %}
+{% block content %}
+<p class="eyebrow">Espace admin</p>
+<h1>Inscriptions aux e-mails</h1>
+<p><a href="/admin?cle={{ cle | urlencode }}">← Retour au tableau de bord</a> ·
+  <a href="/admin/inscriptions.csv?cle={{ cle | urlencode }}">Télécharger la liste (CSV)</a></p>
+{% if not persistant %}
+<p class="note">⚠️ Sans base de données, les inscriptions sont perdues au redémarrage du site. Branchez
+  <code>DATABASE_URL</code> pour les garder.</p>
+{% endif %}
+<p>{{ inscrits | length }} inscrit{{ 's' if inscrits | length > 1 }}, dont {{ inscrits | selectattr('partenaires') | list | length }}
+  d'accord pour les offres des partenaires.</p>
+<p class="help">Pour envoyer vos e-mails, importez le fichier CSV dans un outil d'envoi (Brevo est gratuit jusqu'à
+  300 e-mails par jour) : il gère la désinscription en un clic exigée par la loi. N'envoyez les offres des marques
+  qu'aux personnes qui l'ont accepté (colonne « offres_partenaires »).</p>
+{% if inscrits %}
+<div class="table-wrap">
+<table class="timeline">
+  <thead><tr><th>E-mail</th><th>Type</th><th>Offres partenaires</th><th>Inscrit le</th></tr></thead>
+  <tbody>
+  {% for i in inscrits %}
+  <tr><th>{{ i.email }}</th><td>{{ i.type_cheveux or '—' }}</td><td>{{ 'oui' if i.partenaires else 'non' }}</td>
+    <td>{{ i.cree_le.strftime('%d/%m/%Y') }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+# Garde le site TrichoSens éveillé en journée : l'offre gratuite de Render endort le site
+# après 15 minutes sans visite, et la première personne attend alors son réveil.
+# Toutes les 10 minutes de 7 h à minuit (heure de Paris), soit environ 550 heures par mois,
+# dans la limite des 750 heures gratuites de Render. Adresse du site : variable SITE_URL du
+# dépôt (Settings > Secrets and variables > Actions > Variables), sinon l'adresse ci-dessous.
+name: TrichoSens – garder le site éveillé
+
+on:
+  schedule:
+    - cron: "*/10 5-22 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Appeler la page de santé du site
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://trichosens.onrender.com' }}
+        run: curl -fsS --retry 3 --retry-delay 20 --max-time 90 -A "trichosens-reveil" "$SITE_URL/sante"

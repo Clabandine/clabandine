@@ -198,6 +198,7 @@ def enregistrer_diagnostic(a, d) -> None:
     """Compte un diagnostic terminé et son profil (anonyme, sans données de santé)."""
     c = stats.compter
     c("diagnostic_termine", a.pour)
+    c("mode", a.mode)
     c("type", a.type_cheveux)
     c("famille", a.famille)
     if a.type_secondaire:

@@ -202,6 +202,21 @@ personne (aucune donnée personnelle : ni âge, ni période de vie, ni photo).
    `TS_PHASE` ou `TS_ID`. Cliquez sur **Obtenir le lien**, puis **Copier le lien**.
 3. Dans Render, service trichosens > **Environment**, donnez ce lien comme valeur à `AVIS_URL`.
 
+## Retours des testeuses (v0.6)
+
+- **Accès** : le site s'endort sur l'offre gratuite de Render. Le workflow
+  `.github/workflows/trichosens-reveil.yml` le réveille toutes les 10 minutes de 5 h à 23 h (UTC) ; l'application
+  installée affiche ses pages depuis le cache sans attendre. Pour supprimer toute attente : UptimeRobot (gratuit)
+  ou l'offre Render Starter.
+- **Achat** : `/admin/liens?cle=…` remplace une recherche Amazon par la fiche exacte (lien nettoyé, identifiant
+  partenaire ajouté) ou ajoute un revendeur officiel. Export complet : `/admin/liens.csv`.
+- **Simplicité** : diagnostic express (1 à 2 min) par défaut, bouton « Affiner », questions santé repliées et
+  facultatives ; le résultat commence par « Vos 3 actions essentielles ». L'onglet Compléments n'apparaît que s'il sert.
+- **Crédibilité** : plus de note sur 100, mais « Profil complet / bien renseigné / à compléter » avec la méthode.
+- **Budget** : produits « Indispensables » et « Facultatifs », coût minimal pour commencer.
+- **Relation client** : inscription facultative aux e-mails après le résultat, avec deux accords séparés (conseils,
+  offres partenaires). Liste et export : `/admin/inscriptions`, désinscription : `/desinscription`.
+
 ## Lancer le projet
 
 Il faut Python 3.10 ou plus récent.

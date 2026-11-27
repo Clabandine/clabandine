@@ -10,6 +10,8 @@
   const tousPanels = Array.from(form.querySelectorAll(".step-panel"));
   let panels = tousPanels.slice();
   let publicActuel = "adulte";
+  let modeActuel = "complet";
+  const vues = new Set(); // étapes déjà affichées (pour « Affiner »)
   const submit = form.querySelector(".submit");
   let current = 0;
 
@@ -53,6 +55,7 @@
       }
     });
     majProgression(index);
+    vues.add(panels[index]);
     if (window.tsStat) window.tsStat("etape_vue", panels[index].dataset.step);
     if (diagHead) diagHead.hidden = index !== 0;
     submit.hidden = true; // le bouton final est dans la dernière étape
@@ -283,6 +286,10 @@
       });
       spec.hidden = visible === 0;
     }
+    // Parcours express : les questions facultatives restent masquées.
+    if (modeActuel === "express") {
+      form.querySelectorAll('.question[data-express="0"]').forEach((q) => hideAndClear(q, true));
+    }
     renumber();
   }
 
@@ -427,6 +434,8 @@
         input.dispatchEvent(new Event("change", { bubbles: true }));
       }
       suggerees.set(cle(input), input);
+      const replie = input.closest("details");
+      if (replie) replie.open = true; // ex. questions santé repérées dans le texte
       marquer(input);
       return true;
     }
@@ -607,10 +616,13 @@
 
   function majPublic() {
     publicActuel = checkedValue("pour") || "adulte";
+    modeActuel = checkedValue("mode") || "complet";
     form.dataset.public = publicActuel;
+    form.dataset.mode = modeActuel;
     const pourMoi = (el) => !el.dataset.publics || el.dataset.publics.split(" ").includes(publicActuel);
-    panels = tousPanels.filter(pourMoi);
-    form.querySelectorAll(".question[data-publics]").forEach((q) => hideAndClear(q, !pourMoi(q)));
+    const dansLeMode = (el) => modeActuel !== "express" || el.dataset.express !== "0";
+    panels = tousPanels.filter((p) => pourMoi(p) && dansLeMode(p));
+    form.querySelectorAll(".question").forEach((q) => hideAndClear(q, !pourMoi(q) || !dansLeMode(q)));
     form.querySelectorAll(".pain[data-publics], .option[data-publics], .chip[data-publics]")
       .forEach((o) => hideAndClear(o, !pourMoi(o)));
     const zone = document.getElementById("description");
@@ -618,11 +630,25 @@
     updateDependants();
     document.getElementById("step-total").textContent = panels.length;
   }
-  form.querySelectorAll('input[name="pour"]').forEach((r) => r.addEventListener("change", () => {
+  form.querySelectorAll('input[name="pour"], input[name="mode"]').forEach((r) => r.addEventListener("change", () => {
     majPublic();
     majProgression(current);
   }));
   majPublic();
+
+  // « Affiner » : en fin de parcours express, ajouter les questions facultatives.
+  const affiner = form.querySelector("[data-affiner]");
+  function majAffiner() { if (affiner) affiner.hidden = modeActuel !== "express"; }
+  form.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", majAffiner));
+  majAffiner();
+  if (affiner) affiner.addEventListener("click", () => {
+    const complet = form.querySelector('input[name="mode"][value="complet"]');
+    complet.checked = true;
+    majPublic();
+    majAffiner();
+    const suivante = panels.findIndex((p) => !vues.has(p));
+    show(suivante === -1 ? panels.length - 1 : suivante);
+  });
 
   // Après une erreur côté serveur, ouvrir la première étape concernée.
   const firstError = panels.findIndex((p) => p.querySelector(".has-error"));
