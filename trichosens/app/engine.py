@@ -243,6 +243,8 @@ class Diagnostic:
     # Santé : facteurs, professionnels à consulter, examens à demander.
     orientation: dict = field(default_factory=dict)
     pour: str = "adulte"
+    # Coffret routine vendu par TrichoSens, s'il en existe un adapté au profil.
+    coffret: Product | None = None
     # Alternatives naturelles : recettes maison, cures et gestes du quotidien.
     recettes: list[dict] = field(default_factory=list)
     cures: list[dict] = field(default_factory=list)
@@ -266,6 +268,7 @@ class Diagnostic:
             "fiabilite": self.fiabilite,
             "orientation": self.orientation,
             "pour": self.pour,
+            "coffret": self.coffret.to_dict() if self.coffret else None,
             "recettes": [
                 {"id": r["recette"].id, "titre": r["recette"].titre,
                  "remplace": r["recette"].categorie,
@@ -1141,6 +1144,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         fiabilite=fiabilite(a, photo),
         orientation=sante.orientation(a),
         pour=a.pour,
+        coffret=recommend("coffret", a, besoins, poids, catalog, saison.id)[0],
     )
     d.suivi = resume_suivi(d, a, today)
     return d

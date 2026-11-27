@@ -311,6 +311,43 @@ outils de surveillance ne sont pas comptés.
 adresse de connexion dans la variable `DATABASE_URL` de Render. Sans elle, le tableau de bord
 fonctionne mais repart à zéro à chaque redémarrage du site.
 
+## Marques, boutique TrichoSens et pays
+
+- **Page « Marques partenaires »** (`/marques`) : formes de partenariat, charte, formulaire de
+  contact (anti-robots, 5 envois par heure au plus). Les demandes sont dans
+  `/admin/partenaires?cle=...` (gardées dans la base de données si `DATABASE_URL` est définie).
+- **Acheter chez TrichoSens** : ajoutez dans `liens.csv` une ligne avec le marchand
+  `TrichoSens` (lien vers votre boutique Shopify, un lien de paiement Stripe…). Elle passe en
+  premier, avec un bouton à vos couleurs et la mention « Vendu et expédié par TrichoSens ».
+- **Coffrets** : un produit de catégorie `coffret` (types concernés, besoins, prix) et son lien
+  TrichoSens ; le résultat propose « Votre routine en un coffret » aux profils concernés.
+- **Liens par pays** : colonne `pays` de `liens.csv` (codes à 2 lettres séparés par `|`, vide =
+  tous les pays). Le résultat montre les liens du pays de livraison, deviné d'après la langue
+  du navigateur et modifiable ; sans lien pour ce pays, ceux de France avec « Livraison depuis
+  la France ». Nouvelle boutique Amazon : `python scripts/liens_amazon.py --boutique ca --tag
+  votre-id-20` (be, de, uk, ca, us).
+
+## Application téléphone (PWA)
+
+TrichoSens s'installe sur l'écran d'accueil depuis le navigateur, sans magasin
+d'applications : icône, plein écran, ouverture rapide, suivi disponible hors connexion.
+
+- `app/static/site.webmanifest` (servi à `/site.webmanifest`) : nom, couleurs, icônes
+  (dont les icônes « maskable » pour Android), raccourcis Diagnostic et Mon suivi.
+- `app/static/sw.js` (servi à `/sw.js`) : met en cache les pages principales et les fichiers ;
+  sa version suit `RENDER_GIT_COMMIT`, donc chaque mise en ligne renouvelle le cache.
+- `app/static/installer.js` : bouton « Installer l'application » (Android, ordinateur) et
+  consignes pour iPhone (Safari > Partager > Sur l'écran d'accueil). Page `/application`.
+- Le tableau de bord compte les installations et les ouvertures de l'application.
+
+**Publier sur le Google Play Store (plus tard)** : sur https://www.pwabuilder.com, entrez
+l'adresse du site, choisissez Android, téléchargez le paquet et publiez-le avec un compte
+Google Play Console (25 $ une fois). Ajoutez ensuite dans Render `ANDROID_PACKAGE` (nom du
+paquet) et `ANDROID_CERT_SHA256` (empreinte donnée par PWABuilder) : le site publie alors
+`/.well-known/assetlinks.json`, qui relie l'application au site. L'App Store d'Apple demande
+un compte développeur (99 $/an) et une application avec des fonctions propres ; à prévoir
+plus tard.
+
 ## Organisation du code
 
 ```

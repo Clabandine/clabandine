@@ -97,6 +97,7 @@
   <h2 class="admin-titre">Aller plus loin</h2>
   <ul>
     <li><a href="/admin/export.csv?cle={{ cle | urlencode }}&jours={{ t.jours }}">Télécharger les données ({{ t.jours }} jours, CSV)</a> pour Excel ou Google Sheets.</li>
+    <li><a href="/admin/partenaires?cle={{ cle | urlencode }}">Demandes de partenariat</a>{% if nb_demandes %} ({{ nb_demandes }}){% endif %}.</li>
     <li><a href="/admin/catalogue?cle={{ cle | urlencode }}">État du catalogue</a> (fiches à vérifier).</li>
     <li>Ventes et commissions : dans les tableaux de bord Amazon Partenaires et Awin.</li>
     <li>Avis des testeuses : dans les réponses de votre Google Form.</li>

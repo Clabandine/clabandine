@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}L'application – TrichoSens{% endblock %}
+{% block content %}
+<article class="appli-page">
+  <section class="appli-hero">
+    <img src="{{ url_for('static', path='img/icone-512.png') }}" alt="Icône TrichoSens" width="96" height="96">
+    <p class="eyebrow">Gratuite · sans inscription</p>
+    <h1>L'application TrichoSens</h1>
+    <p class="lead">Votre diagnostic, votre routine et votre suivi, en une touche depuis l'écran d'accueil de votre
+      téléphone.</p>
+    <p class="app-deja">✓ Vous utilisez déjà l'application.</p>
+    <div class="installer-bloc-simple installer-bloc" hidden>
+      <button type="button" class="button big" data-installer>📲 Installer l'application</button>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <ul class="tip-cards appli-atouts">
+      <li><strong>En une touche.</strong> L'icône TrichoSens sur votre écran d'accueil, en plein écran, comme
+        une application.</li>
+      <li><strong>Votre suivi toujours là.</strong> Historique, évolution et journal de pousse restent sur votre
+        téléphone, même hors connexion.</li>
+      <li><strong>Léger et sans compte.</strong> Rien à créer, presque pas de place prise, et toujours la dernière
+        version.</li>
+      <li><strong>Vos rappels.</strong> Ajoutez vos jours de lavage et vos soins à l'agenda depuis votre résultat.</li>
+    </ul>
+  </section>
+
+  <section class="home-section appli-etapes">
+    <h2>Comment l'installer</h2>
+    <div class="appli-grille">
+      <div class="card">
+        <h3>iPhone et iPad</h3>
+        <ol>
+          <li>Ouvrez trichosens dans <strong>Safari</strong>.</li>
+          <li>Touchez le bouton <strong>Partager</strong> (le carré avec une flèche vers le haut).</li>
+          <li>Choisissez <strong>« Sur l'écran d'accueil »</strong>, puis <strong>« Ajouter »</strong>.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Android</h3>
+        <ol>
+          <li>Ouvrez trichosens dans <strong>Chrome</strong> (ou Samsung Internet).</li>
+          <li>Touchez <strong>« Installer l'application »</strong> sur cette page, ou le menu <strong>⋮</strong> puis
+            <strong>« Installer l'application »</strong>.</li>
+          <li>Confirmez : l'icône apparaît sur votre écran d'accueil.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+</article>
+{% endblock %}

@@ -37,7 +37,8 @@ def test_invalid_row_is_explained():
 def test_real_catalogue_is_complete():
     catalog = load_catalog()
     assert len(catalog) >= 40
-    assert {p.categorie for p in catalog} == set(CATEGORIES)
+    # « coffret » reste vide tant que TrichoSens ne vend pas encore ses propres coffrets.
+    assert set(CATEGORIES) - {"coffret"} <= {p.categorie for p in catalog} <= set(CATEGORIES)
     for code in HAIR_TYPES:
         for cat in ("shampoing", "masque", "leave_in", "huile"):
             assert any(p.categorie == cat and (not p.types or code in p.types) for p in catalog), (code, cat)

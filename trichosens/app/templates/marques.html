@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Marques partenaires – TrichoSens{% endblock %}
+{% block content %}
+<article class="marques-page">
+  <section class="marques-hero">
+    <p class="eyebrow">Marques, vendeurs, professionnels</p>
+    <h1>Travaillons ensemble</h1>
+    <p class="lead">TrichoSens aide chaque personne à comprendre ses cheveux et à trouver les soins qui lui
+      conviennent vraiment. Vos produits peuvent en faire partie.</p>
+    <a class="button big" href="#contact">Proposer un partenariat</a>
+  </section>
+
+  <section class="home-section">
+    <h2>Pourquoi TrichoSens</h2>
+    <div class="marques-grille">
+      <div class="card"><h3>Un diagnostic précis</h3><p>Les 12 types de cheveux (1A à 4C), les gênes et leur
+        intensité, la porosité, le cuir chevelu, la santé, les saisons, et des parcours pour les enfants et les
+        ados.</p></div>
+      <div class="card"><h3>Les bons produits aux bonnes personnes</h3><p>Chaque produit est proposé seulement
+        aux profils à qui il convient : moins de déçues, plus de clientes fidèles.</p></div>
+      <div class="card"><h3>Des besoins mesurés</h3><p>Nous suivons, de façon anonyme, les types de cheveux, les
+        gênes et les attentes de nos utilisatrices : de quoi orienter vos gammes.</p></div>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <h2>Les formes de partenariat</h2>
+    <ul class="tip-cards">
+      <li><strong>Référencement dans le catalogue.</strong> Vos produits sont recommandés quand ils
+        correspondent au profil, avec un lien vers votre boutique ou votre programme d'affiliation
+        (Awin, Effiliation, Kwanko…).</li>
+      <li><strong>Coffrets TrichoSens.</strong> Des routines complètes par type de cheveux, composées avec vos
+        produits.</li>
+      <li><strong>Mise en avant.</strong> Lancement, nouvelle gamme : une visibilité supplémentaire, toujours
+        signalée comme « sponsorisée ».</li>
+      <li><strong>Études anonymes.</strong> Des chiffres agrégés sur les besoins capillaires, par type et par
+        profil, sans aucune donnée personnelle.</li>
+      <li><strong>Professionnels.</strong> Coiffeurs, trichologues, dermatologues : un annuaire et la prise de
+        rendez-vous arrivent bientôt.</li>
+    </ul>
+  </section>
+
+  <section class="home-section">
+    <h2>Notre charte</h2>
+    <ul class="tips">
+      <li>Les recommandations dépendent du profil de la personne, jamais du montant d'une commission.</li>
+      <li>Tout contenu sponsorisé est clairement signalé.</li>
+      <li>Nous référençons des produits à la composition (INCI) transparente, conformes au règlement européen
+        sur les cosmétiques, et sans promesse médicale.</li>
+      <li>Les données de nos utilisatrices restent les leurs : nous ne partageons que des chiffres anonymes.</li>
+    </ul>
+  </section>
+
+  <section class="home-section" id="contact">
+    <h2>Proposer un partenariat</h2>
+    {% if envoye %}
+    <p class="key-tip">✓ Merci ! Votre demande est bien reçue. Nous vous répondons rapidement à l'adresse indiquée.</p>
+    {% else %}
+    {% if erreurs %}<p class="error-box" role="alert">Certaines informations manquent ou sont à corriger.</p>{% endif %}
+    <form method="post" action="/marques#contact" class="card partenaire-form" novalidate>
+      <label><span>Marque ou activité <span class="requis">*</span></span>
+        <input type="text" name="marque" maxlength="80" required value="{{ form.marque or '' }}">
+        {% if erreurs.marque %}<span class="error">{{ erreurs.marque }}</span>{% endif %}
+      </label>
+      <label>Vous êtes
+        <select name="type">
+          {% for k, v in TYPES_PARTENAIRES.items() %}<option value="{{ k }}"{% if form.type == k %} selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Votre nom
+        <input type="text" name="nom" maxlength="80" autocomplete="name" value="{{ form.nom or '' }}">
+      </label>
+      <label><span>E-mail professionnel <span class="requis">*</span></span>
+        <input type="email" name="email" maxlength="120" required autocomplete="email" value="{{ form.email or '' }}">
+        {% if erreurs.email %}<span class="error">{{ erreurs.email }}</span>{% endif %}
+      </label>
+      <label>Site web
+        <input type="text" name="site" maxlength="200" inputmode="url" placeholder="https://" value="{{ form.site or '' }}">
+      </label>
+      <label>Votre message
+        <textarea name="message" rows="5" maxlength="2000" placeholder="Vos produits, vos types de cheveux cibles, le partenariat qui vous intéresse…">{{ form.message or '' }}</textarea>
+      </label>
+      <label class="piege" aria-hidden="true">Ne pas remplir <input type="text" name="site_web_2" tabindex="-1" autocomplete="off"></label>
+      <label class="consent">
+        <input type="checkbox" name="accord" value="oui"{% if form.accord == 'oui' %} checked{% endif %}>
+        <span>J'accepte que TrichoSens garde ces informations pour me répondre (3 ans au plus).
+          <a href="/confidentialite">Confidentialité</a></span>
+      </label>
+      {% if erreurs.accord %}<span class="error">{{ erreurs.accord }}</span>{% endif %}
+      <button type="submit" class="button">Envoyer ma demande</button>
+    </form>
+    {% endif %}
+    <p class="help">Vous préférez écrire ? <a href="mailto:{{ EDITEUR.email }}">{{ EDITEUR.email }}</a></p>
+  </section>
+</article>
+{% endblock %}

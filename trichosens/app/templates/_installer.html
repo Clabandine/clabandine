@@ -1,0 +1,9 @@
+{# Encart « Installer l'application » : visible seulement quand l'installation est possible. #}
+<div class="installer-bloc card" hidden>
+  <img src="{{ url_for('static', path='img/icone-192.png') }}" alt="" width="56" height="56" loading="lazy">
+  <div>
+    <h3>{{ titre | default("TrichoSens sur votre téléphone") }}</h3>
+    <p>{{ texte | default("Installez l'application : votre routine, votre suivi et vos rappels à portée de main, même sans connexion.") }}</p>
+    <button type="button" class="button small" data-installer>📲 Installer l'application</button>
+  </div>
+</div>

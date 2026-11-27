@@ -33,6 +33,7 @@ from .reminders import JOURS, RAPPELS, build_ics
 from . import specifiques as trouver
 from . import texte as texte_libre
 from . import legal
+from . import partenaires
 
 logging.basicConfig(level=logging.INFO)
 
@@ -97,6 +98,13 @@ def logo_url() -> str | None:
     return None
 
 
+# Pays proposés pour la livraison (les liens d'achat portent les mêmes codes).
+PAYS_LIVRAISON = {
+    "FR": "France", "BE": "Belgique", "LU": "Luxembourg", "CH": "Suisse", "MC": "Monaco",
+    "CA": "Canada", "US": "États-Unis", "GB": "Royaume-Uni", "DE": "Allemagne",
+    "AUTRE": "Autre pays",
+}
+
 templates.env.globals.update(
     logo_url=logo_url, carrousel=carrousel,
     NEEDS=NEEDS, MOMENTS=MOMENTS, CATEGORIES=CATEGORIES, INTENSITES=INTENSITES, visuel=visuel,
@@ -104,6 +112,7 @@ templates.env.globals.update(
     PAIN_LABELS={pid: p.label for pid, p in PAIN_POINTS.items()},
     JOURS=JOURS, RAPPELS=RAPPELS, PHASES=PHASES, TENDANCE_LABEL=TENDANCE_LABEL,
     TROUVER=trouver, PHASES_PARCOURS=PHASES_PARCOURS,
+    PAYS_LIVRAISON=PAYS_LIVRAISON, TYPES_PARTENAIRES=partenaires.TYPES,
     EDITEUR=legal.EDITEUR, HEBERGEUR=legal.HEBERGEUR, MISE_A_JOUR=legal.MISE_A_JOUR,
 )
 
@@ -128,8 +137,8 @@ def _compter(request: Request, evenement: str, valeur: str = "") -> None:
 
 
 @app.get("/", response_class=HTMLResponse)
-def accueil(request: Request):
-    _compter(request, "visite_accueil")
+def accueil(request: Request, source: str = ""):
+    _compter(request, "ouverture_app" if source == "app" else "visite_accueil")
     return templates.TemplateResponse(request, "index.html")
 
 
@@ -197,7 +206,7 @@ def admin_tableau(request: Request, cle: str = "", jours: int = 30):
     jours = jours if jours in admin.PERIODES else 30
     return templates.TemplateResponse(request, "admin_tableau.html", {
         "tableau": admin.tableau(stats, jours), "cle": cle,
-        "legal_manquant": legal.manquants()})
+        "legal_manquant": legal.manquants(), "nb_demandes": len(partenaires.stockage.lister())})
 
 
 @app.get("/admin/export.csv", include_in_schema=False)
@@ -268,6 +277,92 @@ def rappels_ics(
                     site_url=site)
     return Response(ics, media_type="text/calendar; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="trichosens-rappels.ics"'})
+
+
+# --- Application installable (PWA) ------------------------------------------------
+
+STATIQUE = Path(__file__).parent / "static"
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    """Le service worker doit être servi depuis la racine pour couvrir tout le site."""
+    version = (os.environ.get("RENDER_GIT_COMMIT") or "dev")[:12]
+    code = (STATIQUE / "sw.js").read_text(encoding="utf-8").replace("__VERSION__", version)
+    return Response(code, media_type="text/javascript; charset=utf-8",
+                    headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/site.webmanifest", include_in_schema=False)
+def manifeste():
+    return Response((STATIQUE / "site.webmanifest").read_bytes(),
+                    media_type="application/manifest+json")
+
+
+@app.get("/.well-known/assetlinks.json", include_in_schema=False)
+def assetlinks():
+    """Lien avec l'application Android du Play Store (variables ANDROID_PACKAGE et
+    ANDROID_CERT_SHA256, données par PWABuilder) ; absent tant qu'elle n'existe pas."""
+    package = os.environ.get("ANDROID_PACKAGE", "").strip()
+    empreintes = [e.strip() for e in os.environ.get("ANDROID_CERT_SHA256", "").split(",") if e.strip()]
+    if not package or not empreintes:
+        raise HTTPException(status_code=404)
+    return JSONResponse([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {"namespace": "android_app", "package_name": package,
+                   "sha256_cert_fingerprints": empreintes},
+    }])
+
+
+@app.get("/application", response_class=HTMLResponse)
+def application(request: Request):
+    _compter(request, "page_application")
+    return templates.TemplateResponse(request, "application.html")
+
+
+@app.get("/hors-ligne", response_class=HTMLResponse, include_in_schema=False)
+def hors_ligne(request: Request):
+    return templates.TemplateResponse(request, "hors_ligne.html")
+
+
+@app.get("/marques", response_class=HTMLResponse)
+def marques(request: Request):
+    _compter(request, "page_marques")
+    return templates.TemplateResponse(request, "marques.html", {"form": {}, "erreurs": {}})
+
+
+@app.post("/marques", response_class=HTMLResponse)
+async def marques_demande(request: Request):
+    form = dict(await request.form())
+    ctx = {"form": form, "erreurs": {}}
+    if form.get("site_web_2"):  # champ piège rempli par les robots : on ne garde rien
+        return templates.TemplateResponse(request, "marques.html", {**ctx, "envoye": True})
+    try:
+        demande = partenaires.valider(form)
+    except partenaires.DemandeInvalide as e:
+        return templates.TemplateResponse(request, "marques.html", {**ctx, "erreurs": e.erreurs},
+                                          status_code=422)
+    if not partenaires.limiteur.autorise(_client_ip(request)):
+        return templates.TemplateResponse(request, "marques.html", {
+            **ctx, "erreurs": {"accord": "Trop de demandes envoyées : réessayez dans une heure."}},
+            status_code=429)
+    try:
+        partenaires.enregistrer(demande)
+    except Exception:
+        logging.getLogger("trichosens").exception("Demande de partenariat non enregistrée")
+        return templates.TemplateResponse(request, "marques.html", {
+            **ctx, "erreurs": {"accord": "L'envoi n'a pas abouti : écrivez-nous directement par e-mail."}},
+            status_code=503)
+    stats.compter("demande_partenaire", demande.type)
+    return templates.TemplateResponse(request, "marques.html", {**ctx, "envoye": True})
+
+
+@app.get("/admin/partenaires", response_class=HTMLResponse, include_in_schema=False)
+def admin_partenaires(request: Request, cle: str = ""):
+    _verifier_cle(cle)
+    return templates.TemplateResponse(request, "admin_partenaires.html", {
+        "demandes": partenaires.stockage.lister(), "cle": cle,
+        "persistant": partenaires.stockage.persistant})
 
 
 @app.get("/mentions-legales", response_class=HTMLResponse)
