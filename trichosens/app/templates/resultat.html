@@ -42,6 +42,7 @@
     <h1>{% if d.prenom %}{{ d.prenom }}, voici votre profil capillaire{% else %}Votre profil capillaire{% endif %}</h1>
     {% endif %}
     <p class="lead">{{ d.resume }}</p>
+    {% if d.mode == 'express' %}<p class="express-note">⚡ Diagnostic express · <a href="/diagnostic?mode=complet{% if d.pour != 'adulte' %}&pour={{ d.pour }}{% endif %}">Affiner en 2 minutes</a></p>{% endif %}
     <div class="hero-chips">
       {% for p in d.priorites %}<span class="chip static">{{ NEEDS[p] }}</span>{% endfor %}
     </div>
@@ -64,7 +65,7 @@
   <button role="tab" id="tab-routine" aria-controls="panel-routine" data-tab="routine">Routine</button>
   <button role="tab" id="tab-produits" aria-controls="panel-produits" data-tab="produits">Produits <span class="count">{{ ns.produits | length }}</span></button>
   <button role="tab" id="tab-naturel" aria-controls="panel-naturel" data-tab="naturel">🌿 Naturel</button>
-  <button role="tab" id="tab-complements" aria-controls="panel-complements" data-tab="complements">💊 Compléments</button>
+  {% if d.cures or d.cures_message %}<button role="tab" id="tab-complements" aria-controls="panel-complements" data-tab="complements">💊 Compléments</button>{% endif %}
   <button role="tab" id="tab-conseils" aria-controls="panel-conseils" data-tab="conseils">Conseils</button>
   <button role="tab" id="tab-suivi" aria-controls="panel-suivi" data-tab="suivi">Suivi &amp; rappels</button>
 </nav>
@@ -72,6 +73,22 @@
 {# ---------------------------------------------------------------- Synthèse #}
 <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
   <h2 class="panel-title">Synthèse</h2>
+
+  {% if d.actions_cles %}
+  <section class="actions-cles">
+    <h3>Vos 3 actions essentielles</h3>
+    <ol>
+      {% for x in d.actions_cles %}
+      <li>
+        <strong>{{ x.titre }}</strong>
+        <span>{{ x.texte }}</span>
+        {% if x.produit %}<button type="button" class="lien-discret" data-goto="produits" data-product="{{ x.produit }}">Voir le produit →</button>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    <p class="help">Le reste de vos conseils est dans les onglets : commencez par ces trois-là.</p>
+  </section>
+  {% endif %}
 
   <div class="stat-grid">
     <div class="stat"><span class="stat-label">Type</span><strong>{{ d.type_code }}</strong><small>{{ d.type_cheveux.nom }}</small></div>
@@ -83,11 +100,13 @@
   {% set f = d.fiabilite %}
   {% if f %}
   <div class="card fiabilite niveau-{{ f.niveau }}">
-    <div class="fiabilite-head">
-      <h3>Fiabilité de votre diagnostic : {{ f.label }}</h3>
-      <span class="fiabilite-score">{{ f.score }}<small>/100</small></span>
-    </div>
-    <span class="bar" role="img" aria-label="{{ f.score }} sur 100"><span style="--w: {{ f.score }}%"></span></span>
+    <h3>{{ f.label }}</h3>
+    <details class="calcul">
+      <summary>Comment est-ce évalué ?</summary>
+      <p>Nous regardons si les petits tests maison ont été faits (porosité, élasticité), si une photo a été
+        analysée, et si vos réponses sont cohérentes entre elles. Ce n'est pas une mesure scientifique : c'est un
+        repère pour savoir ce qui peut encore affiner vos conseils.</p>
+    </details>
     {% if f.a_verifier %}
     <h4>À vérifier</h4>
     <ul class="tips">{% for x in f.a_verifier %}<li>{{ x }}</li>{% endfor %}</ul>
@@ -180,6 +199,8 @@
     </ul>
     <p class="key-tip">💡 {{ d.type_cheveux.conseil_cle }}</p>
   </div>
+
+  {% with type_cheveux=d.type_cheveux.code %}{% include "_inscription.html" %}{% endwith %}
 
   {% with titre="Gardez votre routine dans votre poche", texte="Installez l'application TrichoSens : votre résultat, votre suivi et vos rappels à portée de main, même sans connexion." %}
   {% include "_installer.html" %}
@@ -292,13 +313,16 @@
   <ol class="routine">
     {% for s in steps %}
     <li class="step">
-      <strong class="step-title">{{ s.titre }}</strong>
+      <strong class="step-title">{{ s.titre }}{% if s.essentiel %} <small class="tag-indispensable">Indispensable</small>{% endif %}</strong>
       <p>{{ s.conseil }}</p>
       {% if s.produit %}
       <button type="button" class="product-mini" data-goto="produits" data-product="{{ s.produit.id }}">
         <span class="tag">{{ CATEGORIES[s.produit.categorie] }}</span>
         <span>{{ s.produit.nom_complet }}</span>
       </button>
+      {% endif %}
+      {% if s.alternative and 'budget' in s.hors_preferences %}
+      <small class="budget-note">Ce produit dépasse votre budget : la version maison ci-dessous coûte quelques euros.</small>
       {% endif %}
       {% if s.alternative %}
       <button type="button" class="natural-mini" data-goto="naturel" data-product="recette-{{ s.alternative.id }}">
@@ -313,6 +337,20 @@
   <div class="panel-next"><button type="button" class="button" data-goto="produits">Voir mes produits →</button></div>
 </section>
 
+{% macro carte_produit(s) %}{% set p = s.produit %}
+    <article class="product" id="produit-{{ p.id }}">
+      <span class="tag">{{ CATEGORIES[p.categorie] }}</span>
+      {% if p.marque | lower != 'divers' %}<span class="brand">{{ p.marque }}</span>{% endif %}
+      <h3>{{ p.nom }}</h3>
+      <p class="product-desc">{{ p.description }}</p>
+      <small class="used-for">Pour : {{ d.routine | selectattr('produit') | selectattr('produit.id', 'equalto', p.id) | map(attribute='titre') | unique | join(', ') | lower }}</small>
+      {% if p.ingredients_cles %}<small class="ingredients">{{ p.ingredients_cles | join(', ') }}</small>{% endif %}
+      {% if p.labels %}<span class="labels">{% for l in p.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
+      {% if p.prix %}<span class="price">≈ {{ '%.2f' | format(p.prix) | replace('.', ',') }} €{% if p.contenance %} <small>· {{ p.contenance }}</small>{% endif %}</span>{% endif %}
+      {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
+      {{ liens_achat(p) }}
+    </article>
+{% endmacro %}
 {# ---------------------------------------------------------------- Produits #}
 <section class="tab-panel" id="panel-produits" role="tabpanel" aria-labelledby="tab-produits">
   <h2 class="panel-title">Vos produits</h2>
@@ -331,29 +369,25 @@
   </article>
   {% endif %}
   {% if d.cout_total %}
-  <p class="key-tip">💶 Budget de départ : <strong>≈ {{ '%.0f' | format(d.cout_total) }} €</strong>
-    (chaque produit compté une fois ; un flacon dure en général plusieurs semaines).
+  <p class="key-tip">💶 Pour commencer : <strong>≈ {{ '%.0f' | format(d.cout_essentiel) }} €</strong>
+    avec {{ d.essentiels | length }} produit{{ 's' if d.essentiels | length > 1 }} indispensable{{ 's' if d.essentiels | length > 1 }}.
+    {% if d.cout_total > d.cout_essentiel %}Les autres sont facultatifs (≈ {{ '%.0f' | format(d.cout_total) }} € pour la routine complète).{% endif %}
+    Un flacon dure en général plusieurs semaines.
     {% if d.preferences or d.budget != 'indifferent' %}<br>Vos préférences :
     {{ (d.preferences + ([{'petit': 'petit budget', 'moyen': 'budget moyen'}[d.budget]] if d.budget != 'indifferent' else [])) | join(', ') }}.{% endif %}</p>
   {% endif %}
 
-  <div class="product-grid">
-    {% for s in ns.produits %}
-    {% set p = s.produit %}
-    <article class="product" id="produit-{{ p.id }}">
-      <span class="tag">{{ CATEGORIES[p.categorie] }}</span>
-      {% if p.marque | lower != 'divers' %}<span class="brand">{{ p.marque }}</span>{% endif %}
-      <h3>{{ p.nom }}</h3>
-      <p class="product-desc">{{ p.description }}</p>
-      <small class="used-for">Pour : {{ d.routine | selectattr('produit') | selectattr('produit.id', 'equalto', p.id) | map(attribute='titre') | unique | join(', ') | lower }}</small>
-      {% if p.ingredients_cles %}<small class="ingredients">{{ p.ingredients_cles | join(', ') }}</small>{% endif %}
-      {% if p.labels %}<span class="labels">{% for l in p.labels %}<span>{{ l }}</span>{% endfor %}</span>{% endif %}
-      {% if p.prix %}<span class="price">≈ {{ '%.2f' | format(p.prix) | replace('.', ',') }} €{% if p.contenance %} <small>· {{ p.contenance }}</small>{% endif %}</span>{% endif %}
-      {% if s.hors_preferences %}<small class="pref-warning">⚠ Non garanti : {{ s.hors_preferences | join(', ') }}. Aucun produit du catalogue ne coche toutes vos préférences pour cette étape.</small>{% endif %}
-      {{ liens_achat(p) }}
-    </article>
-    {% endfor %}
-  </div>
+  {% set essentiels = ns.produits | selectattr('produit.id', 'in', d.essentiels) | list %}
+  {% set options = ns.produits | rejectattr('produit.id', 'in', d.essentiels) | list %}
+  {% if essentiels %}
+  <h3 class="moment">Pour commencer <small class="tag-indispensable">Indispensables</small></h3>
+  <div class="product-grid">{% for s in essentiels %}{{ carte_produit(s) }}{% endfor %}</div>
+  {% endif %}
+  {% if options %}
+  <h3 class="moment">Pour aller plus loin <small class="tag-option">Facultatif</small></h3>
+  <p class="help">À ajouter peu à peu, selon vos envies et votre budget.</p>
+  <div class="product-grid">{% for s in options %}{{ carte_produit(s) }}{% endfor %}</div>
+  {% endif %}
 
   <p class="help legal">Prix indicatifs, susceptibles de varier selon les revendeurs.
     {% if d.liens_affilies %}Certains liens d'achat sont des liens affiliés : si vous achetez par leur
@@ -402,10 +436,11 @@
     première utilisation. Certains liens sont des liens affiliés : TrichoSens peut toucher une commission,
     sans surcoût pour vous. En tant que Partenaire Amazon, TrichoSens réalise un bénéfice sur les achats
     remplissant les conditions requises.</p>
-  <div class="panel-next"><button type="button" class="button" data-goto="complements">Compléments alimentaires →</button></div>
+  <div class="panel-next"><button type="button" class="button" data-goto="{{ 'complements' if d.cures or d.cures_message else 'conseils' }}">{{ 'Compléments alimentaires →' if d.cures or d.cures_message else 'Voir nos conseils →' }}</button></div>
 </section>
 
 {# ------------------------------------------------------------- Compléments #}
+{% if d.cures or d.cures_message %}
 <section class="tab-panel" id="panel-complements" role="tabpanel" aria-labelledby="tab-complements">
   <h2 class="panel-title">Compléments alimentaires</h2>
   {% if d.orientation.specialistes %}
@@ -432,6 +467,7 @@
     TrichoSens réalise un bénéfice sur les achats remplissant les conditions requises.</p>
   <div class="panel-next"><button type="button" class="button" data-goto="conseils">Voir nos conseils →</button></div>
 </section>
+{% endif %}
 
 {# ---------------------------------------------------------------- Conseils #}
 <section class="tab-panel" id="panel-conseils" role="tabpanel" aria-labelledby="tab-conseils">

@@ -5,10 +5,12 @@ Lancer en local :  uvicorn app.main:app --reload   (depuis le dossier trichosens
 
 import datetime as dt
 import hmac
+import json
 import logging
 import os
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -34,6 +36,8 @@ from . import specifiques as trouver
 from . import texte as texte_libre
 from . import legal
 from . import partenaires
+from . import inscriptions
+from . import liens_admin
 
 logging.basicConfig(level=logging.INFO)
 
@@ -117,6 +121,15 @@ templates.env.globals.update(
 )
 
 
+@app.middleware("http")
+async def marquer_les_pages(request: Request, call_next):
+    """Repère les vraies pages du site, pour que l'application hors connexion ne garde
+    jamais en cache une page d'attente de l'hébergeur."""
+    reponse = await call_next(request)
+    reponse.headers["X-TrichoSens"] = "1"
+    return reponse
+
+
 @app.get("/sante", include_in_schema=False)
 def sante():
     """Utilisé par l'hébergeur pour vérifier que le site répond."""
@@ -153,9 +166,12 @@ def _form_context(answers: dict, errors: dict) -> dict:
 
 
 @app.get("/diagnostic", response_class=HTMLResponse)
-def diagnostic_form(request: Request, pour: str = ""):
-    # /diagnostic?pour=enfant ou ?pour=ado ouvre directement le bon parcours.
+def diagnostic_form(request: Request, pour: str = "", mode: str = ""):
+    # /diagnostic?pour=enfant ou ?pour=ado ouvre directement le bon parcours ;
+    # ?mode=complet ouvre directement le diagnostic complet.
     answers = {"pour": pour} if pour in {"adulte", "enfant", "ado"} else {}
+    if mode in {"express", "complet"}:
+        answers["mode"] = mode
     _compter(request, "diagnostic_ouvert", answers.get("pour", ""))
     return templates.TemplateResponse(request, "diagnostic.html", _form_context(answers, {}))
 
@@ -183,7 +199,7 @@ def _parse_precedent(raw: str | None) -> ResumeSuivi | None:
 @app.get("/acheter/{offre_id}")
 def acheter(request: Request, offre_id: str):
     """Compte le clic puis redirige vers le revendeur (seulement les liens du catalogue)."""
-    offre = offres_par_id(load_catalog()).get(offre_id)
+    offre = offres_par_id(liens_admin.catalogue_complet(load_catalog())).get(offre_id)
     if not offre:
         raise HTTPException(status_code=404, detail="Lien introuvable.")
     clics.add(offre.id)
@@ -206,7 +222,8 @@ def admin_tableau(request: Request, cle: str = "", jours: int = 30):
     jours = jours if jours in admin.PERIODES else 30
     return templates.TemplateResponse(request, "admin_tableau.html", {
         "tableau": admin.tableau(stats, jours), "cle": cle,
-        "legal_manquant": legal.manquants(), "nb_demandes": len(partenaires.stockage.lister())})
+        "legal_manquant": legal.manquants(), "nb_demandes": len(partenaires.stockage.lister()),
+        "nb_inscrits": len(inscriptions.stockage.lister())})
 
 
 @app.get("/admin/export.csv", include_in_schema=False)
@@ -355,6 +372,118 @@ async def marques_demande(request: Request):
             status_code=503)
     stats.compter("demande_partenaire", demande.type)
     return templates.TemplateResponse(request, "marques.html", {**ctx, "envoye": True})
+
+
+@app.post("/api/inscription")
+async def api_inscription(request: Request):
+    """Inscription facultative aux conseils et rappels par e-mail."""
+    try:
+        data = await request.json()
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=422, detail="Demande illisible.")
+    return _inscrire(request, data)
+
+
+@app.post("/inscription", response_class=HTMLResponse)
+async def inscription_formulaire(request: Request):
+    """Même inscription, sans JavaScript."""
+    reponse = _inscrire(request, dict(await request.form()))
+    titre = "Merci !" if reponse.status_code == 200 else "Inscription non enregistrée"
+    message = json.loads(reponse.body)["message" if reponse.status_code == 200 else "detail"]
+    return templates.TemplateResponse(request, "desinscription.html",
+                                      {"titre": titre, "message": message},
+                                      status_code=reponse.status_code)
+
+
+def _inscrire(request: Request, data: dict) -> JSONResponse:
+    if data.get("site"):  # champ piège : on fait comme si de rien n'était
+        return JSONResponse({"message": "Merci ! Votre inscription est enregistrée."})
+    try:
+        inscription = inscriptions.valider(data)
+    except inscriptions.InscriptionInvalide as e:
+        return JSONResponse({"detail": str(e)}, status_code=422)
+    if not inscriptions.limiteur.autorise(_client_ip(request)):
+        return JSONResponse({"detail": "Trop de tentatives : réessayez dans une heure."}, status_code=429)
+    try:
+        inscriptions.inscrire(inscription)
+    except Exception:
+        logging.getLogger("trichosens").exception("Inscription non enregistrée")
+        return JSONResponse({"detail": "L'inscription n'a pas abouti : réessayez plus tard."},
+                            status_code=503)
+    stats.compter("inscription_email", "partenaires" if inscription.partenaires else "conseils")
+    return JSONResponse({"message": "Merci ! Votre inscription est enregistrée. Vous pouvez vous "
+                                    "désinscrire à tout moment."})
+
+
+@app.get("/desinscription", response_class=HTMLResponse)
+def desinscription(request: Request):
+    return templates.TemplateResponse(request, "desinscription.html")
+
+
+@app.post("/desinscription", response_class=HTMLResponse)
+async def desinscription_envoi(request: Request):
+    email = " ".join(str((await request.form()).get("email") or "").split()).lower()
+    if email:
+        inscriptions.stockage.retirer(email)
+    # Même réponse que l'adresse soit inscrite ou non : on ne révèle pas la liste.
+    return templates.TemplateResponse(request, "desinscription.html", {
+        "titre": "C'est fait", "message": "Si cette adresse était inscrite, elle a été supprimée de notre liste."})
+
+
+@app.get("/admin/inscriptions", response_class=HTMLResponse, include_in_schema=False)
+def admin_inscriptions(request: Request, cle: str = ""):
+    _verifier_cle(cle)
+    return templates.TemplateResponse(request, "admin_inscriptions.html", {
+        "inscrits": inscriptions.stockage.lister(), "cle": cle,
+        "persistant": inscriptions.stockage.persistant})
+
+
+@app.get("/admin/inscriptions.csv", include_in_schema=False)
+def admin_inscriptions_csv(cle: str = ""):
+    _verifier_cle(cle)
+    return Response("\ufeff" + inscriptions.export_csv(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="trichosens-inscriptions.csv"'})
+
+
+@app.get("/admin/liens", response_class=HTMLResponse, include_in_schema=False)
+def admin_liens(request: Request, cle: str = "", message: str = "", erreur: str = ""):
+    _verifier_cle(cle)
+    catalogue = liens_admin.catalogue_complet(load_catalog())
+    produits = [p for p in catalogue if p.categorie != "coffret"]
+    a_faire = [p for p in produits if p.offres and all(o.recherche for o in p.offres)]
+    return templates.TemplateResponse(request, "admin_liens.html", {
+        "cle": cle, "produits": produits, "a_faire": len(a_faire), "message": message,
+        "erreur": erreur, "persistant": liens_admin.stockage.persistant, "PAYS": PAYS_LIVRAISON})
+
+
+@app.post("/admin/liens", include_in_schema=False)
+async def admin_liens_envoi(request: Request):
+    form = await request.form()
+    cle = str(form.get("cle") or "")
+    _verifier_cle(cle)
+    produit_id, marchand = str(form.get("produit_id") or ""), str(form.get("marchand") or "Amazon")
+    retour = f"/admin/liens?cle={quote(cle)}#p-{quote(produit_id)}"
+    if produit_id not in {p.id for p in load_catalog()}:
+        raise HTTPException(status_code=404)
+    if form.get("action") == "retirer":
+        liens_admin.retirer(produit_id, marchand)
+        return RedirectResponse(retour.replace("#", "&message=Lien+retir%C3%A9#"), status_code=303)
+    pays = tuple(p for p in form.getlist("pays") if p in PAYS_LIVRAISON and p != "AUTRE")
+    try:
+        liens_admin.ajuster(produit_id, marchand, str(form.get("url") or ""), pays)
+    except liens_admin.LienInvalide as e:
+        return RedirectResponse(retour.replace("#", f"&erreur={quote(str(e))}#"), status_code=303)
+    return RedirectResponse(retour.replace("#", "&message=Lien+enregistr%C3%A9#"), status_code=303)
+
+
+@app.get("/admin/liens.csv", include_in_schema=False)
+def admin_liens_csv(cle: str = ""):
+    _verifier_cle(cle)
+    return Response(liens_admin.export_csv(liens_admin.catalogue_complet(load_catalog())),
+                    media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="liens.csv"'})
 
 
 @app.get("/admin/partenaires", response_class=HTMLResponse, include_in_schema=False)

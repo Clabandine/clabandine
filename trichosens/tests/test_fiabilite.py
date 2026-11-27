@@ -120,5 +120,7 @@ def test_fiabilite_dans_le_resultat_et_les_avis():
             "preoccupations": ["secheresse"], "gene_secheresse": "beaucoup",
             "porosite": "inconnue"}
     r = client.post("/diagnostic", data=form)
-    assert "Fiabilité de votre diagnostic" in r.text
+    assert any(l in r.text for l in ("Profil complet", "Profil bien renseigné", "Profil à compléter"))
+    assert "/100" not in r.text.split('class="card fiabilite')[1].split("</div>")[0]
+    assert "Comment est-ce évalué" in r.text
     assert "test du verre d&#39;eau" in r.text or "test du verre d'eau" in r.text

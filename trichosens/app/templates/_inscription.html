@@ -1,0 +1,28 @@
+{# Inscription facultative aux conseils et rappels par e-mail (consentements distincts). #}
+<form class="card inscription" method="post" action="/inscription" data-inscription novalidate>
+  <h3>💌 Vos conseils et rappels par e-mail</h3>
+  <p>Facultatif : un e-mail 1 à 2 fois par mois avec des conseils pour vos cheveux, le rappel de refaire votre
+    diagnostic et les conseils de saison. Désinscription en un clic.</p>
+  <label class="inscription-email"><span class="sr-only">Votre e-mail</span>
+    <input type="email" name="email" required maxlength="120" autocomplete="email" placeholder="Votre adresse e-mail">
+  </label>
+  <label class="consent">
+    <input type="checkbox" name="conseils" value="oui">
+    <span>Je souhaite recevoir les conseils et rappels de TrichoSens par e-mail.</span>
+  </label>
+  {% if type_cheveux %}
+  <label class="consent">
+    <input type="checkbox" name="type_cheveux" value="{{ type_cheveux }}">
+    <span>Personnaliser ces e-mails selon mon type de cheveux ({{ type_cheveux }}). <small>Facultatif.</small></span>
+  </label>
+  {% endif %}
+  <label class="consent">
+    <input type="checkbox" name="partenaires" value="oui">
+    <span>Recevoir aussi les offres des marques partenaires de TrichoSens. <small>Facultatif.</small></span>
+  </label>
+  <label class="piege" aria-hidden="true">Ne pas remplir <input type="text" name="site" tabindex="-1" autocomplete="off"></label>
+  <button type="submit" class="button small">Je m'inscris</button>
+  <p class="inscription-statut" role="status" aria-live="polite"></p>
+  <p class="help">Aucune donnée de santé n'est liée à votre adresse. <a href="/confidentialite">Confidentialité</a> ·
+    <a href="/desinscription">Se désinscrire</a></p>
+</form>

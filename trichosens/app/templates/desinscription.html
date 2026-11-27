@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}E-mails – TrichoSens{% endblock %}
+{% block content %}
+<article class="legal-page">
+  <p class="eyebrow">Vos e-mails</p>
+  {% if message %}
+  <h1>{{ titre }}</h1>
+  <p class="key-tip">{{ message }}</p>
+  <p><a class="button" href="/">Revenir à l'accueil</a></p>
+  {% else %}
+  <h1>Se désinscrire</h1>
+  <p>Indiquez votre adresse : nous la supprimons de notre liste, avec vos préférences.</p>
+  <form method="post" action="/desinscription" class="card partenaire-form">
+    <label>Votre e-mail <input type="email" name="email" required maxlength="120" autocomplete="email"></label>
+    <button type="submit" class="button">Me désinscrire</button>
+  </form>
+  {% endif %}
+</article>
+{% endblock %}

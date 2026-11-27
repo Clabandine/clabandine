@@ -972,3 +972,47 @@ input[type="time"]:focus, input[type="date"]:focus, input[type="number"]:focus, 
 .ios .aide-autres { display: none; }
 /* Dans l'application installée : un peu d'air sous la barre d'état. */
 .app-installee .site-header { padding-top: env(safe-area-inset-top); }
+.fiabilite .calcul { margin: 4px 0 8px; font-size: .88rem; }
+.fiabilite .calcul summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.fiabilite .calcul p { color: var(--muted); margin: 6px 0 0; }
+.tag-indispensable, .tag-option { font-family: var(--font-ui); font-size: .66rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
+.tag-indispensable { background: var(--brand); color: #fff; }
+.tag-option { background: var(--brand-soft); color: var(--brand); }
+.budget-note { display: block; color: var(--warning); background: var(--warning-soft); border-radius: 8px; padding: 6px 8px; margin-top: 8px; }
+.actions-cles { background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; box-shadow: var(--shadow); }
+.actions-cles h3 { margin: 0 0 10px; font-family: var(--font-brand); font-size: 1.2rem; }
+.actions-cles ol { list-style: none; counter-reset: action; padding: 0; margin: 0; display: grid; gap: 12px; }
+.actions-cles li { counter-increment: action; display: grid; grid-template-columns: 34px 1fr; column-gap: 12px; align-items: start; margin: 0; }
+.actions-cles li::before { content: counter(action); grid-row: span 3; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-family: var(--font-ui); }
+.actions-cles strong { color: var(--brand); }
+.actions-cles span { color: var(--ink); font-size: .94rem; }
+.lien-discret { background: none; border: 0; padding: 4px 0 0; font: inherit; font-size: .86rem; font-weight: 600; color: var(--accent); cursor: pointer; text-align: left; }
+.mode-cards { grid-template-columns: repeat(2, 1fr); }
+.sante-details > summary { cursor: pointer; font-weight: 700; color: var(--accent); padding: 8px 0; }
+.sante-details > summary small { font-weight: 500; color: var(--muted); }
+.express-note { font-size: .88rem; margin: 0 0 8px; }
+.express-note a { color: var(--accent); font-weight: 600; }
+.step-nav [data-affiner] { flex: 0 1 auto; }
+.inscription { border-left: 5px solid var(--copper); }
+.inscription h3 { margin-top: 0; font-size: 1.05rem; }
+.inscription p { font-size: .9rem; }
+.inscription-email input { width: 100%; font: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); }
+.inscription .consent { margin: 10px 0; font-size: .88rem; }
+.inscription-statut { font-weight: 600; color: var(--danger); margin: 8px 0 0; }
+.inscription-statut.ok { color: var(--success); }
+.inscription-statut:empty { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.liens-liste { display: grid; gap: 10px; }
+.lien-produit h2 { font-size: 1rem; margin: 0 0 6px; }
+.lien-produit h2 small { font-weight: 500; color: var(--muted); font-size: .78rem; }
+.lien-produit.a-faire { border-left: 5px solid var(--copper); }
+.liens-actuels { list-style: none; padding: 0; margin: 0 0 8px; font-size: .86rem; }
+.liens-actuels li { margin: 4px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+form.inline { display: inline; }
+.lien-form { display: flex; flex-wrap: wrap; gap: 6px; }
+.lien-form input { font: inherit; font-size: .86rem; padding: 7px 10px; border: 1.5px solid var(--line); border-radius: var(--radius-sm); }
+.lien-form input[type=url] { flex: 1 1 260px; }
+.lien-form input[type=text] { flex: 0 1 140px; }
+.aide-liens summary { cursor: pointer; font-weight: 700; color: var(--accent); }

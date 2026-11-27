@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from . import naturel, profil, sante, seasons
 from .reminders import jours_suggeres
 from .catalog import Product, load_catalog
+from .liens_admin import catalogue_complet
 from .evolution import Evolution, ResumeSuivi, compare
 from .hair_types import FAMILLES, HAIR_TYPES, TYPE_POIDS, TYPE_POINTS, HairType
 from .pain_points import INTENSITE_FACTEUR, PAIN_POINTS, PainReport, explain
@@ -198,6 +199,8 @@ class Step:
     hors_preferences: list[str] = field(default_factory=list)
     # Produit précis à proposer s'il convient (ex. le bonnet en satin pour la nuit).
     produit_id: str | None = None
+    # Indispensable pour commencer (les autres étapes sont des options).
+    essentiel: bool = False
     # Recette maison qui peut remplacer le produit de cette étape.
     alternative: naturel.Recette | None = None
 
@@ -224,6 +227,11 @@ class Diagnostic:
     evolution: Evolution | None = None
     suivi: dict = field(default_factory=dict)
     cout_total: float = 0.0
+    # Coût pour commencer : seulement les produits indispensables.
+    cout_essentiel: float = 0.0
+    essentiels: list[str] = field(default_factory=list)
+    # Les 3 choses à retenir, affichées en premier.
+    actions_cles: list[dict] = field(default_factory=list)
     jours_lavage: list[str] = field(default_factory=list)
     prenom: str = ""
     liens_affilies: bool = False
@@ -243,6 +251,7 @@ class Diagnostic:
     # Santé : facteurs, professionnels à consulter, examens à demander.
     orientation: dict = field(default_factory=dict)
     pour: str = "adulte"
+    mode: str = "complet"
     # Coffret routine vendu par TrichoSens, s'il en existe un adapté au profil.
     coffret: Product | None = None
     # Alternatives naturelles : recettes maison, cures et gestes du quotidien.
@@ -303,6 +312,9 @@ class Diagnostic:
             } if self.evolution else None,
             "suivi": self.suivi,
             "cout_total": self.cout_total,
+            "cout_essentiel": self.cout_essentiel,
+            "actions_cles": self.actions_cles,
+            "essentiels": self.essentiels,
             "jours_lavage": self.jours_lavage,
             "preferences": self.preferences,
             "budget": self.budget,
@@ -321,6 +333,7 @@ class Diagnostic:
                     "categorie": s.categorie,
                     "produit": s.produit.to_dict() if s.produit else None,
                     "hors_preferences": s.hors_preferences,
+                    "essentiel": s.essentiel,
                 }
                 for s in self.routine
             ],
@@ -860,9 +873,57 @@ def recommend(category: str, a: Answers, besoins: dict[str, int], poids: str,
     return (best[1], best[2]) if best else (None, [])
 
 
-def cout_routine(routine: list[Step]) -> float:
+def marquer_essentiels(a: Answers, routine: list[Step]) -> None:
+    """Indispensables pour commencer : lavant, soin démêlant, et selon le profil le soin
+    sans rinçage, le protecteur thermique ou le coiffant. Le reste est en option."""
+    soin_vu = False
+    for s in routine:
+        if not s.categorie or s.moment != "lavage":
+            continue
+        c = s.categorie
+        if c == "shampoing":
+            s.essentiel = True
+        elif c in {"apres_shampoing", "masque"} and not soin_vu:
+            s.essentiel = soin_vu = True
+        elif c == "leave_in" and a.texture != "lisse":
+            s.essentiel = True
+        elif c == "protecteur_thermique":
+            s.essentiel = True
+        elif c == "coiffant" and a.objectif == "definition":
+            s.essentiel = True
+    # Un produit indispensable l'est à toutes les étapes où il sert.
+    ids = {s.produit.id for s in routine if s.essentiel and s.produit}
+    for s in routine:
+        if s.produit and s.produit.id in ids:
+            s.essentiel = True
+
+
+def actions_cles(a: Answers, douleurs: list[PainReport], routine: list[Step],
+                 priorites: list[str], typ: HairType) -> list[dict]:
+    """Trois actions pour commencer : un geste contre la gêne principale, le produit à
+    avoir en premier, et l'habitude qui change tout."""
+    actions: list[dict] = []
+    if douleurs and douleurs[0].actions:
+        d0 = douleurs[0]
+        actions.append({"titre": f"Contre {d0.label[0].lower()}{d0.label[1:]}",
+                        "texte": d0.actions[0]})
+    essentiels = [s for s in routine if s.essentiel and s.produit]
+    if essentiels:
+        prio = priorites[0] if priorites else ""
+        s = next((x for x in essentiels if prio in x.produit.besoins), essentiels[0])
+        actions.append({"titre": "Le produit à avoir en premier",
+                        "texte": f"{s.titre} : {s.produit.nom_complet}.", "produit": s.produit.id})
+    habitude = next((x.conseil for x in routine if x.titre in {"Coiffer sans tirer", "Apaiser sans gratter"}),
+                    None) if a.pour == "enfant" or {"demangeaisons", "pellicules"} & set(a.preoccupations) \
+        else None
+    actions.append({"titre": "L'habitude qui change tout", "texte": habitude or typ.conseil_cle})
+    return actions[:3]
+
+
+def cout_routine(routine: list[Step], seulement_essentiels: bool = False) -> float:
     """Prix indicatif total des produits de la routine (chaque produit compté une fois)."""
-    produits = {s.produit.id: s.produit for s in routine if s.produit}
+    produits = {s.produit.id: s.produit for s in routine
+                if s.produit and (s.essentiel or not seulement_essentiels)}
     return round(sum(p.prix or 0 for p in produits.values()), 2)
 
 
@@ -919,9 +980,9 @@ def _apply_photo(a: Answers, photo: AnalysePhoto, douleurs: list[PainReport],
 # --- Fiabilité du diagnostic ------------------------------------------------------
 
 NIVEAUX_FIABILITE = (
-    (85, "elevee", "Élevée"),
-    (65, "bonne", "Bonne"),
-    (0, "a_preciser", "À préciser"),
+    (85, "elevee", "Profil complet"),
+    (65, "bonne", "Profil bien renseigné"),
+    (0, "a_preciser", "Profil à compléter"),
 )
 
 
@@ -941,6 +1002,10 @@ def fiabilite(a: Answers, photo: AnalysePhoto | None = None,
         score -= 10
         a_ameliorer.append("Faites le test d'élasticité (1 minute) : il dit si vos cheveux "
                            "manquent plutôt d'hydratation ou de protéines.")
+    if a.mode == "express":
+        score -= 10
+        a_ameliorer.insert(0, "Vous avez fait le diagnostic express : ajoutez les questions facultatives "
+                              "(texture, santé, saisons) pour des conseils plus précis, en 2 minutes.")
     photo_ok = bool(photo and photo.exploitable)
     if photo_dispo and not photo_ok and a.pour == "adulte":
         score -= 5
@@ -1044,7 +1109,7 @@ def resume_suivi(d: Diagnostic, a: Answers, today: dt.date) -> dict:
 def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
                    photo: AnalysePhoto | None = None, today: dt.date | None = None,
                    precedent: ResumeSuivi | None = None) -> Diagnostic:
-    catalog = catalog if catalog is not None else load_catalog()
+    catalog = catalog if catalog is not None else catalogue_complet(load_catalog())
     today = today or dt.date.today()
     saison = seasons.saison_du(today)
     besoins = compute_needs(a, photo, saison)
@@ -1066,6 +1131,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         if step.categorie == "masque" and phase == "entretien":
             step.conseil = "Un lavage sur deux, en alternance avec un après-shampoing. " + step.conseil
 
+    marquer_essentiels(a, routine)
     priorites = [n for n, s in sorted(besoins.items(), key=lambda kv: -kv[1]) if s > 0][:3]
     programme, prochain_point = _programme(phase, a, besoins, priorites, today)
     douleurs = explain(a)
@@ -1127,6 +1193,9 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         prochain_point=prochain_point,
         evolution=evolution,
         cout_total=cout_routine(routine),
+        cout_essentiel=cout_routine(routine, seulement_essentiels=True),
+        actions_cles=actions_cles(a, douleurs, routine, priorites, typ),
+        essentiels=list(dict.fromkeys(s.produit.id for s in routine if s.essentiel and s.produit)),
         jours_lavage=jours_suggeres(lavages_par_semaine(a)),
         prenom=a.prenom,
         liens_affilies=any(o.affilie for s in routine if s.produit for o in s.produit.offres),
@@ -1144,6 +1213,7 @@ def run_diagnostic(a: Answers, catalog: list[Product] | None = None,
         fiabilite=fiabilite(a, photo),
         orientation=sante.orientation(a),
         pour=a.pour,
+        mode=a.mode,
         coffret=recommend("coffret", a, besoins, poids, catalog, saison.id)[0],
     )
     d.suivi = resume_suivi(d, a, today)

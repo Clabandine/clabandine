@@ -150,4 +150,36 @@
       appliquerPays(choix.value);
     });
   }
+
+  // --- Inscription aux conseils et rappels par e-mail ---------------------------------
+  document.querySelectorAll("form[data-inscription]").forEach((f) => {
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const statut = f.querySelector(".inscription-statut");
+      const champ = (n) => f.querySelector(`[name="${n}"]`);
+      const type = champ("type_cheveux");
+      const donnees = {
+        email: champ("email").value,
+        conseils: champ("conseils").checked,
+        partenaires: champ("partenaires").checked,
+        type_cheveux: type && type.checked ? type.value : "",
+        site: champ("site").value,
+      };
+      const bouton = f.querySelector('button[type="submit"]');
+      bouton.disabled = true;
+      try {
+        const rep = await fetch("/api/inscription", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(donnees),
+        });
+        const res = await rep.json();
+        if (!rep.ok) throw new Error(res.detail || "L'inscription n'a pas abouti.");
+        statut.textContent = res.message;
+        statut.classList.add("ok");
+        f.querySelectorAll("label, button").forEach((el) => (el.hidden = true));
+      } catch (err) {
+        statut.textContent = err.message;
+        bouton.disabled = false;
+      }
+    });
+  });
 })();

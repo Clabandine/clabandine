@@ -57,6 +57,7 @@
 {% set current = answers.get(q.id) %}
 <fieldset class="question q-{{ q.id }}{% if errors.get(q.id) %} has-error{% endif %}" data-question="{{ q.id }}"
           {% if q.publics | length < 3 %}data-publics="{{ q.publics | join(' ') }}"{% endif %}
+          data-express="{{ '1' if q.express else '0' }}"
           {% if q.id == 'demangeaisons_details' %}data-show-if="demangeaisons pellicules"{% endif %}
           data-required="{{ 'true' if q.required else 'false' }}"
           {% if q.max_choices %}data-max="{{ q.max_choices }}"{% endif %}>
@@ -128,6 +129,8 @@
   {% endfor %}
 
   {% elif q.id == 'sante' %}
+  <details class="sante-details"{% if current %} open{% endif %}>
+  <summary>Répondre aux questions santé <small>(facultatif, 30 secondes)</small></summary>
   {% for groupe, titre in [('connu', 'Un problème connu'), ('signe', 'Ce que vous remarquez')] %}
   <p class="sub-label">{{ titre }}</p>
   <div class="options">
@@ -140,6 +143,18 @@
     {% endfor %}
   </div>
   {% endfor %}
+  </details>
+
+  {% elif q.id == 'mode' %}
+  <div class="pour-cards mode-cards">
+    {% for o in q.options %}
+    <label class="pour-card">
+      <input type="radio" name="mode" value="{{ o.value }}" {% if (current or 'express') == o.value %}checked{% endif %}>
+      <span class="pour-icone" aria-hidden="true">{{ '⚡' if o.value == 'express' else '✨' }}</span>
+      <strong>{{ o.label }}</strong><small>{{ o.hint }}</small>
+    </label>
+    {% endfor %}
+  </div>
 
   {% elif q.id == 'pour' %}
   {% set pour_icones = {'adulte': '🙋‍♀️', 'enfant': '🧒', 'ado': '🧑‍🎓'} %}
@@ -239,7 +254,8 @@
   {% for s in steps %}
   {% if s.id != 'photo' or photo_active %}
   <section class="step-panel" data-step="{{ s.id }}" data-title="{{ s.titre }}" data-phase="{{ s.phase }}" data-duree="{{ s.duree }}"
-           {% if s.publics | length < 3 %}data-publics="{{ s.publics | join(' ') }}"{% endif %}>
+           {% if s.publics | length < 3 %}data-publics="{{ s.publics | join(' ') }}"{% endif %}
+           data-express="{{ '1' if s.express else '0' }}">
     <div class="step-head">
       <svg class="step-icon" viewBox="0 0 48 48" aria-hidden="true">{{ icones[s.id] | safe }}</svg>
       <div>
@@ -323,6 +339,7 @@
     <div class="step-nav js-only" hidden>
       {% if not loop.first %}<button type="button" class="button secondary" data-prev>← Retour</button>{% endif %}
       {% if loop.last %}
+      <button type="button" class="button secondary" data-affiner hidden>Affiner (+2 min)</button>
       <button type="submit" class="button submit-wizard">Voir mon diagnostic ✨</button>
       {% elif s.id == 'bienvenue' %}
       <button type="button" class="button" data-next>Commencer →</button>
